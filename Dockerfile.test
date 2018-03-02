@@ -1,0 +1,5 @@
+# run test
+FROM golang:alpine AS build-env
+WORKDIR  /go/src/git.ecadlabs.com/ecad/auth_radius/auth
+COPY . .
+CMD CGO_ENABLED=0 go test -args -radius-secret portalappsecret -radius-address radius:1812
