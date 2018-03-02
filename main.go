@@ -9,6 +9,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"git.ecadlabs.com/ecad/auth/authenticator/postgresql/migrations"
 	"git.ecadlabs.com/ecad/auth/router"
 	"github.com/dgrijalva/jwt-go"
 )
@@ -25,6 +26,11 @@ func main() {
 	secret := flag.String("secret", "secret", "JWT signing secret.")
 	dbURL := flag.String("db", "postgres://localhost/auth?connect_timeout=10&sslmode=disable", "PostgreSQL server URL")
 	flag.Parse()
+
+	log.Println("Running migrations...")
+	if err := migrations.Migrate(*dbURL); err != nil {
+		log.Fatal(err)
+	}
 
 	log.Println("Starting Auth service...")
 	log.Printf("Health service listening on %s", *healthAddr)
