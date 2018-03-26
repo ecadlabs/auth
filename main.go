@@ -2,16 +2,20 @@ package main
 
 import (
 	"context"
+	"crypto/rand"
+	"crypto/tls"
+	"encoding/base64"
 	"flag"
+	"fmt"
+	"git.ecadlabs.com/ecad/auth/authenticator/postgresql/migrations"
+	"git.ecadlabs.com/ecad/auth/router"
+	"github.com/dgrijalva/jwt-go"
 	log "github.com/sirupsen/logrus"
+	"golang.org/x/crypto/bcrypt"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
-
-	"git.ecadlabs.com/ecad/auth/authenticator/postgresql/migrations"
-	"git.ecadlabs.com/ecad/auth/router"
-	"github.com/dgrijalva/jwt-go"
 )
 
 const (
@@ -21,24 +25,96 @@ const (
 var jwtSigningMethod = jwt.SigningMethodHS256
 
 func main() {
-	httpAddr := flag.String("http", ":8000", "HTTP service address.")
-	healthAddr := flag.String("health", ":8001", "Health service address.")
-	secret := flag.String("secret", "secret", "JWT signing secret.")
-	dbURL := flag.String("db", "postgres://localhost/auth?connect_timeout=10&sslmode=disable", "PostgreSQL server URL")
+	var (
+		config     Config
+		configFile string
+		genPwd     string
+		genSecret  int
+		useBase64  bool
+	)
+
+	flag.StringVar(&genPwd, "bcrypt", "", "Generate password hash.")
+	flag.IntVar(&genSecret, "gen_secret", 0, "Generate random JWT secret of N bytes.")
+	flag.BoolVar(&useBase64, "base64_secret", false, "Encode generated secret using base64.")
+	flag.StringVar(&configFile, "c", "", "Config file.")
+	flag.StringVar(&config.Address, "http", ":8000", "HTTP service address.")
+	flag.StringVar(&config.HealthAddress, "health", ":8001", "Health service address.")
+	flag.StringVar(&config.JWTSecret, "secret", "secret", "JWT signing secret.")
+	flag.StringVar(&config.PostgresURL, "db", "postgres://localhost/auth?connect_timeout=10&sslmode=disable", "PostgreSQL server URL.")
+	flag.BoolVar(&config.TLS, "tls", false, "Enable TLS.")
+	flag.StringVar(&config.TLSCert, "tlscert", "", "TLS certificate file.")
+	flag.StringVar(&config.TLSKey, "tlskey", "", "TLS private key file.")
+
 	flag.Parse()
 
+	if genSecret != 0 {
+		buf := make([]byte, genSecret)
+		if _, err := rand.Read(buf); err != nil {
+			log.Fatal(err)
+		}
+
+		if !useBase64 {
+			os.Stdout.Write(buf)
+			os.Exit(0)
+
+		}
+
+		s := base64.StdEncoding.EncodeToString(buf)
+		fmt.Println(s)
+		os.Exit(0)
+	}
+
+	if genPwd != "" {
+		hash, err := bcrypt.GenerateFromPassword([]byte(genPwd), bcrypt.DefaultCost)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		fmt.Println(string(hash))
+		os.Exit(0)
+	}
+
+	if configFile != "" {
+		c, err := LoadConfig(configFile)
+		if err != nil {
+			log.Fatal(err)
+		}
+		config = *c
+
+		// Override from command line
+		flag.Parse()
+	}
+
+	if config.JWTSecret == "" {
+		flag.Usage()
+		os.Exit(0)
+	}
+
+	var tlsConfig *tls.Config
+
+	if config.TLS && config.TLSCert != "" && config.TLSKey != "" {
+		cert, err := tls.LoadX509KeyPair(config.TLSCert, config.TLSKey)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		tlsConfig = &tls.Config{
+			Certificates: []tls.Certificate{cert},
+		}
+	}
+
 	log.Println("Running migrations...")
-	if err := migrations.Migrate(*dbURL); err != nil {
+	if err := migrations.Migrate(config.PostgresURL); err != nil {
 		log.Fatal(err)
 	}
 
 	log.Println("Starting Auth service...")
-	log.Printf("Health service listening on %s", *healthAddr)
-	log.Printf("HTTP service listening on %s", *httpAddr)
+	log.Printf("Health service listening on %s", config.HealthAddress)
+	log.Printf("HTTP service listening on %s", config.Address)
 
 	conf := router.Config{
-		PostgresURL:      *dbURL,
-		JWTSecret:        []byte(*secret),
+		PostgresURL:      config.PostgresURL,
+		JWTSecret:        []byte(config.JWTSecret),
 		JWTSigningMethod: jwtSigningMethod,
 	}
 
@@ -49,7 +125,7 @@ func main() {
 
 	// Start servers
 	healthServer := &http.Server{
-		Addr:    *healthAddr,
+		Addr:    config.HealthAddress,
 		Handler: r.Health,
 	}
 
@@ -62,12 +138,17 @@ func main() {
 	defer healthServer.Shutdown(context.Background())
 
 	httpServer := &http.Server{
-		Addr:    *httpAddr,
-		Handler: r.Login,
+		Addr:      config.Address,
+		Handler:   r.Login,
+		TLSConfig: tlsConfig,
 	}
 
 	go func() {
-		errChan <- httpServer.ListenAndServe()
+		if httpServer.TLSConfig != nil {
+			errChan <- httpServer.ListenAndServeTLS("", "")
+		} else {
+			errChan <- httpServer.ListenAndServe()
+		}
 	}()
 
 	defer httpServer.Shutdown(context.Background())
