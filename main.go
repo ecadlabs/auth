@@ -26,17 +26,19 @@ var jwtSigningMethod = jwt.SigningMethodHS256
 
 func main() {
 	var (
-		config     Config
-		configFile string
-		genPwd     string
-		genSecret  int
-		useBase64  bool
+		config      Config
+		configFile  string
+		genPwd      string
+		genSecret   int
+		useBase64   bool
+		migrateOnly bool
 	)
 
 	flag.StringVar(&genPwd, "bcrypt", "", "Generate password hash.")
 	flag.IntVar(&genSecret, "gen_secret", 0, "Generate random JWT secret of N bytes.")
 	flag.BoolVar(&useBase64, "base64_secret", false, "Encode generated secret using base64.")
 	flag.StringVar(&configFile, "c", "", "Config file.")
+	flag.BoolVar(&migrateOnly, "migrate", false, "Migrate and exit immediately.")
 	flag.StringVar(&config.Address, "http", ":8000", "HTTP service address.")
 	flag.StringVar(&config.HealthAddress, "health", ":8001", "Health service address.")
 	flag.StringVar(&config.JWTSecret, "secret", "secret", "JWT signing secret.")
@@ -106,6 +108,10 @@ func main() {
 	log.Println("Running migrations...")
 	if err := migrations.Migrate(config.PostgresURL); err != nil {
 		log.Fatal(err)
+	}
+
+	if migrateOnly {
+		os.Exit(0)
 	}
 
 	log.Println("Starting Auth service...")
