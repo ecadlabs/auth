@@ -6,6 +6,7 @@ import (
 )
 
 type Config struct {
+	BaseURL       string `json:"base_url`
 	TLS           bool   `json:"tls"`
 	TLSCert       string `json:"tls_cert"`
 	TLSKey        string `json:"tls_key"`

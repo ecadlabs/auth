@@ -3,6 +3,12 @@
 
 [[projects]]
   branch = "master"
+  name = "github.com/auth0/go-jwt-middleware"
+  packages = ["."]
+  revision = "5493cabe49f7bfa6e2ec444a09d334d90cd4e2bd"
+
+[[projects]]
+  branch = "master"
   name = "github.com/beorn7/perks"
   packages = ["quantile"]
   revision = "4c0e84591b9aa9e6dcfdf3e020114cd81f89d5f9"
@@ -146,6 +152,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "40bbb935599c8365c9a9d938b110335a15d7477e279ba4d802dcfadcee8c20a1"
+  inputs-digest = "f6fcbffeb921c0b93c2f7a7b176e877c514c497aafb8771fbc46f38c9866f02e"
   solver-name = "gps-cdcl"
   solver-version = 1

@@ -15,22 +15,56 @@ const (
 	defaultIss = "auth.service"
 )
 
-// Login is a login endpoint handler
-type Login struct {
+type TokenProducer struct {
 	SessionMaxAge    time.Duration
-	Authenticator    authenticator.Authenticator
 	JWTSecretGetter  func() ([]byte, error)
 	Namespace        string
-	AuthTimeout      time.Duration
 	JWTSigningMethod jwt.SigningMethod
 	Logger           log.FieldLogger
+	RefreshURL       string
 }
 
-func (l *Login) log() log.FieldLogger {
-	if l.Logger != nil {
-		return l.Logger
+func (t *TokenProducer) log() log.FieldLogger {
+	if t.Logger != nil {
+		return t.Logger
 	}
 	return log.StandardLogger()
+}
+
+func (t *TokenProducer) writeTokenWithClaims(w http.ResponseWriter, claims jwt.Claims) {
+	token := jwt.NewWithClaims(t.JWTSigningMethod, claims)
+	secret, err := t.JWTSecretGetter()
+	if err != nil {
+		JSONError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	tokenString, err := token.SignedString(secret)
+	if err != nil {
+		JSONError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	response := struct {
+		Token      string `json:"token"`
+		RefreshURL string `json:"refresh,omitempty"`
+	}{
+		Token:      tokenString,
+		RefreshURL: t.RefreshURL,
+	}
+
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+
+	if err := json.NewEncoder(w).Encode(&response); err != nil {
+		t.log().Println(err)
+	}
+}
+
+// Login is a login endpoint handler
+type Login struct {
+	*TokenProducer
+	Authenticator authenticator.Authenticator
+	AuthTimeout   time.Duration
 }
 
 func (l *Login) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -93,25 +127,20 @@ func (l *Login) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	token := jwt.NewWithClaims(l.JWTSigningMethod, jwt.MapClaims(claims))
-	secret, err := l.JWTSecretGetter()
-	if err != nil {
-		JSONError(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	l.writeTokenWithClaims(w, jwt.MapClaims(claims))
+}
 
-	tokenString, err := token.SignedString(secret)
-	if err != nil {
-		JSONError(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+type Refresh struct {
+	*TokenProducer
+}
 
-	response := struct {
-		Token string `json:"token"`
-	}{
-		Token: tokenString,
-	}
+func (r *Refresh) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	claims := req.Context().Value("user").(*jwt.Token).Claims.(jwt.MapClaims)
 
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	json.NewEncoder(w).Encode(&response)
+	// Update timestamp only
+	now := time.Now()
+	claims["exp"] = now.Add(r.SessionMaxAge).Unix()
+	claims["iat"] = now.Unix()
+
+	r.writeTokenWithClaims(w, claims)
 }

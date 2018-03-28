@@ -63,8 +63,8 @@ func createTestUser(url string) error {
 	return nil
 }
 
-func testLoginRequest(t *testing.T, client *http.Client, req *http.Request) {
-	resp, err := client.Do(req)
+func testLoginRequest(t *testing.T, server *httptest.Server, req *http.Request) {
+	resp, err := server.Client().Do(req)
 
 	if err != nil {
 		t.Error(err)
@@ -103,6 +103,28 @@ func testLoginRequest(t *testing.T, client *http.Client, req *http.Request) {
 	if c := tok.Claims.(jwt.MapClaims); c["sub"] != testUserIDString {
 		t.Errorf("sub: %s != %s\n", c["sub"], testUserIDString)
 	}
+
+	t.Run("TestRefresh", func(t *testing.T) {
+		req, err := http.NewRequest("GET", server.URL+"/refresh", nil)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+
+		req.Header.Set("Authorization", "Bearer "+response.Token)
+
+		resp, err := server.Client().Do(req)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			t.Error(resp.Status)
+			return
+		}
+	})
 }
 
 func loginBody(name, password string) ([]byte, error) {
@@ -161,7 +183,7 @@ func TestPostLogin(t *testing.T) {
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	testLoginRequest(t, server.Client(), req)
+	testLoginRequest(t, server, req)
 }
 
 func TestGetLogin(t *testing.T) {
@@ -197,7 +219,7 @@ func TestGetLogin(t *testing.T) {
 	}
 	req.SetBasicAuth(testEmail, testPassword)
 
-	testLoginRequest(t, server.Client(), req)
+	testLoginRequest(t, server, req)
 }
 
 func TestLoginInvalidUser(t *testing.T) {

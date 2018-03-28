@@ -116,6 +116,7 @@ func main() {
 		PostgresURL:      config.PostgresURL,
 		JWTSecret:        []byte(config.JWTSecret),
 		JWTSigningMethod: jwtSigningMethod,
+		BaseURL:          config.BaseURL,
 	}
 
 	r, err := conf.Handlers()
