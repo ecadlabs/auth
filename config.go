@@ -17,25 +17,24 @@ type Config struct {
 	HealthAddress string `json:"health_address"`
 }
 
-func LoadConfig(name string) (*Config, error) {
+func (c *Config) Load(name string) error {
 	buf, err := ioutil.ReadFile(name)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	var c Config
-	if err := json.Unmarshal(buf, &c); err != nil {
-		return nil, err
+	if err := json.Unmarshal(buf, c); err != nil {
+		return err
 	}
 
 	if c.JWTSecret == "" && c.JWTSecretFile != "" {
 		buf, err := ioutil.ReadFile(c.JWTSecretFile)
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 		c.JWTSecret = string(buf)
 	}
 
-	return &c, nil
+	return nil
 }

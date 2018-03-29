@@ -39,6 +39,7 @@ func main() {
 	flag.BoolVar(&useBase64, "base64_secret", false, "Encode generated secret using base64.")
 	flag.StringVar(&configFile, "c", "", "Config file.")
 	flag.BoolVar(&migrateOnly, "migrate", false, "Migrate and exit immediately.")
+
 	flag.StringVar(&config.Address, "http", ":8000", "HTTP service address.")
 	flag.StringVar(&config.HealthAddress, "health", ":8001", "Health service address.")
 	flag.StringVar(&config.JWTSecret, "secret", "secret", "JWT signing secret.")
@@ -58,7 +59,6 @@ func main() {
 		if !useBase64 {
 			os.Stdout.Write(buf)
 			os.Exit(0)
-
 		}
 
 		s := base64.StdEncoding.EncodeToString(buf)
@@ -77,11 +77,9 @@ func main() {
 	}
 
 	if configFile != "" {
-		c, err := LoadConfig(configFile)
-		if err != nil {
+		if err := config.Load(configFile); err != nil {
 			log.Fatal(err)
 		}
-		config = *c
 
 		// Override from command line
 		flag.Parse()
