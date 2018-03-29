@@ -6,15 +6,15 @@ import (
 )
 
 type Config struct {
-	BaseURL       string `json:"base_url`
+	BaseURL       string `json:"base_url"`
 	TLS           bool   `json:"tls"`
 	TLSCert       string `json:"tls_cert"`
 	TLSKey        string `json:"tls_key"`
-	JWTSecret     string `json:"jwt_secret`
-	JWTSecretFile string `json:"jwt_secret_file`
+	JWTSecret     string `json:"jwt_secret"`
+	JWTSecretFile string `json:"jwt_secret_file"`
 	PostgresURL   string `json:"db_url"`
-	Address       string `json:"address`
-	HealthAddress string `json:"health_address`
+	Address       string `json:"address"`
+	HealthAddress string `json:"health_address"`
 }
 
 func LoadConfig(name string) (*Config, error) {
