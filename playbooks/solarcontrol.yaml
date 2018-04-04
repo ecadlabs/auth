@@ -1,0 +1,64 @@
+---
+- name: setup solarcontroller auth & postgres service
+  hosts: solarcontrol.ecadlabs.com
+  become: yes
+
+  vars:
+    pip_install_packages:
+      - name: docker
+    docker_registry: gcr.io/ecad-auth/
+    git_tag: 2-create-8cf3d2b1
+    pg_tag: 10.3
+
+  roles:
+  - role: geerlingguy.repo-epel
+  - role: geerlingguy.pip
+  - role: geerlingguy.docker
+
+  tasks:
+  - name: Create docker network for all containers to be in
+    docker_network:
+      name: solarcontrol
+
+  - name: create auth-postgres volume
+    docker_volume:
+      state: present
+      name: auth-pgdata
+
+  - name: render auth-postgres.service unit file
+    template:
+      src: auth-postgres.service.j2
+      dest: /etc/systemd/system/auth-postgres.service
+      owner: root
+      group: root
+    notify:
+    - restart postgres
+
+  - name: enable & start postgres
+    systemd:
+      name: auth-postgres
+      state: started
+      enabled: yes
+      daemon_reload: yes
+
+  - name: render jwt-postgres-auth.service unit file
+    template:
+      src: jwt-postgres-auth.service.j2
+      dest: /etc/systemd/system/jwt-postgres-auth.service
+      owner: root
+      group: root
+    notify:
+    - restart jwt-postgres-auth
+
+  handlers:
+  - name: restart postgres
+    systemd:
+      name: auth-postgres
+      state: restarted
+      daemon_reload: yes
+
+  - name: restart jwt-postgres-auth
+    systemd:
+      name: jwt-postgres-auth
+      state: restarted
+      daemon_reload: yes

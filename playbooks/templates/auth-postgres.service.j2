@@ -1,0 +1,19 @@
+[Unit]
+Description=auth-postgres
+After=docker.service
+Requires=docker.service
+
+[Service]
+TimeoutStartSec=0
+ExecStartPre=-/usr/bin/docker kill %p
+ExecStartPre=-/usr/bin/docker rm -f %p
+ExecStartPre=-/usr/bin/docker pull postgres:{{ pg_tag }}
+
+ExecStart=/usr/bin/docker run --name %p \
+            --network solarcontrol \
+            -v auth-pgdata:/var/lib/postgresql/data \
+            postgres:{{ pg_tag }}
+ExecStop=/usr/bin/docker stop %p
+
+[Install]
+WantedBy=multi-user.target

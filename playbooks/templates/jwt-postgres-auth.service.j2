@@ -1,0 +1,20 @@
+[Unit]
+Description=jwt-postgres-auth
+After=docker.service
+Requires=docker.service
+Requires=auth-postgres.service
+
+[Service]
+TimeoutStartSec=0
+ExecStartPre=-/usr/bin/docker kill %p
+ExecStartPre=-/usr/bin/docker rm -f %p
+ExecStartPre=-/bin/gcloud docker -- pull {{ docker_registry }}postgres-auth:{{ git_tag }}
+
+ExecStart=/usr/bin/docker run --name %p \
+            --network solarcontrol \
+            -v /var/lib/solarcontrol:/data \
+            {{ docker_registry }}postgres-auth:{{ git_tag }}
+ExecStop=/usr/bin/docker stop %p
+
+[Install]
+WantedBy=multi-user.target
