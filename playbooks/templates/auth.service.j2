@@ -1,7 +1,8 @@
 [Unit]
-Description=auth-postgres
+Description=auth
 After=docker.service
 Requires=docker.service
+Requires=auth-postgres.service
 
 [Service]
 TimeoutStartSec=0

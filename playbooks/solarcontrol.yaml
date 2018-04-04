@@ -7,8 +7,9 @@
     pip_install_packages:
       - name: docker
     docker_registry: gcr.io/ecad-auth/
-    git_tag: 2-create-8cf3d2b1
+    git_tag: 2-create-fda690bd
     pg_tag: 10.3
+    docker_network_name: solarcontrol
 
   roles:
   - role: geerlingguy.repo-epel
@@ -20,45 +21,55 @@
     docker_network:
       name: solarcontrol
 
-  - name: create auth-postgres volume
+  - name: Create auth-postgres volume
     docker_volume:
       state: present
       name: auth-pgdata
 
-  - name: render auth-postgres.service unit file
+  - name: Create auth-postgres container
+    docker_container:
+      name: auth-postgres
+      state: present
+      image: "postgres:{{ pg_tag }}"
+      networks:
+        - name: "{{ docker_network_name }}"
+      volumes:
+        - auth-pgdata:/var/lib/postgresql/data
+
+  - name: Render auth-postgres.service unit file
     template:
       src: auth-postgres.service.j2
       dest: /etc/systemd/system/auth-postgres.service
       owner: root
       group: root
-    notify:
-    - restart postgres
 
-  - name: enable & start postgres
+  - name: Enable & start auth-postgres.service
     systemd:
       name: auth-postgres
       state: started
       enabled: yes
       daemon_reload: yes
 
-  - name: render jwt-postgres-auth.service unit file
+  - name: Create auth container
+    docker_container:
+      name: auth
+      state: present
+      image: "{{ docker_registry }}postgres-auth:{{ git_tag }}"
+      networks:
+        - name: "{{ docker_network_name }}"
+      volumes:
+        - /var/lib/solarcontrol:/data
+
+  - name: Render auth.service unit file
     template:
-      src: jwt-postgres-auth.service.j2
-      dest: /etc/systemd/system/jwt-postgres-auth.service
+      src: auth.service.j2
+      dest: /etc/systemd/system/auth.service
       owner: root
       group: root
-    notify:
-    - restart jwt-postgres-auth
 
-  handlers:
-  - name: restart postgres
+  - name: Enable & start auth.service
     systemd:
-      name: auth-postgres
-      state: restarted
+      name: auth
+      enabled: yes
       daemon_reload: yes
-
-  - name: restart jwt-postgres-auth
-    systemd:
-      name: jwt-postgres-auth
-      state: restarted
-      daemon_reload: yes
+      state: started
