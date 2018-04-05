@@ -42,7 +42,7 @@ func main() {
 
 	flag.StringVar(&config.Address, "http", ":8000", "HTTP service address.")
 	flag.StringVar(&config.HealthAddress, "health", ":8001", "Health service address.")
-	flag.StringVar(&config.JWTSecret, "secret", "secret", "JWT signing secret.")
+	flag.StringVar(&config.JWTSecret, "secret", "", "JWT signing secret.")
 	flag.StringVar(&config.PostgresURL, "db", "postgres://localhost/auth?connect_timeout=10&sslmode=disable", "PostgreSQL server URL.")
 	flag.BoolVar(&config.TLS, "tls", false, "Enable TLS.")
 	flag.StringVar(&config.TLSCert, "tlscert", "", "TLS certificate file.")
