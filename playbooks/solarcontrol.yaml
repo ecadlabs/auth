@@ -7,7 +7,7 @@
     pip_install_packages:
       - name: docker
     docker_registry: gcr.io/ecad-auth/
-    git_tag: 2-create-fda690bd
+    git_tag: 2-create-2557feee
     pg_tag: 10.3
     docker_network_name: solarcontrol
 
