@@ -57,10 +57,6 @@
   branch = "master"
   name = "golang.org/x/crypto"
 
-[[constraint]]
-  branch = "master"
-  name = "layeh.com/radius"
-
 [prune]
   go-tests = true
   unused-packages = true

@@ -140,18 +140,9 @@
   ]
   revision = "dd2ff4accc098aceecb86b36eaa7829b2a17b1c9"
 
-[[projects]]
-  branch = "master"
-  name = "layeh.com/radius"
-  packages = [
-    ".",
-    "rfc2865"
-  ]
-  revision = "04c7e6b2818affa6cf1cca6e0ffa0758762290bf"
-
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "226f0670405ba74f7967f7af7b2474d592cb27680b21eff19a979f0829980bab"
+  inputs-digest = "213e71d360e43194b13cd0548873746e3f1d70878f24a1246127551f1549a431"
   solver-name = "gps-cdcl"
   solver-version = 1
