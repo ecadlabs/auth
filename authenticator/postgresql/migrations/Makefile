@@ -1,2 +1,2 @@
-bindata.go: *.sql
-	go-bindata -pkg migrations .
+bindata.go: data/*.sql
+	go-bindata -pkg migrations -prefix data data
