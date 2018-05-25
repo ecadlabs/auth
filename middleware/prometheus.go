@@ -66,14 +66,14 @@ func NewPrometheus(n ...string) *Prometheus {
 
 func (p *Prometheus) Handler(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		rw := ResponseWriter{ResponseWriter: w}
+		rw := NewResponseStatusWriter(w)
 
 		timestamp := time.Now()
-		next.ServeHTTP(&rw, r)
+		next.ServeHTTP(rw, r)
 		duration := time.Since(timestamp)
 
 		labels := prometheus.Labels{
-			"code":   strconv.FormatInt(int64(rw.Status), 10),
+			"code":   strconv.FormatInt(int64(rw.Status()), 10),
 			"method": r.Method,
 			"path":   r.URL.Path,
 		}

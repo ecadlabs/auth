@@ -25,13 +25,13 @@ func (l *Logging) Handler(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		timestamp := time.Now()
 
-		rw := ResponseWriter{ResponseWriter: w}
-		h.ServeHTTP(&rw, r)
+		rw := NewResponseStatusWriter(w)
+		h.ServeHTTP(rw, r)
 
 		fields := log.Fields{
 			"start_time": timestamp.Format(time.RFC3339),
 			"duration":   time.Since(timestamp),
-			"status":     rw.Status,
+			"status":     rw.Status(),
 			"hostname":   r.Host,
 			"method":     r.Method,
 			"path":       r.URL.Path,
