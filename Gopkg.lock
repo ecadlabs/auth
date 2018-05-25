@@ -20,6 +20,18 @@
   version = "v3.1.0"
 
 [[projects]]
+  name = "github.com/golang-migrate/migrate"
+  packages = [
+    ".",
+    "database",
+    "database/postgres",
+    "source",
+    "source/go-bindata"
+  ]
+  revision = "22f249514de9aa3f8a720a7cabbdd45d294f83a1"
+  version = "v3.2.0"
+
+[[projects]]
   name = "github.com/golang/protobuf"
   packages = ["proto"]
   revision = "925541529c1fa6821df4e44ce2723319eb2be768"
@@ -54,18 +66,6 @@
     "oid"
   ]
   revision = "88edab0803230a3898347e77b474f8c1820a1f20"
-
-[[projects]]
-  name = "github.com/mattes/migrate"
-  packages = [
-    ".",
-    "database",
-    "database/postgres",
-    "source",
-    "source/go-bindata"
-  ]
-  revision = "035c07716cd373d88456ec4d701402df52584cb4"
-  version = "v3.0.1"
 
 [[projects]]
   name = "github.com/matttproud/golang_protobuf_extensions"
@@ -152,6 +152,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "f6fcbffeb921c0b93c2f7a7b176e877c514c497aafb8771fbc46f38c9866f02e"
+  inputs-digest = "226f0670405ba74f7967f7af7b2474d592cb27680b21eff19a979f0829980bab"
   solver-name = "gps-cdcl"
   solver-version = 1

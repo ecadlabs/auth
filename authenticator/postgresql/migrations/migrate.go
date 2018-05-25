@@ -2,9 +2,9 @@ package migrations
 
 import (
 	"database/sql"
-	"github.com/mattes/migrate"
-	"github.com/mattes/migrate/database/postgres"
-	"github.com/mattes/migrate/source/go-bindata"
+	"github.com/golang-migrate/migrate"
+	"github.com/golang-migrate/migrate/database/postgres"
+	"github.com/golang-migrate/migrate/source/go-bindata"
 	"net/url"
 	"strconv"
 )
