@@ -1,4 +1,4 @@
-package main
+package service
 
 import (
 	"encoding/json"
@@ -12,9 +12,11 @@ type Config struct {
 	TLSKey        string `json:"tls_key"`
 	JWTSecret     string `json:"jwt_secret"`
 	JWTSecretFile string `json:"jwt_secret_file"`
+	SessionMaxAge int    `json:"session_max_age"`
 	PostgresURL   string `json:"db_url"`
 	Address       string `json:"address"`
 	HealthAddress string `json:"health_address"`
+	DBTimeout     int    `json:"db_timeout"`
 }
 
 func (c *Config) Load(name string) error {

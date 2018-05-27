@@ -6,13 +6,17 @@ import (
 )
 
 func JSONError(w http.ResponseWriter, err string, code int) {
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.WriteHeader(code)
-
 	response := struct {
 		Error string `json:"error,omitempty"`
 	}{
 		Error: err,
 	}
-	json.NewEncoder(w).Encode(&response)
+
+	JSONResponse(w, code, &response)
+}
+
+func JSONResponse(w http.ResponseWriter, code int, v interface{}) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.WriteHeader(code)
+	json.NewEncoder(w).Encode(v)
 }

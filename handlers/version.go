@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"encoding/json"
 	"net/http"
 )
 
@@ -14,6 +13,5 @@ func (h VersionHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Version: string(h),
 	}
 
-	json.NewEncoder(w).Encode(response)
-	return
+	JSONResponse(w, http.StatusOK, &response)
 }

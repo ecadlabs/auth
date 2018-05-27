@@ -1,9 +1,0 @@
-CREATE TABLE users(
-	id UUID PRIMARY KEY,
-	email VARCHAR(1024) NOT NULL UNIQUE,
-	password_hash TEXT NOT NULL,
-	first_name TEXT,
-	last_name TEXT,
-	added TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-	modified TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
