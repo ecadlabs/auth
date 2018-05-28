@@ -65,7 +65,7 @@ func (s *Storage) GetUserByEmail(ctx context.Context, email string) (*User, erro
 }
 
 type GetOptions struct {
-	SortBy Column
+	SortBy string
 	Order  SortOrder
 	Start  interface{}
 	Limit  int
@@ -74,9 +74,9 @@ type GetOptions struct {
 func (s *Storage) GetUsers(ctx context.Context, opt *GetOptions) ([]*User, error) {
 	var col string
 	if opt.SortBy == "" {
-		col = string(ColumnAdded)
+		col = DefaultSortColumn
 	} else {
-		col = string(opt.SortBy)
+		col = opt.SortBy
 	}
 
 	col = pq.QuoteIdentifier(col)
@@ -128,7 +128,14 @@ func (s *Storage) GetUsers(ctx context.Context, opt *GetOptions) ([]*User, error
 	return users, nil
 }
 
-func (s *Storage) NewUser(ctx context.Context, user *User) (uuid.UUID, error) {
+func isUniqueViolation(err error, constraint string) bool {
+	if e, ok := err.(*pq.Error); ok && e.Code.Name() == "unique_violation" && e.Constraint == constraint {
+		return true
+	}
+	return false
+}
+
+func (s *Storage) NewUser(ctx context.Context, user *User) (*User, error) {
 	model := userModel{
 		ID:           uuid.NewV4(),
 		Email:        user.Email,
@@ -137,12 +144,27 @@ func (s *Storage) NewUser(ctx context.Context, user *User) (uuid.UUID, error) {
 		Role:         user.Role,
 	}
 
-	_, err := s.DB.NamedExecContext(ctx, "INSERT INTO users (id, email, password_hash, name, role) VALUES (:id, :email, :password_hash, :name, :role)", &model)
+	rows, err := s.DB.NamedQueryContext(ctx, "INSERT INTO users (id, email, password_hash, name, role) VALUES (:id, :email, :password_hash, :name, :role) RETURNING added, modified, email_verified", &model)
 	if err != nil {
-		return uuid.Nil, err
+		if isUniqueViolation(err, "users_email_key") {
+			err = ErrEmail
+		}
+
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		if err := rows.StructScan(&model); err != nil {
+			return nil, err
+		}
 	}
 
-	return model.ID, nil
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return model.toUser(), nil
 }
 
 func (s *Storage) Ping(ctx context.Context) error {

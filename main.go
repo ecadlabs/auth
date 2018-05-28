@@ -40,6 +40,7 @@ func main() {
 	flag.StringVar(&configFile, "c", "", "Config file.")
 	flag.BoolVar(&migrateOnly, "migrate", false, "Migrate and exit immediately.")
 
+	flag.StringVar(&config.BaseURL, "base", "http://localhost:8000", "Base URL.")
 	flag.StringVar(&config.Address, "http", ":8000", "HTTP service address.")
 	flag.StringVar(&config.HealthAddress, "health", ":8001", "Health service address.")
 	flag.StringVar(&config.JWTSecret, "secret", "", "JWT signing secret.")
@@ -87,7 +88,7 @@ func main() {
 		flag.Parse()
 	}
 
-	if config.JWTSecret == "" {
+	if config.JWTSecret == "" && !migrateOnly {
 		flag.Usage()
 		os.Exit(0)
 	}

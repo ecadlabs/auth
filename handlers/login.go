@@ -11,6 +11,8 @@ import (
 	"time"
 )
 
+const TokenContextKey = "token"
+
 type TokenHandler struct {
 	Storage          *users.Storage
 	Timeout          time.Duration
@@ -21,13 +23,12 @@ type TokenHandler struct {
 	RefreshURL       string
 }
 
-func (t *TokenHandler) context() context.Context {
-	ctx := context.Background()
+func (t *TokenHandler) context(parent context.Context) context.Context {
 	if t.Timeout != 0 {
-		ctx, _ = context.WithTimeout(ctx, t.Timeout)
+		ctx, _ := context.WithTimeout(parent, t.Timeout)
+		return ctx
 	}
-
-	return ctx
+	return parent
 }
 
 func (t *TokenHandler) writeTokenWithClaims(w http.ResponseWriter, claims jwt.Claims) {
@@ -79,7 +80,7 @@ func (t *TokenHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := t.Storage.GetUserByEmail(t.context(), request.Name)
+	user, err := t.Storage.GetUserByEmail(t.context(r.Context()), request.Name)
 	if err != nil {
 		log.Error(err)
 		JSONError(w, http.StatusText(http.StatusForbidden), http.StatusForbidden)
@@ -110,7 +111,7 @@ func (t *TokenHandler) Login(w http.ResponseWriter, r *http.Request) {
 }
 
 func (t *TokenHandler) Refresh(w http.ResponseWriter, req *http.Request) {
-	claims := req.Context().Value("user").(*jwt.Token).Claims.(jwt.MapClaims)
+	claims := req.Context().Value(TokenContextKey).(*jwt.Token).Claims.(jwt.MapClaims)
 
 	// Update timestamp only
 	now := time.Now()

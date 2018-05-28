@@ -8,14 +8,14 @@ import (
 
 var (
 	ErrNotFound = errors.New("User not found")
-	ErrColumn   = errors.New("Wrong column name")
+	ErrEmail    = errors.New("Email is in use")
 )
 
 type Role int
 
 const (
-	UserRegular Role = iota
-	UserAdmin
+	RoleRegular Role = iota
+	RoleAdmin
 )
 
 type SortOrder int
@@ -26,38 +26,23 @@ const (
 )
 
 type User struct {
-	ID            uuid.UUID `json:"id"`
-	Email         string    `json:"email"`
-	PasswordHash  []byte    `json:"-"`
-	Name          string    `json:"name,omitempty"`
-	Added         time.Time `json:"added"`
-	Modified      time.Time `json:"modified"`
-	Role          Role      `json:"role,omitempty"`
-	EmailVerified bool      `json:"email_verified"`
+	ID            uuid.UUID `json:"id" schema:"id"`
+	Email         string    `json:"email" schema:"email"`
+	PasswordHash  []byte    `json:"-" schema:"-"`
+	Password      string    `json:"password,omitempty" schema:"password"` // Create user request
+	Name          string    `json:"name,omitempty" schema:"name"`
+	Added         time.Time `json:"added" schema:"added"`
+	Modified      time.Time `json:"modified" schema:"modified"`
+	Role          Role      `json:"role,omitempty" schema:"role"`
+	EmailVerified bool      `json:"email_verified" schema:"email_verified"`
 }
-
-type Column string
 
 const (
-	ColumnID       Column = "id"
-	ColumnEmail    Column = "email"
-	ColumnName     Column = "name"
-	ColumnAdded    Column = "added"
-	ColumnModified Column = "modified"
+	ColumnID       = "id"
+	ColumnEmail    = "email"
+	ColumnName     = "name"
+	ColumnAdded    = "added"
+	ColumnModified = "modified"
 )
 
-var validSortColumns = map[string]struct{}{
-	"id":       struct{}{},
-	"email":    struct{}{},
-	"name":     struct{}{},
-	"added":    struct{}{},
-	"modified": struct{}{},
-}
-
-func ColumnFromString(s string) (Column, error) {
-	if _, ok := validSortColumns[s]; !ok {
-		return Column(""), ErrColumn
-	}
-
-	return Column(s), nil
-}
+const DefaultSortColumn = ColumnAdded

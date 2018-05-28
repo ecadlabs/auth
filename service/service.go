@@ -68,9 +68,16 @@ func (s *Service) APIHandler() http.Handler {
 		tokenHandler.RefreshURL = s.config.BaseURL + "/refresh"
 	}
 
+	usersHandler := handlers.Users{
+		Storage: s.storage,
+		BaseURL: s.config.BaseURL + "/users",
+		Timeout: time.Duration(s.config.DBTimeout) * time.Second,
+	}
+
 	jwtMiddleware := jwtmiddleware.New(jwtmiddleware.Options{
 		ValidationKeyGetter: func(token *jwt.Token) (interface{}, error) { return []byte(s.config.JWTSecret), nil },
 		SigningMethod:       jwtSigningMethod,
+		UserProperty:        handlers.TokenContextKey,
 	})
 
 	m := mux.NewRouter()
@@ -79,8 +86,15 @@ func (s *Service) APIHandler() http.Handler {
 	m.Use(middleware.NewPrometheus().Handler)
 	m.Use((&middleware.Recover{}).Handler)
 
+	// Login API
 	m.Methods("GET", "POST").Path("/login").HandlerFunc(tokenHandler.Login)
 	m.Methods("GET").Path("/refresh").Handler(jwtMiddleware.Handler(http.HandlerFunc(tokenHandler.Refresh)))
+
+	// Users API
+	m.Methods("GET").Path("/users").HandlerFunc(usersHandler.GetUsers)
+	m.Methods("POST").Path("/users").HandlerFunc(usersHandler.NewUser)
+
+	// Miscellaneous
 	m.Methods("GET").Path("/version").Handler(handlers.VersionHandler(version))
 	m.Methods("GET").Path("/metrics").Handler(promhttp.Handler())
 

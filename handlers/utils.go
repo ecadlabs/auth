@@ -20,3 +20,8 @@ func JSONResponse(w http.ResponseWriter, code int, v interface{}) {
 	w.WriteHeader(code)
 	json.NewEncoder(w).Encode(v)
 }
+
+type Paginated struct {
+	Value interface{} `json:"value"`
+	Next  string      `json:"next,omitempty"`
+}
