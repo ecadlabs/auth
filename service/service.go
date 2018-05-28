@@ -91,8 +91,9 @@ func (s *Service) APIHandler() http.Handler {
 	m.Methods("GET").Path("/refresh").Handler(jwtMiddleware.Handler(http.HandlerFunc(tokenHandler.Refresh)))
 
 	// Users API
-	m.Methods("GET").Path("/users").HandlerFunc(usersHandler.GetUsers)
 	m.Methods("POST").Path("/users").HandlerFunc(usersHandler.NewUser)
+	m.Methods("GET").Path("/users").HandlerFunc(usersHandler.GetUsers)
+	m.Methods("GET").Path("/users/{id}").HandlerFunc(usersHandler.GetUser)
 
 	// Miscellaneous
 	m.Methods("GET").Path("/version").Handler(handlers.VersionHandler(version))

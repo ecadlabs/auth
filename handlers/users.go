@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"git.ecadlabs.com/ecad/auth/users"
 	"github.com/dgrijalva/jwt-go"
+	"github.com/gorilla/mux"
 	"github.com/gorilla/schema"
 	"github.com/satori/go.uuid"
 	log "github.com/sirupsen/logrus"
@@ -66,6 +67,32 @@ func (u *Users) Middleware(next http.Handler) http.Handler {
 
 		next.ServeHTTP(w, newRequest)
 	})
+}
+
+func (u *Users) GetUser(w http.ResponseWriter, r *http.Request) {
+	// TODO Access control
+
+	uid, err := uuid.FromString(mux.Vars(r)["id"])
+	if err != nil {
+		JSONError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	user, err := u.Storage.GetUserByID(u.context(r.Context()), uid)
+	if err != nil {
+		var status int
+		if err == users.ErrNotFound {
+			status = http.StatusNotFound
+		} else {
+			status = http.StatusInternalServerError
+		}
+
+		log.Error(err)
+		JSONError(w, err.Error(), status)
+		return
+	}
+
+	JSONResponse(w, http.StatusOK, user)
 }
 
 func (u *Users) GetUsers(w http.ResponseWriter, r *http.Request) {
