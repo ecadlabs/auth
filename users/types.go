@@ -37,6 +37,25 @@ type User struct {
 	EmailVerified bool      `json:"email_verified" schema:"email_verified"`
 }
 
+func (u *User) ColumnToString(column string) string {
+	switch column {
+	case ColumnID:
+		return u.ID.String()
+	case ColumnEmail:
+		return u.Email
+	case ColumnName:
+		return u.Name
+	case ColumnAdded:
+		v, _ := u.Added.MarshalText()
+		return string(v)
+	case ColumnModified:
+		v, _ := u.Modified.MarshalText()
+		return string(v)
+	default:
+		return ""
+	}
+}
+
 const (
 	ColumnID       = "id"
 	ColumnEmail    = "email"

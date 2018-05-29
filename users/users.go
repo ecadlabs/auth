@@ -3,7 +3,7 @@ package users
 import (
 	"context"
 	"database/sql"
-	"fmt"
+	"git.ecadlabs.com/ecad/auth/query"
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
 	"github.com/satori/go.uuid"
@@ -19,6 +19,7 @@ type userModel struct {
 	Modified      time.Time      `db:"modified"`
 	Role          Role           `db:"role"`
 	EmailVerified bool           `db:"email_verified"`
+	SortedBy      string         `db:"sorted_by"` // Output only
 }
 
 func (u *userModel) toUser() *User {
@@ -64,68 +65,65 @@ func (s *Storage) GetUserByEmail(ctx context.Context, email string) (*User, erro
 	return u.toUser(), nil
 }
 
-type GetOptions struct {
-	SortBy string
-	Order  SortOrder
-	Start  interface{}
-	Limit  int
+var queryColumns = map[string]struct{}{
+	"id":             struct{}{},
+	"email":          struct{}{},
+	"name":           struct{}{},
+	"added":          struct{}{},
+	"modified":       struct{}{},
+	"role":           struct{}{},
+	"email_verified": struct{}{},
 }
 
-func (s *Storage) GetUsers(ctx context.Context, opt *GetOptions) ([]*User, error) {
-	var col string
-	if opt.SortBy == "" {
-		col = DefaultSortColumn
-	} else {
-		col = opt.SortBy
+func (s *Storage) GetUsers(ctx context.Context, q *query.Query) ([]*User, *query.Query, error) {
+	if q.SortBy == "" {
+		q.SortBy = DefaultSortColumn
 	}
 
-	col = pq.QuoteIdentifier(col)
-
-	var so string
-	if opt.Order == SortDesc {
-		so = "DESC"
-	} else {
-		so = "ASC"
+	if err := q.ValidateColumnsFunc(func(col string) bool {
+		_, ok := queryColumns[col]
+		return ok
+	}); err != nil {
+		return nil, nil, err
 	}
 
-	q := "SELECT * FROM users"
-
-	if opt.Start != nil {
-		q += fmt.Sprintf(" WHERE %s > :start", col)
-	}
-
-	q += fmt.Sprintf(" ORDER BY %s %s", col, so)
-
-	if opt.Limit > 0 {
-		q += " LIMIT :limit"
-	}
-
-	rows, err := s.DB.NamedQueryContext(ctx, q, map[string]interface{}{
-		"start": opt.Start,
-		"limit": opt.Limit,
-	})
-
+	stmt, args, err := q.SelectStmt("users", "id", "sorted_by")
 	if err != nil {
-		return nil, err
+		return nil, nil, err
+	}
+
+	rows, err := s.DB.QueryxContext(ctx, stmt, args...)
+	if err != nil {
+		return nil, nil, err
 	}
 	defer rows.Close()
 
 	users := []*User{}
+	var lastItem *userModel
 
 	for rows.Next() {
 		var user userModel
 		if err := rows.StructScan(&user); err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
+		lastItem = &user
 		users = append(users, user.toUser())
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	return users, nil
+	ret := *q
+
+	if lastItem != nil {
+		// Update query
+		ret.LastID = lastItem.ID.String()
+		ret.Last = lastItem.SortedBy
+	}
+
+	return users, &ret, nil
 }
 
 func isUniqueViolation(err error, constraint string) bool {

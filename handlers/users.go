@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"git.ecadlabs.com/ecad/auth/query"
 	"git.ecadlabs.com/ecad/auth/users"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/mux"
@@ -12,7 +13,6 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	"net/http"
 	"net/url"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -97,29 +97,20 @@ func (u *Users) GetUser(w http.ResponseWriter, r *http.Request) {
 
 func (u *Users) GetUsers(w http.ResponseWriter, r *http.Request) {
 	// TODO Access control
-	var opt users.GetOptions
+	r.ParseForm()
 
-	if s := r.FormValue("sort"); s != "" {
-		opt.SortBy = s
-	} else {
-		opt.SortBy = users.DefaultSortColumn
+	q, err := query.FromValues(r.Form)
+	if err != nil {
+		log.Error(err)
+		JSONError(w, err.Error(), http.StatusBadRequest)
+		return
 	}
 
-	if s := r.FormValue("start"); s != "" {
-		opt.Start = s
+	if q.Limit <= 0 {
+		q.Limit = DefaultLimit
 	}
 
-	if i, err := strconv.ParseInt(r.FormValue("limit"), 10, 64); err == nil {
-		opt.Limit = int(i)
-	} else {
-		opt.Limit = DefaultLimit
-	}
-
-	if r.FormValue("order") == "desc" {
-		opt.Order = users.SortDesc
-	}
-
-	userSlice, err := u.Storage.GetUsers(u.context(r.Context()), &opt)
+	userSlice, nextQuery, err := u.Storage.GetUsers(u.context(r.Context()), q)
 	if err != nil {
 		log.Error(err)
 		JSONError(w, err.Error(), http.StatusInternalServerError)
@@ -131,6 +122,7 @@ func (u *Users) GetUsers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Pagination
 	nextUrl, err := url.Parse(u.BaseURL)
 	if err != nil {
 		log.Error(err)
@@ -138,33 +130,7 @@ func (u *Users) GetUsers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	lastItem := userSlice[len(userSlice)-1]
-	var start string
-
-	switch opt.SortBy {
-	case users.ColumnID:
-		start = lastItem.ID.String()
-	case users.ColumnEmail:
-		start = lastItem.Email
-	case users.ColumnName:
-		start = lastItem.Name
-	case users.ColumnAdded:
-		v, _ := lastItem.Added.MarshalText()
-		start = string(v)
-	case users.ColumnModified:
-		v, _ := lastItem.Modified.MarshalText()
-		start = string(v)
-	}
-
-	// Preserve original
-	q := make(url.Values)
-	for k, v := range r.Form {
-		q[k] = v
-	}
-
-	q.Set("start", start)
-
-	nextUrl.RawQuery = q.Encode()
+	nextUrl.RawQuery = nextQuery.Values().Encode()
 
 	res := Paginated{
 		Value: userSlice,
