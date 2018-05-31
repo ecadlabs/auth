@@ -20,9 +20,9 @@ type userModel struct {
 	Name          sql.NullString `db:"name"`
 	Added         time.Time      `db:"added"`
 	Modified      time.Time      `db:"modified"`
-	Role          Role           `db:"role"`
 	EmailVerified bool           `db:"email_verified"`
 	SortedBy      string         `db:"sorted_by"` // Output only
+	Roles         pq.StringArray `db:"roles"`
 }
 
 func (u *userModel) toUser() *User {
@@ -33,7 +33,7 @@ func (u *userModel) toUser() *User {
 		Name:          u.Name.String,
 		Added:         u.Added,
 		Modified:      u.Modified,
-		Role:          u.Role,
+		Roles:         u.Roles,
 		EmailVerified: u.EmailVerified,
 	}
 }
@@ -42,9 +42,11 @@ type Storage struct {
 	DB *sqlx.DB
 }
 
-func (s *Storage) GetUserByID(ctx context.Context, id uuid.UUID) (*User, error) {
+func (s *Storage) getUser(ctx context.Context, col string, val interface{}) (*User, error) {
 	var u userModel
-	if err := s.DB.GetContext(ctx, &u, "SELECT * FROM users WHERE id = $1", id); err != nil {
+
+	q := "SELECT users.*, ra.roles FROM users LEFT JOIN (SELECT user_id, array_agg(role) AS roles FROM roles GROUP BY user_id) AS ra ON ra.user_id = users.id WHERE users." + pq.QuoteIdentifier(col) + " = $1"
+	if err := s.DB.GetContext(ctx, &u, q, val); err != nil {
 		if err == sql.ErrNoRows {
 			err = ErrNotFound
 		}
@@ -53,28 +55,23 @@ func (s *Storage) GetUserByID(ctx context.Context, id uuid.UUID) (*User, error) 
 	}
 
 	return u.toUser(), nil
+}
+
+func (s *Storage) GetUserByID(ctx context.Context, id uuid.UUID) (*User, error) {
+	return s.getUser(ctx, "id", id)
 }
 
 func (s *Storage) GetUserByEmail(ctx context.Context, email string) (*User, error) {
-	var u userModel
-	if err := s.DB.GetContext(ctx, &u, "SELECT * FROM users WHERE email = $1", email); err != nil {
-		if err == sql.ErrNoRows {
-			err = ErrNotFound
-		}
-
-		return nil, err
-	}
-
-	return u.toUser(), nil
+	return s.getUser(ctx, "email", email)
 }
 
 var queryColumns = map[string]struct{}{
-	"id":             struct{}{},
-	"email":          struct{}{},
-	"name":           struct{}{},
-	"added":          struct{}{},
-	"modified":       struct{}{},
-	"role":           struct{}{},
+	"id":       struct{}{},
+	"email":    struct{}{},
+	"name":     struct{}{},
+	"added":    struct{}{},
+	"modified": struct{}{},
+	//"role": struct{}{}, // TODO
 	"email_verified": struct{}{},
 }
 
@@ -143,10 +140,10 @@ func (s *Storage) NewUser(ctx context.Context, user *User) (*User, error) {
 		Email:        user.Email,
 		PasswordHash: user.PasswordHash,
 		Name:         sql.NullString{String: user.Name, Valid: user.Name != ""},
-		Role:         user.Role,
+		//Role:         user.Role, TODO
 	}
 
-	rows, err := s.DB.NamedQueryContext(ctx, "INSERT INTO users (id, email, password_hash, name, role) VALUES (:id, :email, :password_hash, :name, :role) RETURNING added, modified, email_verified", &model)
+	rows, err := s.DB.NamedQueryContext(ctx, "INSERT INTO users (id, email, password_hash, name) VALUES (:id, :email, :password_hash, :name) RETURNING added, modified, email_verified", &model)
 	if err != nil {
 		if isUniqueViolation(err, "users_email_key") {
 			err = ErrEmail
@@ -172,7 +169,7 @@ func (s *Storage) NewUser(ctx context.Context, user *User) (*User, error) {
 var patchColumns = map[string]struct{}{
 	"email": struct{}{},
 	"name":  struct{}{},
-	"role":  struct{}{},
+	//"role":  struct{}{}, //TODO
 }
 
 func (s *Storage) PatchUser(ctx context.Context, id uuid.UUID, patch jsonpatch.Patch) (*User, error) {
