@@ -206,6 +206,24 @@ func (s *Storage) PatchUser(ctx context.Context, id uuid.UUID, patch jsonpatch.P
 	return u.toUser(), nil
 }
 
+func (s *Storage) DeleteUser(ctx context.Context, id uuid.UUID) error {
+	res, err := s.DB.ExecContext(ctx, "DELETE FROM users WHERE id = $1", id)
+	if err != nil {
+		return err
+	}
+
+	rows, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rows == 0 {
+		return ErrNotFound
+	}
+
+	return nil
+}
+
 func (s *Storage) Ping(ctx context.Context) error {
 	if err := s.DB.PingContext(ctx); err != nil {
 		return err

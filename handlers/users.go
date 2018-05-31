@@ -6,7 +6,7 @@ import (
 	"git.ecadlabs.com/ecad/auth/jsonpatch"
 	"git.ecadlabs.com/ecad/auth/query"
 	"git.ecadlabs.com/ecad/auth/users"
-	"github.com/dgrijalva/jwt-go"
+	//"github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/schema"
 	"github.com/satori/go.uuid"
@@ -31,12 +31,12 @@ type Users struct {
 	Timeout time.Duration
 }
 
-func (u *Users) context(parent context.Context) context.Context {
+func (u *Users) context(r *http.Request) context.Context {
 	if u.Timeout != 0 {
-		ctx, _ := context.WithTimeout(parent, u.Timeout)
+		ctx, _ := context.WithTimeout(r.Context(), u.Timeout)
 		return ctx
 	}
-	return parent
+	return r.Context()
 }
 
 func errorHTTPStatus(err error) int {
@@ -47,6 +47,7 @@ func errorHTTPStatus(err error) int {
 	return http.StatusInternalServerError
 }
 
+/*
 // Get current user from the DB and attach to the context
 // Is this needed?
 func (u *Users) Middleware(next http.Handler) http.Handler {
@@ -58,7 +59,7 @@ func (u *Users) Middleware(next http.Handler) http.Handler {
 			return
 		}
 
-		user, err := u.Storage.GetUserByID(u.context(r.Context()), uid)
+		user, err := u.Storage.GetUserByID(u.context(r), uid)
 		if err != nil {
 			log.Error(err)
 			JSONError(w, err.Error(), errorHTTPStatus(err))
@@ -70,6 +71,7 @@ func (u *Users) Middleware(next http.Handler) http.Handler {
 		next.ServeHTTP(w, newRequest)
 	})
 }
+*/
 
 func (u *Users) GetUser(w http.ResponseWriter, r *http.Request) {
 	// TODO Access control
@@ -80,7 +82,7 @@ func (u *Users) GetUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := u.Storage.GetUserByID(u.context(r.Context()), uid)
+	user, err := u.Storage.GetUserByID(u.context(r), uid)
 	if err != nil {
 		log.Error(err)
 		JSONError(w, err.Error(), errorHTTPStatus(err))
@@ -105,7 +107,7 @@ func (u *Users) GetUsers(w http.ResponseWriter, r *http.Request) {
 		q.Limit = DefaultLimit
 	}
 
-	userSlice, nextQuery, err := u.Storage.GetUsers(u.context(r.Context()), q)
+	userSlice, nextQuery, err := u.Storage.GetUsers(u.context(r), q)
 	if err != nil {
 		log.Error(err)
 		JSONError(w, err.Error(), errorHTTPStatus(err))
@@ -171,7 +173,7 @@ func (u *Users) NewUser(w http.ResponseWriter, r *http.Request) {
 
 	user.PasswordHash = hash
 
-	ret, err := u.Storage.NewUser(u.context(r.Context()), &user)
+	ret, err := u.Storage.NewUser(u.context(r), &user)
 	if err != nil {
 		log.Error(err)
 
@@ -207,7 +209,7 @@ func (u *Users) PatchUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := u.Storage.PatchUser(u.context(r.Context()), uid, p)
+	user, err := u.Storage.PatchUser(u.context(r), uid, p)
 	if err != nil {
 		log.Error(err)
 		JSONError(w, err.Error(), errorHTTPStatus(err))
@@ -215,4 +217,22 @@ func (u *Users) PatchUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	JSONResponse(w, http.StatusOK, user)
+}
+
+func (u *Users) DeleteUser(w http.ResponseWriter, r *http.Request) {
+	// TODO Access control
+
+	id, err := uuid.FromString(mux.Vars(r)["id"])
+	if err != nil {
+		JSONError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if err := u.Storage.DeleteUser(u.context(r), id); err != nil {
+		log.Error(err)
+		JSONError(w, err.Error(), errorHTTPStatus(err))
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }
