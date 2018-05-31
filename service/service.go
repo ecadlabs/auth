@@ -94,6 +94,7 @@ func (s *Service) APIHandler() http.Handler {
 	m.Methods("POST").Path("/users").HandlerFunc(usersHandler.NewUser)
 	m.Methods("GET").Path("/users").HandlerFunc(usersHandler.GetUsers)
 	m.Methods("GET").Path("/users/{id}").HandlerFunc(usersHandler.GetUser)
+	m.Methods("PATCH").Path("/users/{id}").HandlerFunc(usersHandler.PatchUser)
 
 	// Miscellaneous
 	m.Methods("GET").Path("/version").Handler(handlers.VersionHandler(version))

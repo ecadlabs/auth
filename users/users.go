@@ -3,10 +3,12 @@ package users
 import (
 	"context"
 	"database/sql"
+	"git.ecadlabs.com/ecad/auth/jsonpatch"
 	"git.ecadlabs.com/ecad/auth/query"
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
 	"github.com/satori/go.uuid"
+	log "github.com/sirupsen/logrus"
 	"time"
 )
 
@@ -92,7 +94,7 @@ func (s *Storage) GetUsers(ctx context.Context, q *query.Query) ([]*User, *query
 
 	stmt, args, err := q.SelectStmt(&selOpt)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, &ErrRequest{err}
 	}
 
 	rows, err := s.DB.QueryxContext(ctx, stmt, args...)
@@ -166,6 +168,43 @@ func (s *Storage) NewUser(ctx context.Context, user *User) (*User, error) {
 	}
 
 	return model.toUser(), nil
+}
+
+var patchColumns = map[string]struct{}{
+	"email": struct{}{},
+	"name":  struct{}{},
+	"role":  struct{}{},
+}
+
+func (s *Storage) PatchUser(ctx context.Context, id uuid.UUID, patch jsonpatch.Patch) (*User, error) {
+	updateOpt := jsonpatch.UpdateOptions{
+		Table:         "users",
+		IDColumn:      "id",
+		ID:            id,
+		ReturnUpdated: true,
+		ValidateColumn: func(col string) bool {
+			_, ok := patchColumns[col]
+			return ok
+		},
+		SetDefaultColumns: []string{"modified"},
+	}
+
+	stmt, args, err := patch.UpdateStmt(&updateOpt)
+	if err != nil {
+		return nil, &ErrRequest{err}
+	}
+
+	log.Println(stmt)
+
+	var u userModel
+	if err := s.DB.GetContext(ctx, &u, stmt, args...); err != nil {
+		if err == sql.ErrNoRows {
+			err = ErrNotFound
+		}
+		return nil, err
+	}
+
+	return u.toUser(), nil
 }
 
 func (s *Storage) Ping(ctx context.Context) error {

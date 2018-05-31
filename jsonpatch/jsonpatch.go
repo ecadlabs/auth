@@ -34,6 +34,10 @@ func errCol(col string) error {
 }
 
 func (p Patch) ValidateFunc(f func(string) bool) error {
+	if len(p) == 0 {
+		return errors.New("Empty patch data")
+	}
+
 	for _, op := range p {
 		if op.Op != "replace" {
 			return fmt.Errorf("Unknown JSON patch op: `%s'", op.Op)
@@ -53,18 +57,15 @@ func (p Patch) ValidateFunc(f func(string) bool) error {
 }
 
 type UpdateOptions struct {
-	Table          string
-	IDColumn       string
-	ID             interface{}
-	ReturnUpdated  bool
-	ValidateColumn func(string) bool
+	Table             string
+	IDColumn          string
+	ID                interface{}
+	ReturnUpdated     bool
+	ValidateColumn    func(string) bool
+	SetDefaultColumns []string
 }
 
 func (p Patch) UpdateStmt(o *UpdateOptions) (string, []interface{}, error) {
-	if len(p) == 0 {
-		return "", nil, errors.New("Empty patch data")
-	}
-
 	if err := p.ValidateFunc(o.ValidateColumn); err != nil {
 		return "", nil, err
 	}
@@ -86,6 +87,10 @@ func (p Patch) UpdateStmt(o *UpdateOptions) (string, []interface{}, error) {
 
 		expr += pq.QuoteIdentifier(col) + " = " + idx.Next()
 		arg[i] = op.Value
+	}
+
+	for _, col := range o.SetDefaultColumns {
+		expr += ", " + pq.QuoteIdentifier(col) + " = DEFAULT"
 	}
 
 	expr += " WHERE " + pq.QuoteIdentifier(o.IDColumn) + " = " + idx.Next()

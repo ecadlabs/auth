@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"git.ecadlabs.com/ecad/auth/jsonpatch"
 	"git.ecadlabs.com/ecad/auth/query"
 	"git.ecadlabs.com/ecad/auth/users"
 	"github.com/dgrijalva/jwt-go"
@@ -112,8 +113,15 @@ func (u *Users) GetUsers(w http.ResponseWriter, r *http.Request) {
 
 	userSlice, nextQuery, err := u.Storage.GetUsers(u.context(r.Context()), q)
 	if err != nil {
+		var status int
+		if _, ok := err.(*users.ErrRequest); ok {
+			status = http.StatusBadRequest
+		} else {
+			status = http.StatusInternalServerError
+		}
+
 		log.Error(err)
-		JSONError(w, err.Error(), http.StatusInternalServerError)
+		JSONError(w, err.Error(), status)
 		return
 	}
 
@@ -192,4 +200,39 @@ func (u *Users) NewUser(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Location", u.BaseURL+"/"+ret.ID.String())
 	JSONResponse(w, http.StatusCreated, ret)
+}
+
+func (u *Users) PatchUser(w http.ResponseWriter, r *http.Request) {
+	// TODO Access control
+	// TODO Email verification
+
+	uid, err := uuid.FromString(mux.Vars(r)["id"])
+	if err != nil {
+		JSONError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	var p jsonpatch.Patch
+
+	if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
+		log.Error(err)
+		JSONError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	user, err := u.Storage.PatchUser(u.context(r.Context()), uid, p)
+	if err != nil {
+		var status int
+		if _, ok := err.(*users.ErrRequest); ok {
+			status = http.StatusBadRequest
+		} else {
+			status = http.StatusInternalServerError
+		}
+
+		log.Error(err)
+		JSONError(w, err.Error(), status)
+		return
+	}
+
+	JSONResponse(w, http.StatusOK, user)
 }

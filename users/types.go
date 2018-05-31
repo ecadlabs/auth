@@ -11,6 +11,10 @@ var (
 	ErrEmail    = errors.New("Email is in use")
 )
 
+type ErrRequest struct {
+	error
+}
+
 type Role int
 
 const (
