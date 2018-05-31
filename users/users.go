@@ -9,6 +9,7 @@ import (
 	"github.com/lib/pq"
 	"github.com/satori/go.uuid"
 	log "github.com/sirupsen/logrus"
+	"net/http"
 	"time"
 )
 
@@ -94,7 +95,7 @@ func (s *Storage) GetUsers(ctx context.Context, q *query.Query) ([]*User, *query
 
 	stmt, args, err := q.SelectStmt(&selOpt)
 	if err != nil {
-		return nil, nil, &ErrRequest{err}
+		return nil, nil, &Error{err, http.StatusBadRequest}
 	}
 
 	rows, err := s.DB.QueryxContext(ctx, stmt, args...)
@@ -132,10 +133,8 @@ func (s *Storage) GetUsers(ctx context.Context, q *query.Query) ([]*User, *query
 }
 
 func isUniqueViolation(err error, constraint string) bool {
-	if e, ok := err.(*pq.Error); ok && e.Code.Name() == "unique_violation" && e.Constraint == constraint {
-		return true
-	}
-	return false
+	e, ok := err.(*pq.Error)
+	return ok && e.Code.Name() == "unique_violation" && e.Constraint == constraint
 }
 
 func (s *Storage) NewUser(ctx context.Context, user *User) (*User, error) {
@@ -191,7 +190,7 @@ func (s *Storage) PatchUser(ctx context.Context, id uuid.UUID, patch jsonpatch.P
 
 	stmt, args, err := patch.UpdateStmt(&updateOpt)
 	if err != nil {
-		return nil, &ErrRequest{err}
+		return nil, &Error{err, http.StatusBadRequest}
 	}
 
 	log.Println(stmt)

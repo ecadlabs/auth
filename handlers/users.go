@@ -39,6 +39,14 @@ func (u *Users) context(parent context.Context) context.Context {
 	return parent
 }
 
+func errorHTTPStatus(err error) int {
+	if e, ok := err.(*users.Error); ok {
+		return e.HTTPStatus
+	}
+
+	return http.StatusInternalServerError
+}
+
 // Get current user from the DB and attach to the context
 // Is this needed?
 func (u *Users) Middleware(next http.Handler) http.Handler {
@@ -52,15 +60,8 @@ func (u *Users) Middleware(next http.Handler) http.Handler {
 
 		user, err := u.Storage.GetUserByID(u.context(r.Context()), uid)
 		if err != nil {
-			var status int
-			if err == users.ErrNotFound {
-				status = http.StatusNotFound
-			} else {
-				status = http.StatusInternalServerError
-			}
-
 			log.Error(err)
-			JSONError(w, err.Error(), status)
+			JSONError(w, err.Error(), errorHTTPStatus(err))
 			return
 		}
 
@@ -81,15 +82,8 @@ func (u *Users) GetUser(w http.ResponseWriter, r *http.Request) {
 
 	user, err := u.Storage.GetUserByID(u.context(r.Context()), uid)
 	if err != nil {
-		var status int
-		if err == users.ErrNotFound {
-			status = http.StatusNotFound
-		} else {
-			status = http.StatusInternalServerError
-		}
-
 		log.Error(err)
-		JSONError(w, err.Error(), status)
+		JSONError(w, err.Error(), errorHTTPStatus(err))
 		return
 	}
 
@@ -113,15 +107,8 @@ func (u *Users) GetUsers(w http.ResponseWriter, r *http.Request) {
 
 	userSlice, nextQuery, err := u.Storage.GetUsers(u.context(r.Context()), q)
 	if err != nil {
-		var status int
-		if _, ok := err.(*users.ErrRequest); ok {
-			status = http.StatusBadRequest
-		} else {
-			status = http.StatusInternalServerError
-		}
-
 		log.Error(err)
-		JSONError(w, err.Error(), status)
+		JSONError(w, err.Error(), errorHTTPStatus(err))
 		return
 	}
 
@@ -222,15 +209,8 @@ func (u *Users) PatchUser(w http.ResponseWriter, r *http.Request) {
 
 	user, err := u.Storage.PatchUser(u.context(r.Context()), uid, p)
 	if err != nil {
-		var status int
-		if _, ok := err.(*users.ErrRequest); ok {
-			status = http.StatusBadRequest
-		} else {
-			status = http.StatusInternalServerError
-		}
-
 		log.Error(err)
-		JSONError(w, err.Error(), status)
+		JSONError(w, err.Error(), errorHTTPStatus(err))
 		return
 	}
 

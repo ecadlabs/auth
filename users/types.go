@@ -3,17 +3,19 @@ package users
 import (
 	"errors"
 	"github.com/satori/go.uuid"
+	"net/http"
 	"time"
 )
 
-var (
-	ErrNotFound = errors.New("User not found")
-	ErrEmail    = errors.New("Email is in use")
-)
-
-type ErrRequest struct {
+type Error struct {
 	error
+	HTTPStatus int
 }
+
+var (
+	ErrNotFound = Error{errors.New("User not found"), http.StatusNotFound}
+	ErrEmail    = Error{errors.New("Email is in use"), http.StatusConflict}
+)
 
 type Role int
 
