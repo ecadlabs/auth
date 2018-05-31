@@ -2,6 +2,8 @@
 // sources:
 // data/1_add_users_table.down.sql
 // data/1_add_users_table.up.sql
+// data/2_add_roles_table.down.sql
+// data/2_add_roles_table.up.sql
 // DO NOT EDIT!
 
 package migrations
@@ -109,6 +111,46 @@ func _1_add_users_tableUpSql() (*asset, error) {
 	return a, nil
 }
 
+var __2_add_roles_tableDownSql = []byte("\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\x72\x09\xf2\x0f\x50\x08\x71\x74\xf2\x71\x55\x28\xca\xcf\x49\x2d\xb6\x06\x04\x00\x00\xff\xff\xf9\xdd\xb1\x51\x11\x00\x00\x00")
+
+func _2_add_roles_tableDownSqlBytes() ([]byte, error) {
+	return bindataRead(
+		__2_add_roles_tableDownSql,
+		"2_add_roles_table.down.sql",
+	)
+}
+
+func _2_add_roles_tableDownSql() (*asset, error) {
+	bytes, err := _2_add_roles_tableDownSqlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "2_add_roles_table.down.sql", size: 17, mode: os.FileMode(420), modTime: time.Unix(1527798209, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
+var __2_add_roles_tableUpSql = []byte("\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\x72\x0e\x72\x75\x0c\x71\x55\x08\x71\x74\xf2\x71\x55\x28\xca\xcf\x49\x2d\xd6\xe0\xe2\x2c\x2d\x4e\x2d\x8a\xcf\x4c\x51\x08\x0d\xf5\x74\xd1\xe1\xe2\x04\x09\x2b\x84\x39\x06\x39\x7b\x38\x06\x69\x18\x1a\x18\x99\x68\xea\x70\x71\x06\x04\x79\xfa\x3a\x06\x45\x2a\x78\xbb\x46\x2a\x68\x40\x35\xe8\x80\x4d\xd0\xe4\xd2\xb4\x06\x04\x00\x00\xff\xff\xf5\x68\xf3\xff\x57\x00\x00\x00")
+
+func _2_add_roles_tableUpSqlBytes() ([]byte, error) {
+	return bindataRead(
+		__2_add_roles_tableUpSql,
+		"2_add_roles_table.up.sql",
+	)
+}
+
+func _2_add_roles_tableUpSql() (*asset, error) {
+	bytes, err := _2_add_roles_tableUpSqlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "2_add_roles_table.up.sql", size: 87, mode: os.FileMode(420), modTime: time.Unix(1527798186, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
 // Asset loads and returns the asset for the given name.
 // It returns an error if the asset could not be found or
 // could not be loaded.
@@ -163,6 +205,8 @@ func AssetNames() []string {
 var _bindata = map[string]func() (*asset, error){
 	"1_add_users_table.down.sql": _1_add_users_tableDownSql,
 	"1_add_users_table.up.sql": _1_add_users_tableUpSql,
+	"2_add_roles_table.down.sql": _2_add_roles_tableDownSql,
+	"2_add_roles_table.up.sql": _2_add_roles_tableUpSql,
 }
 
 // AssetDir returns the file names below a certain
@@ -207,6 +251,8 @@ type bintree struct {
 var _bintree = &bintree{nil, map[string]*bintree{
 	"1_add_users_table.down.sql": &bintree{_1_add_users_tableDownSql, map[string]*bintree{}},
 	"1_add_users_table.up.sql": &bintree{_1_add_users_tableUpSql, map[string]*bintree{}},
+	"2_add_roles_table.down.sql": &bintree{_2_add_roles_tableDownSql, map[string]*bintree{}},
+	"2_add_roles_table.up.sql": &bintree{_2_add_roles_tableUpSql, map[string]*bintree{}},
 }}
 
 // RestoreAsset restores an asset under the given directory
