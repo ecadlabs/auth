@@ -114,7 +114,7 @@ func FromValues(q url.Values) (*Query, error) {
 			}
 
 			if _, ok := validOp[e.Op]; !ok {
-				return nil, fmt.Errorf("Incorrect operator: `%s`", e.Op)
+				return nil, fmt.Errorf("Incorrect operator: `%s'", e.Op)
 			}
 
 			res.Match = append(res.Match, e)
@@ -128,7 +128,7 @@ func FromValues(q url.Values) (*Query, error) {
 				res.LastID = v
 			case "order":
 				if _, ok := validOrder[v]; !ok {
-					return nil, fmt.Errorf("Incorrect order: `%s`", v)
+					return nil, fmt.Errorf("Incorrect order: `%s'", v)
 				}
 				res.Order = v
 			case "limit":
@@ -139,7 +139,7 @@ func FromValues(q url.Values) (*Query, error) {
 				res.Limit = int(i)
 			}
 		} else {
-			return nil, fmt.Errorf("Incorrect query: `%s`", k)
+			return nil, fmt.Errorf("Incorrect query: `%s'", k)
 		}
 	}
 
@@ -183,22 +183,35 @@ func (a *argIndex) Next() string {
 	return fmt.Sprintf("$%d", *a)
 }
 
-func (q *Query) SelectStmt(table, idColumn, retColumn string) (string, []interface{}, error) {
+type SelectOptions struct {
+	Table          string
+	IDColumn       string
+	ReturnColumn   string
+	ValidateColumn func(string) bool
+}
+
+func (q *Query) SelectStmt(o *SelectOptions) (string, []interface{}, error) {
 	if q.SortBy == "" {
 		return "", nil, errors.New("Sorting column is not specified")
+	}
+
+	if o.ValidateColumn != nil {
+		if err := q.ValidateColumnsFunc(o.ValidateColumn); err != nil {
+			return "", nil, err
+		}
 	}
 
 	sortCol := pq.QuoteIdentifier(q.SortBy)
 
 	expr := "SELECT *"
-	if retColumn != "" {
-		expr += ", " + sortCol + " AS " + pq.QuoteIdentifier(retColumn)
+	if o.ReturnColumn != "" {
+		expr += ", " + sortCol + " AS " + pq.QuoteIdentifier(o.ReturnColumn)
 	}
-	expr += " FROM " + pq.QuoteIdentifier(table)
+	expr += " FROM " + pq.QuoteIdentifier(o.Table)
 
 	var i argIndex
 	arg := make([]interface{}, 0, len(q.Match)+1)
-	idCol := pq.QuoteIdentifier(idColumn)
+	idCol := pq.QuoteIdentifier(o.IDColumn)
 
 	var cond string
 
@@ -248,7 +261,7 @@ func (q *Query) SelectStmt(table, idColumn, retColumn string) (string, []interfa
 }
 
 func errCol(col string) error {
-	return fmt.Errorf("Invalid column name `%s`", col)
+	return fmt.Errorf("Invalid column name `%s'", col)
 }
 
 func (q *Query) ValidateColumnsFunc(f func(string) bool) error {

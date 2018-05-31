@@ -80,14 +80,17 @@ func (s *Storage) GetUsers(ctx context.Context, q *query.Query) ([]*User, *query
 		q.SortBy = DefaultSortColumn
 	}
 
-	if err := q.ValidateColumnsFunc(func(col string) bool {
-		_, ok := queryColumns[col]
-		return ok
-	}); err != nil {
-		return nil, nil, err
+	selOpt := query.SelectOptions{
+		Table:        "users",
+		IDColumn:     "id",
+		ReturnColumn: "sorted_by",
+		ValidateColumn: func(col string) bool {
+			_, ok := queryColumns[col]
+			return ok
+		},
 	}
 
-	stmt, args, err := q.SelectStmt("users", "id", "sorted_by")
+	stmt, args, err := q.SelectStmt(&selOpt)
 	if err != nil {
 		return nil, nil, err
 	}

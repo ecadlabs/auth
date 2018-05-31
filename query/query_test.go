@@ -59,7 +59,12 @@ func TestQuery(t *testing.T) {
 
 		sort.Slice(q.Match, func(i, j int) bool { return q.Match[i].Col < q.Match[j].Col })
 
-		sql, args, err := q.SelectStmt("table", "id", "")
+		selOpt := SelectOptions{
+			Table:    "table",
+			IDColumn: "id",
+		}
+
+		sql, args, err := q.SelectStmt(&selOpt)
 		if err != nil {
 			t.Error(err)
 			continue
