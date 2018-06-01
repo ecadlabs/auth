@@ -225,7 +225,12 @@ func (q *Query) SelectStmt(o *SelectOptions) (string, []interface{}, error) {
 
 	sortCol := pq.QuoteIdentifier(q.SortBy)
 
-	expr := "SELECT " + o.SelectExpr + " FROM " + o.FromExpr
+	se := o.SelectExpr
+	if se == "" {
+		se = "*"
+	}
+
+	expr := "SELECT " + se + " FROM " + o.FromExpr
 
 	var i argIndex
 	arg := make([]interface{}, 0, len(q.Match)+1)

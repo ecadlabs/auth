@@ -60,7 +60,7 @@ func TestQuery(t *testing.T) {
 		sort.Slice(q.Match, func(i, j int) bool { return q.Match[i].Col < q.Match[j].Col })
 
 		selOpt := SelectOptions{
-			Table:    "table",
+			FromExpr: "\"table\"",
 			IDColumn: "id",
 		}
 
