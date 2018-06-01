@@ -21,6 +21,7 @@ const (
 	OpPrefix = "p"
 	OpSuffix = "s"
 	OpSubstr = "sub"
+	OpHas    = "has"
 )
 
 const (
@@ -60,37 +61,53 @@ var validOp = map[string]struct{}{
 	OpPrefix: struct{}{},
 	OpSuffix: struct{}{},
 	OpSubstr: struct{}{},
+	OpHas:    struct{}{},
 }
 
 func (e *Expr) Expr(val string) string {
 	col := pq.QuoteIdentifier(e.Col)
 
-	switch e.Op {
-	case OpEq:
-		return col + " = " + val
-	case OpNe:
-		return col + " <> " + val
-	case OpLT:
-		return col + " < " + val
-	case OpGT:
-		return col + " > " + val
-	case OpLE:
-		return col + " <= " + val
-	case OpGE:
-		return col + " >= " + val
-	case OpRegex:
-		return col + " ~ " + val
-	case OpLike:
-		return col + " LIKE " + val
-	case OpPrefix:
-		return col + " LIKE (" + val + " || '%')"
-	case OpSuffix:
-		return col + " LIKE ('%' || " + val + ")"
-	case OpSubstr:
-		return col + " LIKE ('%' || " + val + " || '%')"
-	default:
-		return ""
+	var neg bool
+	op := e.Op
+	if len(op) != 0 && op[0] == '!' {
+		op = op[1:]
+		neg = true
 	}
+
+	var expr string
+
+	switch op {
+	case OpNe:
+		expr = col + " <> " + val
+	case OpLT:
+		expr = col + " < " + val
+	case OpGT:
+		expr = col + " > " + val
+	case OpLE:
+		expr = col + " <= " + val
+	case OpGE:
+		expr = col + " >= " + val
+	case OpRegex:
+		expr = col + " ~ " + val
+	case OpLike:
+		expr = col + " LIKE " + val
+	case OpPrefix:
+		expr = col + " LIKE (" + val + " || '%')"
+	case OpSuffix:
+		expr = col + " LIKE ('%' || " + val + ")"
+	case OpSubstr:
+		expr = col + " LIKE ('%' || " + val + " || '%')"
+	case OpHas:
+		expr = "(" + col + " IS NOT NULL AND " + val + " = ANY(" + col + "))"
+	default:
+		expr = col + " = " + val
+	}
+
+	if neg {
+		return "NOT " + expr
+	}
+
+	return expr
 }
 
 func FromValues(q url.Values) (*Query, error) {
@@ -113,7 +130,12 @@ func FromValues(q url.Values) (*Query, error) {
 				Value: v,
 			}
 
-			if _, ok := validOp[e.Op]; !ok {
+			op := e.Op
+			if len(op) != 0 && op[0] == '!' {
+				op = op[1:]
+			}
+
+			if _, ok := validOp[op]; !ok {
 				return nil, fmt.Errorf("Incorrect operator: `%s'", e.Op)
 			}
 
@@ -184,9 +206,9 @@ func (a *argIndex) Next() string {
 }
 
 type SelectOptions struct {
-	Table          string
+	SelectExpr     string
+	FromExpr       string
 	IDColumn       string
-	ReturnColumn   string
 	ValidateColumn func(string) bool
 }
 
@@ -203,11 +225,7 @@ func (q *Query) SelectStmt(o *SelectOptions) (string, []interface{}, error) {
 
 	sortCol := pq.QuoteIdentifier(q.SortBy)
 
-	expr := "SELECT *"
-	if o.ReturnColumn != "" {
-		expr += ", " + sortCol + " AS " + pq.QuoteIdentifier(o.ReturnColumn)
-	}
-	expr += " FROM " + pq.QuoteIdentifier(o.Table)
+	expr := "SELECT " + o.SelectExpr + " FROM " + o.FromExpr
 
 	var i argIndex
 	arg := make([]interface{}, 0, len(q.Match)+1)

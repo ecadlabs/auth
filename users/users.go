@@ -66,12 +66,12 @@ func (s *Storage) GetUserByEmail(ctx context.Context, email string) (*User, erro
 }
 
 var queryColumns = map[string]struct{}{
-	"id":       struct{}{},
-	"email":    struct{}{},
-	"name":     struct{}{},
-	"added":    struct{}{},
-	"modified": struct{}{},
-	//"role": struct{}{}, // TODO
+	"id":             struct{}{},
+	"email":          struct{}{},
+	"name":           struct{}{},
+	"added":          struct{}{},
+	"modified":       struct{}{},
+	"roles":          struct{}{},
 	"email_verified": struct{}{},
 }
 
@@ -81,9 +81,9 @@ func (s *Storage) GetUsers(ctx context.Context, q *query.Query) ([]*User, *query
 	}
 
 	selOpt := query.SelectOptions{
-		Table:        "users",
-		IDColumn:     "id",
-		ReturnColumn: "sorted_by",
+		SelectExpr: "users.*, ra.roles, users." + pq.QuoteIdentifier(q.SortBy) + " AS sorted_by",
+		FromExpr:   "users LEFT JOIN (SELECT user_id, array_agg(role) AS roles FROM roles GROUP BY user_id) AS ra ON ra.user_id = users.id",
+		IDColumn:   "id",
 		ValidateColumn: func(col string) bool {
 			_, ok := queryColumns[col]
 			return ok
@@ -94,6 +94,7 @@ func (s *Storage) GetUsers(ctx context.Context, q *query.Query) ([]*User, *query
 	if err != nil {
 		return nil, nil, &Error{err, http.StatusBadRequest}
 	}
+	log.Println(stmt)
 
 	rows, err := s.DB.QueryxContext(ctx, stmt, args...)
 	if err != nil {
