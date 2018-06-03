@@ -3,13 +3,15 @@ package users
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"git.ecadlabs.com/ecad/auth/jsonpatch"
 	"git.ecadlabs.com/ecad/auth/query"
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
 	"github.com/satori/go.uuid"
-	log "github.com/sirupsen/logrus"
+	//log "github.com/sirupsen/logrus"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -26,16 +28,22 @@ type userModel struct {
 }
 
 func (u *userModel) toUser() *User {
-	return &User{
+	ret := &User{
 		ID:            u.ID,
 		Email:         u.Email,
 		PasswordHash:  u.PasswordHash,
 		Name:          u.Name.String,
 		Added:         u.Added,
 		Modified:      u.Modified,
-		Roles:         u.Roles,
+		Roles:         make(map[string]interface{}),
 		EmailVerified: u.EmailVerified,
 	}
+
+	for _, r := range u.Roles {
+		ret.Roles[r] = true
+	}
+
+	return ret
 }
 
 type Storage struct {
@@ -94,7 +102,7 @@ func (s *Storage) GetUsers(ctx context.Context, q *query.Query) ([]*User, *query
 	if err != nil {
 		return nil, nil, &Error{err, http.StatusBadRequest}
 	}
-	log.Println(stmt)
+	//log.Println(stmt)
 
 	rows, err := s.DB.QueryxContext(ctx, stmt, args...)
 	if err != nil {
@@ -135,77 +143,226 @@ func isUniqueViolation(err error, constraint string) bool {
 	return ok && e.Code.Name() == "unique_violation" && e.Constraint == constraint
 }
 
-func (s *Storage) NewUser(ctx context.Context, user *User) (*User, error) {
+func (s *Storage) NewUser(ctx context.Context, user *User) (res *User, err error) {
+	// TODO Check allowed roles
 	model := userModel{
 		ID:           uuid.NewV4(),
 		Email:        user.Email,
 		PasswordHash: user.PasswordHash,
 		Name:         sql.NullString{String: user.Name, Valid: user.Name != ""},
-		//Role:         user.Role, TODO
 	}
 
-	rows, err := s.DB.NamedQueryContext(ctx, "INSERT INTO users (id, email, password_hash, name) VALUES (:id, :email, :password_hash, :name) RETURNING added, modified, email_verified", &model)
+	tx, err := s.DB.Beginx()
+	if err != nil {
+		return
+	}
+
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+			return
+		}
+
+		err = tx.Commit()
+	}()
+
+	// Create user
+	rows, err := sqlx.NamedQueryContext(ctx, tx, "INSERT INTO users (id, email, password_hash, name) VALUES (:id, :email, :password_hash, :name) RETURNING added, modified, email_verified", &model)
 	if err != nil {
 		if isUniqueViolation(err, "users_email_key") {
 			err = ErrEmail
 		}
-
-		return nil, err
+		return
 	}
 	defer rows.Close()
 
 	for rows.Next() {
-		if err := rows.StructScan(&model); err != nil {
-			return nil, err
+		if err = rows.StructScan(&model); err != nil {
+			return
 		}
 	}
 
-	if err := rows.Err(); err != nil {
-		return nil, err
+	if err = rows.Err(); err != nil {
+		return
 	}
 
-	return model.toUser(), nil
-}
+	res = model.toUser()
 
-var patchColumns = map[string]struct{}{
-	"email": struct{}{},
-	"name":  struct{}{},
-	//"role":  struct{}{}, //TODO
-}
-
-func (s *Storage) PatchUser(ctx context.Context, id uuid.UUID, patch jsonpatch.Patch) (*User, error) {
-	updateOpt := jsonpatch.UpdateOptions{
-		Table:         "users",
-		IDColumn:      "id",
-		ID:            id,
-		ReturnUpdated: true,
-		ValidateColumn: func(col string) bool {
-			_, ok := patchColumns[col]
-			return ok
-		},
-		SetDefaultColumns: []string{"modified"},
+	if len(user.Roles) == 0 {
+		return
 	}
 
-	stmt, args, err := patch.UpdateStmt(&updateOpt)
+	res.Roles = user.Roles
+
+	// Create roles
+	valuesExprs := make([]string, len(user.Roles))
+	args := make([]interface{}, len(user.Roles)+1)
+
+	args[0] = model.ID
+	var i int
+
+	for r := range user.Roles {
+		valuesExprs[i] = fmt.Sprintf("($1, $%d)", i+2)
+		args[i+1] = r
+		i++
+	}
+
+	_, err = tx.ExecContext(ctx, "INSERT INTO roles (user_id, role) VALUES "+strings.Join(valuesExprs, ", "), args...)
+	return
+}
+
+func errPatchOp(o *jsonpatch.Op) error {
+	return &Error{fmt.Errorf("Incorrect JSON patch op `%s' for path `%s'", o.Op, o.Path), http.StatusBadRequest}
+}
+
+var updatePaths = map[string]struct{}{
+	"/email": struct{}{},
+	"/name":  struct{}{},
+}
+
+func (s *Storage) PatchUser(ctx context.Context, id uuid.UUID, patch jsonpatch.Patch) (user *User, err error) {
+	updateCols := make([]string, 0, len(patch))
+	updateArgs := make([]interface{}, 0, len(patch)+1)
+
+	addRolesArgs := make([]interface{}, 0, len(patch)+1)
+	removeRolesArgs := make([]interface{}, 0, len(patch)+1)
+
+	addRolesArgs = append(addRolesArgs, id)
+	removeRolesArgs = append(removeRolesArgs, id)
+
+	// Verify everything
+	for _, o := range patch {
+		if _, ok := updatePaths[o.Path]; ok {
+			if o.Op != "replace" {
+				return nil, errPatchOp(o)
+			}
+
+			if o.Value == nil {
+				return nil, ErrPatchValue
+			}
+
+			updateCols = append(updateCols, o.Path[1:])
+			updateArgs = append(updateArgs, o.Value)
+		} else if o.Path == "/roles" {
+			switch o.Op {
+			case "add":
+				if o.Value == nil {
+					return nil, ErrPatchValue
+				}
+				addRolesArgs = append(addRolesArgs, o.Value)
+			case "remove":
+				removeRolesArgs = append(removeRolesArgs, o.Value)
+			default:
+				return nil, errPatchOp(o)
+			}
+		}
+	}
+
+	tx, err := s.DB.Beginx()
 	if err != nil {
-		return nil, &Error{err, http.StatusBadRequest}
+		return
 	}
 
-	log.Println(stmt)
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+			return
+		}
+
+		err = tx.Commit()
+	}()
+
+	updateExpr := "UPDATE users SET "
+	for i, c := range updateCols {
+		if i != 0 {
+			updateExpr += ", "
+		}
+		updateExpr += fmt.Sprintf("%s = $%d", pq.QuoteIdentifier(c), i+1)
+	}
+
+	if len(updateCols) != 0 {
+		updateExpr += ", "
+	}
+	updateExpr += fmt.Sprintf("modified = DEFAULT WHERE id = $%d RETURNING *", len(updateCols)+1)
+	updateArgs = append(updateArgs, id)
+
+	//log.Println(updateExpr)
 
 	var u userModel
-	if err := s.DB.GetContext(ctx, &u, stmt, args...); err != nil {
+	if err = tx.GetContext(ctx, &u, updateExpr, updateArgs...); err != nil {
 		if err == sql.ErrNoRows {
 			err = ErrNotFound
 		}
 		return nil, err
 	}
 
+	// Update roles
+	if len(addRolesArgs) > 1 {
+		insertExpr := "INSERT INTO roles (user_id, role) VALUES "
+
+		for i := 0; i < len(addRolesArgs)-1; i++ {
+			if i != 0 {
+				insertExpr += ", "
+			}
+			insertExpr += fmt.Sprintf("($1, $%d)", i+2)
+		}
+
+		//log.Println(insertExpr)
+
+		if _, err = tx.ExecContext(ctx, insertExpr, addRolesArgs...); err != nil {
+			if isUniqueViolation(err, "roles_pkey") {
+				err = ErrRoleExists
+			}
+			return nil, err
+		}
+	}
+
+	if len(removeRolesArgs) > 1 {
+		deleteExpr := "DELETE FROM roles WHERE user_id = $1 AND ("
+
+		for i := 0; i < len(removeRolesArgs)-1; i++ {
+			if i != 0 {
+				deleteExpr += " OR "
+			}
+			deleteExpr += fmt.Sprintf("role = $%d", i+2)
+		}
+
+		deleteExpr += ")"
+
+		//log.Println(deleteExpr)
+		//log.Println(removeRolesArgs)
+
+		if _, err = tx.ExecContext(ctx, deleteExpr, removeRolesArgs...); err != nil {
+			return nil, err
+		}
+	}
+
+	// Get roles back
+	if err = tx.GetContext(ctx, &u, "SELECT array_agg(role) AS roles FROM roles WHERE user_id = $1 GROUP BY user_id", id); err != nil {
+		if err != sql.ErrNoRows {
+			return nil, err
+		}
+	}
+
 	return u.toUser(), nil
 }
 
-func (s *Storage) DeleteUser(ctx context.Context, id uuid.UUID) error {
-	res, err := s.DB.ExecContext(ctx, "DELETE FROM users WHERE id = $1", id)
+func (s *Storage) DeleteUser(ctx context.Context, id uuid.UUID) (err error) {
+	tx, err := s.DB.Beginx()
+	if err != nil {
+		return
+	}
+
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+			return
+		}
+
+		err = tx.Commit()
+	}()
+
+	res, err := tx.ExecContext(ctx, "DELETE FROM users WHERE id = $1", id)
 	if err != nil {
 		return err
 	}
@@ -217,6 +374,11 @@ func (s *Storage) DeleteUser(ctx context.Context, id uuid.UUID) error {
 
 	if rows == 0 {
 		return ErrNotFound
+	}
+
+	_, err = tx.ExecContext(ctx, "DELETE FROM roles WHERE user_id = $1", id)
+	if err != nil {
+		return err
 	}
 
 	return nil
