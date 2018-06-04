@@ -20,8 +20,8 @@ var (
 )
 
 const (
-	RoleRegular = "com.ecadlabs.regular"
-	RoleAdmin   = "com.ecadlabs.admin"
+	RoleRegular = "com.ecadlabs.auth.regular"
+	RoleAdmin   = "com.ecadlabs.auth.admin"
 )
 
 type SortOrder int

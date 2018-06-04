@@ -8,10 +8,14 @@ import (
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
 	"net/http"
+	"strings"
 	"time"
 )
 
-const TokenContextKey = "token"
+const (
+	TokenContextKey  = "token"
+	DefaultNamespace = "com.ecadlabs.auth"
+)
 
 type TokenHandler struct {
 	Storage          *users.Storage
@@ -58,6 +62,14 @@ func (t *TokenHandler) writeTokenWithClaims(w http.ResponseWriter, claims jwt.Cl
 	JSONResponse(w, http.StatusOK, &response)
 }
 
+func nsClaim(ns, sufix string) string {
+	if strings.HasPrefix(ns, "http://") || strings.HasPrefix(ns, "https://") {
+		return ns + "/" + sufix
+	}
+
+	return ns + "." + sufix
+}
+
 // Login is a login endpoint handler
 func (t *TokenHandler) Login(w http.ResponseWriter, r *http.Request) {
 	var request struct {
@@ -93,18 +105,26 @@ func (t *TokenHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	roles := make([]string, 0, len(user.Roles))
+	for r := range user.Roles {
+		roles = append(roles, r)
+	}
+
+	ns := t.Namespace
+	if ns == "" {
+		ns = DefaultNamespace
+	}
+
 	now := time.Now()
 
 	claims := jwt.MapClaims{
-		"sub": user.ID,
-		"exp": now.Add(t.SessionMaxAge).Unix(),
-		"iat": now.Unix(),
-	}
-
-	if t.Namespace != "" {
-		claims["iss"] = t.Namespace
-		claims[t.Namespace+"/email"] = user.Email
-		claims[t.Namespace+"/name"] = user.Name
+		"sub":                user.ID,
+		"exp":                now.Add(t.SessionMaxAge).Unix(),
+		"iat":                now.Unix(),
+		"iss":                ns,
+		nsClaim(ns, "email"): user.Email,
+		nsClaim(ns, "name"):  user.Name,
+		nsClaim(ns, "roles"): roles,
 	}
 
 	t.writeTokenWithClaims(w, claims)
