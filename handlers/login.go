@@ -88,20 +88,20 @@ func (t *TokenHandler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if request.Name == "" || request.Password == "" {
-		JSONError(w, http.StatusText(http.StatusForbidden), http.StatusForbidden)
+		JSONError(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 		return
 	}
 
 	user, err := t.Storage.GetUserByEmail(t.context(r.Context()), request.Name)
 	if err != nil {
 		log.Error(err)
-		JSONError(w, http.StatusText(http.StatusForbidden), http.StatusForbidden)
+		JSONError(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 		return
 	}
 
 	if err := bcrypt.CompareHashAndPassword(user.PasswordHash, []byte(request.Password)); err != nil {
 		log.Error(err)
-		JSONError(w, http.StatusText(http.StatusForbidden), http.StatusForbidden)
+		JSONError(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 		return
 	}
 

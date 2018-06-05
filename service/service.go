@@ -69,16 +69,24 @@ func (s *Service) APIHandler() http.Handler {
 	}
 
 	usersHandler := handlers.Users{
-		Storage: s.storage,
-		BaseURL: s.config.BaseURL + "/users",
-		Timeout: time.Duration(s.config.DBTimeout) * time.Second,
+		Storage:   s.storage,
+		BaseURL:   s.config.BaseURL + "/users",
+		Namespace: s.config.BaseURL,
+		Timeout:   time.Duration(s.config.DBTimeout) * time.Second,
 	}
 
-	jwtMiddleware := jwtmiddleware.New(jwtmiddleware.Options{
+	jwtOptions := jwtmiddleware.Options{
 		ValidationKeyGetter: func(token *jwt.Token) (interface{}, error) { return []byte(s.config.JWTSecret), nil },
 		SigningMethod:       jwtSigningMethod,
 		UserProperty:        handlers.TokenContextKey,
-	})
+		ErrorHandler: func(w http.ResponseWriter, r *http.Request, err string) {
+			handlers.JSONError(w, err, http.StatusUnauthorized)
+		},
+	}
+	jwtMiddleware := jwtmiddleware.New(jwtOptions)
+
+	jwtOptions.CredentialsOptional = true
+	jwtMiddlewareOptionalAuth := jwtmiddleware.New(jwtOptions)
 
 	m := mux.NewRouter()
 
@@ -91,15 +99,23 @@ func (s *Service) APIHandler() http.Handler {
 	m.Methods("GET").Path("/refresh").Handler(jwtMiddleware.Handler(http.HandlerFunc(tokenHandler.Refresh)))
 
 	// Users API
-	m.Methods("POST").Path("/users").HandlerFunc(usersHandler.NewUser)
-	m.Methods("GET").Path("/users").HandlerFunc(usersHandler.GetUsers)
-	m.Methods("GET").Path("/users/{id}").HandlerFunc(usersHandler.GetUser)
-	m.Methods("PATCH").Path("/users/{id}").HandlerFunc(usersHandler.PatchUser)
-	m.Methods("DELETE").Path("/users/{id}").HandlerFunc(usersHandler.DeleteUser)
+	m.Methods("POST").Path("/users/").Handler(jwtMiddlewareOptionalAuth.Handler(http.HandlerFunc(usersHandler.NewUser)))
+
+	umux := m.PathPrefix("/users").Subrouter()
+	umux.Use(jwtMiddleware.Handler)
+
+	umux.Methods("GET").Path("/").HandlerFunc(usersHandler.GetUsers)
+	umux.Methods("GET").Path("/{id}").HandlerFunc(usersHandler.GetUser)
+	umux.Methods("PATCH").Path("/{id}").HandlerFunc(usersHandler.PatchUser)
+	umux.Methods("DELETE").Path("/{id}").HandlerFunc(usersHandler.DeleteUser)
 
 	// Miscellaneous
 	m.Methods("GET").Path("/version").Handler(handlers.VersionHandler(version))
 	m.Methods("GET").Path("/metrics").Handler(promhttp.Handler())
+
+	m.NotFoundHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		handlers.JSONError(w, "Resource not found", http.StatusNotFound)
+	})
 
 	return m
 }

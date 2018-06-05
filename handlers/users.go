@@ -5,8 +5,9 @@ import (
 	"encoding/json"
 	"git.ecadlabs.com/ecad/auth/jsonpatch"
 	"git.ecadlabs.com/ecad/auth/query"
+	"git.ecadlabs.com/ecad/auth/roles"
 	"git.ecadlabs.com/ecad/auth/users"
-	//"github.com/dgrijalva/jwt-go"
+	"github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/schema"
 	"github.com/satori/go.uuid"
@@ -26,9 +27,10 @@ const (
 var schemaDecoder = schema.NewDecoder()
 
 type Users struct {
-	BaseURL string
-	Storage *users.Storage
-	Timeout time.Duration
+	BaseURL   string
+	Namespace string
+	Storage   *users.Storage
+	Timeout   time.Duration
 }
 
 func (u *Users) context(r *http.Request) context.Context {
@@ -47,38 +49,55 @@ func errorHTTPStatus(err error) int {
 	return http.StatusInternalServerError
 }
 
-/*
-// Get current user from the DB and attach to the context
-// Is this needed?
-func (u *Users) Middleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		claims := r.Context().Value(TokenContextKey).(*jwt.Token).Claims.(jwt.MapClaims)
-		uid, err := uuid.FromString(claims["sub"].(string))
-		if err != nil {
-			JSONError(w, err.Error(), http.StatusBadRequest)
-			return
+func (u *Users) getTokenData(r *http.Request) (uid uuid.UUID, ret roles.Roles) {
+	if token, ok := r.Context().Value(TokenContextKey).(*jwt.Token); ok {
+		claims := token.Claims.(jwt.MapClaims)
+		ns := u.Namespace
+		if ns == "" {
+			ns = DefaultNamespace
 		}
 
-		user, err := u.Storage.GetUserByID(u.context(r), uid)
-		if err != nil {
-			log.Error(err)
-			JSONError(w, err.Error(), errorHTTPStatus(err))
-			return
+		if n, ok := claims[nsClaim(ns, "roles")].([]interface{}); ok {
+			names := make([]string, 0, len(n))
+			for _, name := range n {
+				if s, ok := name.(string); ok {
+					names = append(names, s)
+				}
+			}
+
+			if len(names) != 0 {
+				ret = roles.GetKnownRoles(names)
+			}
 		}
 
-		newRequest := r.WithContext(context.WithValue(r.Context(), UserContextKey, user))
+		if sub, ok := claims["sub"].(string); ok {
+			if id, err := uuid.FromString(sub); err == nil {
+				uid = id
+			}
+		}
+	}
 
-		next.ServeHTTP(w, newRequest)
-	})
+	if len(ret) == 0 {
+		ret = roles.Roles{roles.GetRole(RoleAnonymous)}
+	}
+
+	return
 }
-*/
 
 func (u *Users) GetUser(w http.ResponseWriter, r *http.Request) {
-	// TODO Access control
-
 	uid, err := uuid.FromString(mux.Vars(r)["id"])
 	if err != nil {
 		JSONError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	self, userRoles := u.getTokenData(r)
+	if err = userRoles.IsGranted(permissionGet, map[string]interface{}{
+		"self": self,
+		"id":   uid,
+	}); err != nil {
+		log.Error(err)
+		JSONError(w, err.Error(), http.StatusForbidden)
 		return
 	}
 
@@ -93,8 +112,15 @@ func (u *Users) GetUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func (u *Users) GetUsers(w http.ResponseWriter, r *http.Request) {
-	// TODO Access control
 	r.ParseForm()
+
+	_, userRoles := u.getTokenData(r)
+
+	if err := userRoles.IsGranted(permissionList, nil); err != nil {
+		log.Error(err)
+		JSONError(w, err.Error(), http.StatusForbidden)
+		return
+	}
 
 	q, err := query.FromValues(r.Form)
 	if err != nil {
@@ -173,6 +199,17 @@ func (u *Users) NewUser(w http.ResponseWriter, r *http.Request) {
 
 	user.PasswordHash = hash
 
+	if !user.Roles.HasPrefix(RolePrefix) {
+		user.Roles.Add(RoleRegular)
+	}
+
+	_, userRoles := u.getTokenData(r)
+	if err = userRoles.IsGranted(permissionCreate, map[string]interface{}{"user": &user}); err != nil {
+		log.Error(err)
+		JSONError(w, err.Error(), http.StatusForbidden)
+		return
+	}
+
 	ret, err := u.Storage.NewUser(u.context(r), &user)
 	if err != nil {
 		log.Error(err)
@@ -192,12 +229,21 @@ func (u *Users) NewUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func (u *Users) PatchUser(w http.ResponseWriter, r *http.Request) {
-	// TODO Access control
 	// TODO Email verification
 
 	uid, err := uuid.FromString(mux.Vars(r)["id"])
 	if err != nil {
 		JSONError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	self, userRoles := u.getTokenData(r)
+	if err = userRoles.IsGranted(permissionModify, map[string]interface{}{
+		"self": self,
+		"id":   uid,
+	}); err != nil {
+		log.Error(err)
+		JSONError(w, err.Error(), http.StatusForbidden)
 		return
 	}
 
@@ -207,6 +253,23 @@ func (u *Users) PatchUser(w http.ResponseWriter, r *http.Request) {
 		log.Error(err)
 		JSONError(w, err.Error(), http.StatusBadRequest)
 		return
+	}
+
+	for _, op := range p {
+		if op.Path == "/roles" {
+			switch op.Op {
+			case "add":
+				err = userRoles.IsGranted(permissionAddRole, map[string]interface{}{"role": op.Value})
+			case "remove":
+				err = userRoles.IsGranted(permissionDeleteRole, map[string]interface{}{"role": op.Value})
+			}
+
+			if err != nil {
+				log.Error(err)
+				JSONError(w, err.Error(), http.StatusForbidden)
+				return
+			}
+		}
 	}
 
 	user, err := u.Storage.PatchUser(u.context(r), uid, p)
@@ -220,15 +283,23 @@ func (u *Users) PatchUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func (u *Users) DeleteUser(w http.ResponseWriter, r *http.Request) {
-	// TODO Access control
-
-	id, err := uuid.FromString(mux.Vars(r)["id"])
+	uid, err := uuid.FromString(mux.Vars(r)["id"])
 	if err != nil {
 		JSONError(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	if err := u.Storage.DeleteUser(u.context(r), id); err != nil {
+	self, userRoles := u.getTokenData(r)
+	if err = userRoles.IsGranted(permissionDelete, map[string]interface{}{
+		"self": self,
+		"id":   uid,
+	}); err != nil {
+		log.Error(err)
+		JSONError(w, err.Error(), http.StatusForbidden)
+		return
+	}
+
+	if err := u.Storage.DeleteUser(u.context(r), uid); err != nil {
 		log.Error(err)
 		JSONError(w, err.Error(), errorHTTPStatus(err))
 		return

@@ -9,7 +9,6 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
 	"github.com/satori/go.uuid"
-	//log "github.com/sirupsen/logrus"
 	"net/http"
 	"strings"
 	"time"
@@ -102,7 +101,6 @@ func (s *Storage) GetUsers(ctx context.Context, q *query.Query) ([]*User, *query
 	if err != nil {
 		return nil, nil, &Error{err, http.StatusBadRequest}
 	}
-	//log.Println(stmt)
 
 	rows, err := s.DB.QueryxContext(ctx, stmt, args...)
 	if err != nil {
@@ -286,8 +284,6 @@ func (s *Storage) PatchUser(ctx context.Context, id uuid.UUID, patch jsonpatch.P
 	updateExpr += fmt.Sprintf("modified = DEFAULT WHERE id = $%d RETURNING *", len(updateCols)+1)
 	updateArgs = append(updateArgs, id)
 
-	//log.Println(updateExpr)
-
 	var u userModel
 	if err = tx.GetContext(ctx, &u, updateExpr, updateArgs...); err != nil {
 		if err == sql.ErrNoRows {
@@ -306,8 +302,6 @@ func (s *Storage) PatchUser(ctx context.Context, id uuid.UUID, patch jsonpatch.P
 			}
 			insertExpr += fmt.Sprintf("($1, $%d)", i+2)
 		}
-
-		//log.Println(insertExpr)
 
 		if _, err = tx.ExecContext(ctx, insertExpr, addRolesArgs...); err != nil {
 			if isUniqueViolation(err, "roles_pkey") {
@@ -328,9 +322,6 @@ func (s *Storage) PatchUser(ctx context.Context, id uuid.UUID, patch jsonpatch.P
 		}
 
 		deleteExpr += ")"
-
-		//log.Println(deleteExpr)
-		//log.Println(removeRolesArgs)
 
 		if _, err = tx.ExecContext(ctx, deleteExpr, removeRolesArgs...); err != nil {
 			return nil, err
