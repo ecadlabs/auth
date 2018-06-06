@@ -70,7 +70,7 @@ func (s *Service) APIHandler() http.Handler {
 
 	usersHandler := handlers.Users{
 		Storage:   s.storage,
-		BaseURL:   s.config.BaseURL + "/users",
+		BaseURL:   s.config.BaseURL + "/users/",
 		Namespace: s.config.BaseURL,
 		Timeout:   time.Duration(s.config.DBTimeout) * time.Second,
 	}
