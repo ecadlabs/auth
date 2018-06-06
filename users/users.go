@@ -246,9 +246,6 @@ func (s *Storage) PatchUser(ctx context.Context, id uuid.UUID, patch jsonpatch.P
 
 			switch o.Op {
 			case "add":
-				if o.Value == nil {
-					return nil, ErrPatchValue
-				}
 				addRolesArgs = append(addRolesArgs, role)
 			case "remove":
 				removeRolesArgs = append(removeRolesArgs, role)
