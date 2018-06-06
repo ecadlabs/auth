@@ -256,12 +256,14 @@ func (u *Users) PatchUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	for _, op := range p {
-		if op.Path == "/roles" {
+		if strings.HasPrefix(op.Path, "/roles/") {
+			role := strings.TrimPrefix(op.Path, "/roles/")
+
 			switch op.Op {
 			case "add":
-				err = userRoles.IsGranted(permissionAddRole, map[string]interface{}{"role": op.Value})
+				err = userRoles.IsGranted(permissionAddRole, map[string]interface{}{"role": role})
 			case "remove":
-				err = userRoles.IsGranted(permissionDeleteRole, map[string]interface{}{"role": op.Value})
+				err = userRoles.IsGranted(permissionDeleteRole, map[string]interface{}{"role": role})
 			}
 
 			if err != nil {

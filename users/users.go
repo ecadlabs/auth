@@ -241,15 +241,17 @@ func (s *Storage) PatchUser(ctx context.Context, id uuid.UUID, patch jsonpatch.P
 
 			updateCols = append(updateCols, o.Path[1:])
 			updateArgs = append(updateArgs, o.Value)
-		} else if o.Path == "/roles" {
+		} else if strings.HasPrefix(o.Path, "/roles/") {
+			role := strings.TrimPrefix(o.Path, "/roles/")
+
 			switch o.Op {
 			case "add":
 				if o.Value == nil {
 					return nil, ErrPatchValue
 				}
-				addRolesArgs = append(addRolesArgs, o.Value)
+				addRolesArgs = append(addRolesArgs, role)
 			case "remove":
-				removeRolesArgs = append(removeRolesArgs, o.Value)
+				removeRolesArgs = append(removeRolesArgs, role)
 			default:
 				return nil, errPatchOp(o)
 			}
