@@ -82,7 +82,7 @@ var queryColumns = map[string]struct{}{
 	"email_verified": struct{}{},
 }
 
-func (s *Storage) GetUsers(ctx context.Context, q *query.Query) ([]*User, *query.Query, error) {
+func (s *Storage) GetUsers(ctx context.Context, q *query.Query) (users []*User, count int, next *query.Query, err error) {
 	if q.SortBy == "" {
 		q.SortBy = DefaultSortColumn
 	}
@@ -99,41 +99,53 @@ func (s *Storage) GetUsers(ctx context.Context, q *query.Query) ([]*User, *query
 
 	stmt, args, err := q.SelectStmt(&selOpt)
 	if err != nil {
-		return nil, nil, &Error{err, http.StatusBadRequest}
+		err = &Error{err, http.StatusBadRequest}
 	}
 
 	rows, err := s.DB.QueryxContext(ctx, stmt, args...)
 	if err != nil {
-		return nil, nil, err
+		return
 	}
 	defer rows.Close()
 
-	users := []*User{}
+	usersSlice := []*User{}
 	var lastItem *userModel
 
 	for rows.Next() {
 		var user userModel
-		if err := rows.StructScan(&user); err != nil {
-			return nil, nil, err
+		if err = rows.StructScan(&user); err != nil {
+			return
 		}
 
 		lastItem = &user
-		users = append(users, user.toUser())
+		usersSlice = append(usersSlice, user.toUser())
 	}
 
-	if err := rows.Err(); err != nil {
-		return nil, nil, err
+	if err = rows.Err(); err != nil {
+		return
 	}
 
-	ret := *q
+	// Count
+	if q.TotalCount {
+		stmt, args := q.CountStmt("users")
+		if err = s.DB.Get(&count, stmt, args...); err != nil {
+			return
+		}
+	}
+
+	users = usersSlice
 
 	if lastItem != nil {
 		// Update query
+		ret := *q
 		ret.LastID = lastItem.ID.String()
 		ret.Last = lastItem.SortedBy
+		ret.TotalCount = false
+
+		next = &ret
 	}
 
-	return users, &ret, nil
+	return
 }
 
 func isUniqueViolation(err error, constraint string) bool {

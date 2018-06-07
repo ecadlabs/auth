@@ -22,6 +22,7 @@ func JSONResponse(w http.ResponseWriter, code int, v interface{}) {
 }
 
 type Paginated struct {
-	Value interface{} `json:"value"`
-	Next  string      `json:"next,omitempty"`
+	Value      interface{} `json:"value"`
+	TotalCount *int        `json:"total_count,omitempty"`
+	Next       string      `json:"next,omitempty"`
 }

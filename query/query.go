@@ -36,12 +36,13 @@ type Expr struct {
 }
 
 type Query struct {
-	SortBy string
-	Order  string
-	Last   string
-	LastID string
-	Limit  int
-	Match  []Expr
+	SortBy     string
+	Order      string
+	Last       string
+	LastID     string
+	Limit      int
+	TotalCount bool
+	Match      []Expr
 }
 
 var validOrder = map[string]struct{}{
@@ -159,6 +160,12 @@ func FromValues(q url.Values) (*Query, error) {
 					return nil, err
 				}
 				res.Limit = int(i)
+			case "count":
+				b, err := strconv.ParseBool(v)
+				if err != nil {
+					return nil, err
+				}
+				res.TotalCount = b
 			}
 		} else {
 			return nil, fmt.Errorf("Incorrect query: `%s'", k)
@@ -187,8 +194,12 @@ func (q *Query) Values() url.Values {
 		ret.Set("lastId", q.LastID)
 	}
 
-	if q.Limit != 0 {
+	if q.Limit > 0 {
 		ret.Set("limit", strconv.FormatInt(int64(q.Limit), 10))
+	}
+
+	if q.TotalCount {
+		ret.Set("count", "1")
 	}
 
 	for _, e := range q.Match {
@@ -210,6 +221,31 @@ type SelectOptions struct {
 	FromExpr       string
 	IDColumn       string
 	ValidateColumn func(string) bool
+}
+
+func (q *Query) CountStmt(from string) (string, []interface{}) {
+	stmt := "SELECT COUNT(*) FROM " + from
+	arg := make([]interface{}, len(q.Match))
+
+	var (
+		idx  argIndex
+		cond string
+	)
+
+	for i, m := range q.Match {
+		if cond != "" {
+			cond += " AND "
+		}
+
+		cond += m.Expr(idx.Next())
+		arg[i] = m.Value
+	}
+
+	if len(q.Match) != 0 {
+		stmt += " WHERE " + cond
+	}
+
+	return stmt, arg
 }
 
 func (q *Query) SelectStmt(o *SelectOptions) (string, []interface{}, error) {

@@ -133,31 +133,37 @@ func (u *Users) GetUsers(w http.ResponseWriter, r *http.Request) {
 		q.Limit = DefaultLimit
 	}
 
-	userSlice, nextQuery, err := u.Storage.GetUsers(u.context(r), q)
+	userSlice, count, nextQuery, err := u.Storage.GetUsers(u.context(r), q)
 	if err != nil {
 		log.Error(err)
 		JSONError(w, err.Error(), errorHTTPStatus(err))
 		return
 	}
 
-	if len(userSlice) == 0 {
+	if len(userSlice) == 0 && !q.TotalCount {
 		w.WriteHeader(http.StatusNoContent)
 		return
 	}
 
 	// Pagination
-	nextUrl, err := url.Parse(u.BaseURL)
-	if err != nil {
-		log.Error(err)
-		JSONError(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	nextUrl.RawQuery = nextQuery.Values().Encode()
-
 	res := Paginated{
 		Value: userSlice,
-		Next:  nextUrl.String(),
+	}
+
+	if q.TotalCount {
+		res.TotalCount = &count
+	}
+
+	if nextQuery != nil {
+		nextUrl, err := url.Parse(u.BaseURL)
+		if err != nil {
+			log.Error(err)
+			JSONError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		nextUrl.RawQuery = nextQuery.Values().Encode()
+		res.Next = nextUrl.String()
 	}
 
 	JSONResponse(w, http.StatusOK, &res)
