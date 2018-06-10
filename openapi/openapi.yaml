@@ -1,24 +1,22 @@
-openapi: '3.0.0'
-
+openapi: 3.0.0
 info:
   description: JWT authentication and users management service
   version: 1.0.0
   title: Auth and Users Service
   contact:
-    url: https://git.ecadlabs.com/ecad/auth
+    url: 'https://git.ecadlabs.com/ecad/auth'
     email: e.asphyx@gmail.com
-
 tags:
-- name: auth
-  description: Authentication and JWT token management
-- name: users
-  description: Users operations
-
+  - name: auth
+    description: Authentication and JWT token management
+  - name: users
+    description: Users operations
 paths:
   /login:
     summary: Authenticate client
     post:
-      tags: [auth]
+      tags:
+        - auth
       summary: Authenticate client
       description: Authenticate client and return JWT token
       requestBody:
@@ -28,7 +26,9 @@ paths:
           application/json:
             schema:
               type: object
-              required: [name, password]
+              required:
+                - name
+                - password
               properties:
                 name:
                   type: string
@@ -39,9 +39,9 @@ paths:
           $ref: '#/components/responses/Token'
         default:
           $ref: '#/components/responses/Error'
-
     get:
-      tags: [auth]
+      tags:
+        - auth
       summary: Authenticate client
       description: Authenticate client using Basic scheme and return JWT token
       responses:
@@ -50,11 +50,11 @@ paths:
         default:
           $ref: '#/components/responses/Error'
       security:
-      - basicAuth: []
-
+        - basicAuth: []
   /refresh:
     get:
-      tags: [auth]
+      tags:
+        - auth
       summary: Refresh JWT token
       responses:
         '200':
@@ -62,11 +62,11 @@ paths:
         default:
           $ref: '#/components/responses/Error'
       security:
-      - jwtAuth: []
-
+        - jwtAuth: []
   /users/:
     post:
-      tags: [users]
+      tags:
+        - users
       summary: Create new user
       requestBody:
         description: User info
@@ -75,7 +75,9 @@ paths:
           application/json:
             schema:
               type: object
-              required: [email, password]
+              required:
+                - email
+                - password
               properties:
                 email:
                   type: string
@@ -104,60 +106,60 @@ paths:
                 format: uri
         default:
           $ref: '#/components/responses/Error'
-
     get:
-      tags: [users]
+      tags:
+        - users
       summary: List users
       description: List users with filtering
       parameters:
-      - $ref: '#/components/parameters/SortBy'
-      - $ref: '#/components/parameters/Order'
-      - $ref: '#/components/parameters/Last'
-      - $ref: '#/components/parameters/LastID'
-      - $ref: '#/components/parameters/Limit'
-      - $ref: '#/components/parameters/Count'
-      - in: query
-        name: id
-        schema:
-          $ref: '#/components/schemas/Predicate'
-        style: deepObject
-        explode: true
-      - in: query
-        name: email
-        schema:
-          $ref: '#/components/schemas/Predicate'
-        style: deepObject
-        explode: true
-      - in: query
-        name: name
-        schema:
-          $ref: '#/components/schemas/Predicate'
-        style: deepObject
-        explode: true
-      - in: query
-        name: added
-        schema:
-          $ref: '#/components/schemas/Predicate'
-        style: deepObject
-        explode: true
-      - in: query
-        name: modified
-        schema:
-          $ref: '#/components/schemas/Predicate'
-        style: deepObject
-        explode: true
-      - in: query
-        name: roles
-        schema:
-          $ref: '#/components/schemas/Predicate'
-        style: deepObject
-        explode: true
-      - in: query
-        name: email_verified
-        schema:
-          $ref: '#/components/schemas/Predicate'
-        style: deepObject
-        explode: true
+        - $ref: '#/components/parameters/SortBy'
+        - $ref: '#/components/parameters/Order'
+        - $ref: '#/components/parameters/Last'
+        - $ref: '#/components/parameters/LastID'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Count'
+        - in: query
+          name: id
+          schema:
+            $ref: '#/components/schemas/Predicate'
+          style: deepObject
+          explode: true
+        - in: query
+          name: email
+          schema:
+            $ref: '#/components/schemas/Predicate'
+          style: deepObject
+          explode: true
+        - in: query
+          name: name
+          schema:
+            $ref: '#/components/schemas/Predicate'
+          style: deepObject
+          explode: true
+        - in: query
+          name: added
+          schema:
+            $ref: '#/components/schemas/Predicate'
+          style: deepObject
+          explode: true
+        - in: query
+          name: modified
+          schema:
+            $ref: '#/components/schemas/Predicate'
+          style: deepObject
+          explode: true
+        - in: query
+          name: roles
+          schema:
+            $ref: '#/components/schemas/Predicate'
+          style: deepObject
+          explode: true
+        - in: query
+          name: email_verified
+          schema:
+            $ref: '#/components/schemas/Predicate'
+          style: deepObject
+          explode: true
       responses:
         '200':
           description: List of Users
@@ -165,42 +167,42 @@ paths:
             application/json:
               schema:
                 allOf:
-                - $ref: '#/components/schemas/Paginated'
-                - type: object
-                  required:
-                  - value
-                  properties:
-                    value:
-                      type: array
-                      items:
-                        $ref: '#/components/schemas/User'
+                  - $ref: '#/components/schemas/Paginated'
+                  - type: object
+                    required:
+                      - value
+                    properties:
+                      value:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/User'
         '204':
           description: Empty response
         default:
           $ref: '#/components/responses/Error'
       security:
-      - jwtAuth: []
-
-  /users/{id}:
+        - jwtAuth: []
+  '/users/{id}':
     get:
-      tags: [users]
+      tags:
+        - users
       summary: Get user info
       parameters:
-      - $ref: '#/components/parameters/ID'
+        - $ref: '#/components/parameters/ID'
       responses:
         '200':
           $ref: '#/components/responses/User'
         default:
           $ref: '#/components/responses/Error'
       security:
-      - jwtAuth: []
-
+        - jwtAuth: []
     patch:
-      tags: [users]
+      tags:
+        - users
       summary: Modify user's properties
       description: Modify user's properties using JSON Patch encoding
       parameters:
-      - $ref: '#/components/parameters/ID'
+        - $ref: '#/components/parameters/ID'
       requestBody:
         description: User's properties change list
         required: true
@@ -214,50 +216,78 @@ paths:
         default:
           $ref: '#/components/responses/Error'
       security:
-      - jwtAuth: []
-
+        - jwtAuth: []
     delete:
-      tags: [users]
+      tags:
+        - users
       summary: Delete user
       parameters:
-      - $ref: '#/components/parameters/ID'
+        - $ref: '#/components/parameters/ID'
       responses:
         '204':
           description: Success
         default:
           $ref: '#/components/responses/Error'
       security:
-      - jwtAuth: []
-
+        - jwtAuth: []
+  /version:
+    get:
+      summary: Version info
+      responses:
+        '200':
+          description: Version info
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - version
+                properties:
+                  version:
+                    type: string
+  /metrics:
+    get:
+      summary: Prometheus metrics
+      responses:
+        '200':
+          description: Prometheus metrics
+          content:
+            text/plain:
+              schema:
+                type: string
+            application/vnd.google.protobuf; proto=io.prometheus.client.MetricFamily:
+              schema:
+                type: string
+                format: binary
 components:
   schemas:
     Token:
       type: object
-      required: [token]
+      required:
+        - token
       properties:
         token:
           type: string
         refresh:
           type: string
           format: uri
-
     Error:
       type: object
-      required: [error]
+      required:
+        - error
       properties:
         error:
           type: string
-
     Paginated:
       type: object
-      required: [next]
+      required:
+        - next
       properties:
         next:
           type: string
           format: uri
         total_count:
           type: integer
-
     User:
       type: object
       required:
@@ -285,46 +315,46 @@ components:
           type: boolean
         roles:
           type: array
+          nullable: true
           items:
             type: string
-
     Predicate:
       type: object
       properties:
-        'eq':
+        eq:
           type: string
           description: Equal
-        'ne':
+        ne:
           type: string
           description: Not equal
-        'lt':
+        lt:
           type: string
           description: Less than
-        'gt':
+        gt:
           type: string
           description: Greater than
-        'le':
+        le:
           type: string
           description: Less or equal
-        'ge':
+        ge:
           type: string
           description: Greater or equal
-        're':
+        re:
           type: string
           description: POSIX Regex
-        'l':
+        l:
           type: string
           description: SQL LIKE
-        'p':
+        p:
           type: string
           description: Has prefix
-        's':
+        s:
           type: string
           description: Has suffix
-        'sub':
+        sub:
           type: string
           description: Has substring
-        'has':
+        has:
           type: string
           description: Collection contains value
         '!eq':
@@ -351,21 +381,23 @@ components:
           type: string
         '!has':
           type: string
-
     JSONPatch:
       type: array
       items:
         type: object
-        required: [op, path]
+        required:
+          - op
+          - path
         properties:
           op:
             type: string
-            enum: [replace, add, remove]
+            enum:
+              - replace
+              - add
+              - remove
           path:
             type: string
-            pattern: '^\/'
           value: {}
-
   responses:
     Token:
       description: Token response
@@ -373,21 +405,18 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/Token'
-
     Error:
       description: Error response
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/Error'
-
     User:
       description: User response
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/User'
-
   parameters:
     ID:
       in: path
@@ -397,30 +426,28 @@ components:
       schema:
         type: string
         format: uuid
-
     SortBy:
       in: query
       name: sortBy
       description: Sort by field
       schema:
         type: string
-
     Order:
       in: query
       name: order
       description: Sort order
       schema:
         type: string
-        enum: [asc, desc]
+        enum:
+          - asc
+          - desc
         default: asc
-
     Last:
       in: query
       name: last
       description: Previews page last item's sorting field value
       schema:
         type: string
-
     LastID:
       in: query
       name: lastId
@@ -428,7 +455,6 @@ components:
       schema:
         type: string
         format: uuid
-
     Limit:
       in: query
       name: limit
@@ -436,7 +462,6 @@ components:
       schema:
         type: integer
         default: 20
-
     Count:
       in: query
       name: count
@@ -444,13 +469,11 @@ components:
       schema:
         type: boolean
         default: false
-
   securitySchemes:
     jwtAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
-
     basicAuth:
       type: http
       scheme: basic
