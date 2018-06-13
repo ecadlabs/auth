@@ -6,13 +6,15 @@ stages:
   - build
   - test
 
+before_script:
+    - echo ${GOOGLE_GCR_KEY} | docker login -u _json_key --password-stdin ${DOCKER_REGISTRY}
+
 docker-build-auth:
   stage: build
   image: docker
   services:
     - docker:dind
   script:
-    - echo ${GOOGLE_GCR_KEY} | docker login -u _json_key --password-stdin ${DOCKER_REGISTRY}
     - docker build -t "${DOCKER_REGISTRY_URL}/postgres-auth:${CI_COMMIT_REF_NAME:0:8}-${CI_COMMIT_SHA:0:8}" .
     - docker push "${DOCKER_REGISTRY_URL}/postgres-auth:${CI_COMMIT_REF_NAME:0:8}-${CI_COMMIT_SHA:0:8}"
 
