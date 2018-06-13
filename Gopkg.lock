@@ -20,6 +20,18 @@
   version = "v3.1.0"
 
 [[projects]]
+  name = "github.com/golang-migrate/migrate"
+  packages = [
+    ".",
+    "database",
+    "database/postgres",
+    "source",
+    "source/go-bindata"
+  ]
+  revision = "22f249514de9aa3f8a720a7cabbdd45d294f83a1"
+  version = "v3.2.0"
+
+[[projects]]
   name = "github.com/golang/protobuf"
   packages = ["proto"]
   revision = "925541529c1fa6821df4e44ce2723319eb2be768"
@@ -38,6 +50,12 @@
   version = "v1.6.1"
 
 [[projects]]
+  name = "github.com/gorilla/schema"
+  packages = ["."]
+  revision = "d0e4c24cff97ae983e9847e0ed5a02dc10013d41"
+  version = "v1.0.2"
+
+[[projects]]
   branch = "master"
   name = "github.com/jmoiron/sqlx"
   packages = [
@@ -54,18 +72,6 @@
     "oid"
   ]
   revision = "88edab0803230a3898347e77b474f8c1820a1f20"
-
-[[projects]]
-  name = "github.com/mattes/migrate"
-  packages = [
-    ".",
-    "database",
-    "database/postgres",
-    "source",
-    "source/go-bindata"
-  ]
-  revision = "035c07716cd373d88456ec4d701402df52584cb4"
-  version = "v3.0.1"
 
 [[projects]]
   name = "github.com/matttproud/golang_protobuf_extensions"
@@ -140,18 +146,9 @@
   ]
   revision = "dd2ff4accc098aceecb86b36eaa7829b2a17b1c9"
 
-[[projects]]
-  branch = "master"
-  name = "layeh.com/radius"
-  packages = [
-    ".",
-    "rfc2865"
-  ]
-  revision = "04c7e6b2818affa6cf1cca6e0ffa0758762290bf"
-
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "f6fcbffeb921c0b93c2f7a7b176e877c514c497aafb8771fbc46f38c9866f02e"
+  inputs-digest = "402a37a5508ea9f6d870ddfb90d9cc5fc76ee51997b4381368f9e383b1747fb5"
   solver-name = "gps-cdcl"
   solver-version = 1

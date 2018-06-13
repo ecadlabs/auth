@@ -1,37 +1,42 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
+	"strings"
 	"time"
 
-	"context"
-	"git.ecadlabs.com/ecad/auth/authenticator"
+	"git.ecadlabs.com/ecad/auth/users"
 	"github.com/dgrijalva/jwt-go"
 	log "github.com/sirupsen/logrus"
+	"golang.org/x/crypto/bcrypt"
 )
 
 const (
-	defaultIss = "auth.service"
+	TokenContextKey  = "token"
+	DefaultNamespace = "com.ecadlabs.auth"
 )
 
-type TokenProducer struct {
+type TokenHandler struct {
+	Storage          *users.Storage
+	Timeout          time.Duration
 	SessionMaxAge    time.Duration
 	JWTSecretGetter  func() ([]byte, error)
-	Namespace        string
 	JWTSigningMethod jwt.SigningMethod
-	Logger           log.FieldLogger
-	RefreshURL       string
+	Namespace        string
+	RefreshURL       func() string
 }
 
-func (t *TokenProducer) log() log.FieldLogger {
-	if t.Logger != nil {
-		return t.Logger
+func (t *TokenHandler) context(parent context.Context) context.Context {
+	if t.Timeout != 0 {
+		ctx, _ := context.WithTimeout(parent, t.Timeout)
+		return ctx
 	}
-	return log.StandardLogger()
+	return parent
 }
 
-func (t *TokenProducer) writeTokenWithClaims(w http.ResponseWriter, claims jwt.Claims) {
+func (t *TokenHandler) writeTokenWithClaims(w http.ResponseWriter, claims jwt.Claims) {
 	token := jwt.NewWithClaims(t.JWTSigningMethod, claims)
 	secret, err := t.JWTSecretGetter()
 	if err != nil {
@@ -50,24 +55,24 @@ func (t *TokenProducer) writeTokenWithClaims(w http.ResponseWriter, claims jwt.C
 		RefreshURL string `json:"refresh,omitempty"`
 	}{
 		Token:      tokenString,
-		RefreshURL: t.RefreshURL,
+		RefreshURL: t.RefreshURL(),
 	}
 
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
 
-	if err := json.NewEncoder(w).Encode(&response); err != nil {
-		t.log().Println(err)
+	JSONResponse(w, http.StatusOK, &response)
+}
+
+func nsClaim(ns, sufix string) string {
+	if strings.HasPrefix(ns, "http://") || strings.HasPrefix(ns, "https://") {
+		return ns + "/" + sufix
 	}
+
+	return ns + "." + sufix
 }
 
 // Login is a login endpoint handler
-type Login struct {
-	*TokenProducer
-	Authenticator authenticator.Authenticator
-	AuthTimeout   time.Duration
-}
-
-func (l *Login) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (t *TokenHandler) Login(w http.ResponseWriter, r *http.Request) {
 	var request struct {
 		Name     string `json:"name"`
 		Password string `json:"password"`
@@ -78,69 +83,61 @@ func (l *Login) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		request.Password = password
 	} else {
 		if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
-			JSONError(w, err.Error(), http.StatusUnauthorized)
+			JSONError(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 	}
 
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-
-	ctx, _ := context.WithTimeout(r.Context(), l.AuthTimeout)
-	result, err := l.Authenticator.Authenticate(ctx, &authenticator.Credentials{
-		ID:     request.Name,
-		Secret: []byte(request.Password),
-	})
-
-	if err != nil {
-		if ae, ok := err.(authenticator.Error); ok && ae.Rejected() {
-			JSONError(w, http.StatusText(http.StatusForbidden), http.StatusForbidden)
-		} else {
-			JSONError(w, err.Error(), http.StatusServiceUnavailable)
-		}
-
-		l.log().WithField("err", err).Println("Authentication error")
+	if request.Name == "" || request.Password == "" {
+		JSONError(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 		return
 	}
 
+	user, err := t.Storage.GetUserByEmail(t.context(r.Context()), request.Name)
+	if err != nil {
+		log.Error(err)
+		JSONError(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		return
+	}
+
+	if err := bcrypt.CompareHashAndPassword(user.PasswordHash, []byte(request.Password)); err != nil {
+		log.Error(err)
+		JSONError(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		return
+	}
+
+	roles := make([]string, 0, len(user.Roles))
+	for r := range user.Roles {
+		roles = append(roles, r)
+	}
+
+	ns := t.Namespace
+	if ns == "" {
+		ns = DefaultNamespace
+	}
+
 	now := time.Now()
-	iss := l.Namespace
-	if iss == "" {
-		iss = defaultIss
-	}
-	defaultClaims := map[string]interface{}{
-		"exp": now.Add(l.SessionMaxAge).Unix(),
-		"iss": iss, // Should be URL according to RFC
-		"iat": now.Unix(),
-		"sub": request.Name,
-	}
 
-	claims := result.Claims()
-
-	if claims == nil {
-		claims = make(map[string]interface{})
+	claims := jwt.MapClaims{
+		"sub":                user.ID,
+		"exp":                now.Add(t.SessionMaxAge).Unix(),
+		"iat":                now.Unix(),
+		"iss":                ns,
+		nsClaim(ns, "email"): user.Email,
+		nsClaim(ns, "name"):  user.Name,
+		nsClaim(ns, "roles"): roles,
 	}
 
-	for k, v := range defaultClaims {
-		// Claims may be set by backend
-		if _, ok := claims[k]; !ok {
-			claims[k] = v
-		}
-	}
-
-	l.writeTokenWithClaims(w, jwt.MapClaims(claims))
+	t.writeTokenWithClaims(w, claims)
 }
 
-type Refresh struct {
-	*TokenProducer
-}
-
-func (r *Refresh) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	claims := req.Context().Value("user").(*jwt.Token).Claims.(jwt.MapClaims)
+func (t *TokenHandler) Refresh(w http.ResponseWriter, req *http.Request) {
+	claims := req.Context().Value(TokenContextKey).(*jwt.Token).Claims.(jwt.MapClaims)
 
 	// Update timestamp only
 	now := time.Now()
-	claims["exp"] = now.Add(r.SessionMaxAge).Unix()
+	claims["exp"] = now.Add(t.SessionMaxAge).Unix()
 	claims["iat"] = now.Unix()
 
-	r.writeTokenWithClaims(w, claims)
+	t.writeTokenWithClaims(w, claims)
 }

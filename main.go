@@ -7,15 +7,16 @@ import (
 	"encoding/base64"
 	"flag"
 	"fmt"
-	"git.ecadlabs.com/ecad/auth/authenticator/postgresql/migrations"
-	"git.ecadlabs.com/ecad/auth/router"
-	"github.com/dgrijalva/jwt-go"
-	log "github.com/sirupsen/logrus"
-	"golang.org/x/crypto/bcrypt"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
+
+	"git.ecadlabs.com/ecad/auth/migrations"
+	"git.ecadlabs.com/ecad/auth/service"
+	"github.com/dgrijalva/jwt-go"
+	log "github.com/sirupsen/logrus"
+	"golang.org/x/crypto/bcrypt"
 )
 
 const (
@@ -26,7 +27,7 @@ var jwtSigningMethod = jwt.SigningMethodHS256
 
 func main() {
 	var (
-		config      Config
+		config      service.Config
 		configFile  string
 		genPwd      string
 		genSecret   int
@@ -40,10 +41,13 @@ func main() {
 	flag.StringVar(&configFile, "c", "", "Config file.")
 	flag.BoolVar(&migrateOnly, "migrate", false, "Migrate and exit immediately.")
 
+	flag.StringVar(&config.BaseURL, "base", "http://localhost:8000", "Base URL.")
 	flag.StringVar(&config.Address, "http", ":8000", "HTTP service address.")
 	flag.StringVar(&config.HealthAddress, "health", ":8001", "Health service address.")
 	flag.StringVar(&config.JWTSecret, "secret", "", "JWT signing secret.")
-	flag.StringVar(&config.PostgresURL, "db", "postgres://localhost/auth?connect_timeout=10&sslmode=disable", "PostgreSQL server URL.")
+	flag.IntVar(&config.SessionMaxAge, "max_age", 259200, "Session max age, sec.")
+	flag.StringVar(&config.PostgresURL, "db", "postgres://localhost/users?connect_timeout=10&sslmode=disable", "PostgreSQL server URL.")
+	flag.IntVar(&config.DBTimeout, "timeout", 10, "DB timeout, sec.")
 	flag.BoolVar(&config.TLS, "tls", false, "Enable TLS.")
 	flag.StringVar(&config.TLSCert, "tlscert", "", "TLS certificate file.")
 	flag.StringVar(&config.TLSKey, "tlskey", "", "TLS private key file.")
@@ -85,7 +89,7 @@ func main() {
 		flag.Parse()
 	}
 
-	if config.JWTSecret == "" {
+	if config.JWTSecret == "" && !migrateOnly {
 		flag.Usage()
 		os.Exit(0)
 	}
@@ -116,14 +120,7 @@ func main() {
 	log.Printf("Health service listening on %s", config.HealthAddress)
 	log.Printf("HTTP service listening on %s", config.Address)
 
-	conf := router.Config{
-		PostgresURL:      config.PostgresURL,
-		JWTSecret:        []byte(config.JWTSecret),
-		JWTSigningMethod: jwtSigningMethod,
-		BaseURL:          config.BaseURL,
-	}
-
-	r, err := conf.Handlers()
+	svc, err := config.New()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -131,7 +128,7 @@ func main() {
 	// Start servers
 	healthServer := &http.Server{
 		Addr:    config.HealthAddress,
-		Handler: r.Health,
+		Handler: svc.HealthHandler(),
 	}
 
 	errChan := make(chan error, 10)
@@ -144,7 +141,7 @@ func main() {
 
 	httpServer := &http.Server{
 		Addr:      config.Address,
-		Handler:   r.Login,
+		Handler:   svc.APIHandler(),
 		TLSConfig: tlsConfig,
 	}
 
