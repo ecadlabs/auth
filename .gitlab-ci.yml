@@ -25,4 +25,12 @@ test-auth:
     - mkdir -p /go/src/git.ecadlabs.com/ecad/auth
     - cp -r * /go/src/git.ecadlabs.com/ecad/auth
     - cd /go/src/git.ecadlabs.com/ecad/auth
-    - go test -db "postgres://postgres@postgres/postgres?connect_timeout=10&sslmode=disable"
+
+build-auth-api-docs:
+  stage: build
+  image: docker
+  services:
+    - docker:dind
+  script:
+    - docker build -t "${DOCKER_REGISTRY_URL}/auth_api_docs:${CI_COMMIT_REF_NAME:0:8}-${CI_COMMIT_SHA:0:8}" .
+    - docker push "${DOCKER_REGISTRY_URL}/auth_api_docs:${CI_COMMIT_REF_NAME:0:8}-${CI_COMMIT_SHA:0:8}"
