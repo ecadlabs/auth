@@ -272,6 +272,13 @@ func (q *Query) SelectStmt(o *SelectOptions) (string, []interface{}, error) {
 	arg := make([]interface{}, 0, len(q.Match)+1)
 	idCol := pq.QuoteIdentifier(o.IDColumn)
 
+	var cmp string
+	if q.Order == OrderDesc {
+		cmp = "<"
+	} else {
+		cmp = ">"
+	}
+
 	var cond string
 
 	if q.Last != "" {
@@ -280,11 +287,11 @@ func (q *Query) SelectStmt(o *SelectOptions) (string, []interface{}, error) {
 		}
 
 		lastArg := i.Next()
-		cond += sortCol + " > " + lastArg
+		cond += sortCol + " " + cmp + " " + lastArg
 		arg = append(arg, q.Last)
 
 		if q.LastID != "" {
-			cond += " OR " + sortCol + " = " + lastArg + " AND " + idCol + " > " + i.Next() + ")"
+			cond += " OR " + sortCol + " = " + lastArg + " AND " + idCol + " " + cmp + " " + i.Next() + ")"
 			arg = append(arg, q.LastID)
 		}
 	}
@@ -309,7 +316,7 @@ func (q *Query) SelectStmt(o *SelectOptions) (string, []interface{}, error) {
 		so = "ASC"
 	}
 
-	expr += " ORDER BY " + sortCol + " " + so + ", " + idCol + " ASC"
+	expr += " ORDER BY " + sortCol + " " + so + ", " + idCol + " " + so
 
 	if q.Limit > 0 {
 		expr += " LIMIT " + i.Next()
