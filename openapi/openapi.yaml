@@ -18,6 +18,7 @@ paths:
       tags:
         - auth
       summary: Authenticate client
+      operationId: "postLogin"
       description: Authenticate client and return JWT token
       requestBody:
         description: User's credentials
@@ -44,6 +45,7 @@ paths:
         - auth
       summary: Authenticate client
       description: Authenticate client using Basic scheme and return JWT token
+      operationId: "getLogin"
       responses:
         '200':
           $ref: '#/components/responses/Token'
@@ -56,6 +58,7 @@ paths:
       tags:
         - auth
       summary: Refresh JWT token
+      operationId: "refrestToken"
       responses:
         '200':
           $ref: '#/components/responses/Token'
@@ -68,6 +71,7 @@ paths:
       tags:
         - users
       summary: Create new user
+      operationId: "createUser"
       requestBody:
         description: User info
         required: true
@@ -111,6 +115,7 @@ paths:
         - users
       summary: List users
       description: List users with filtering
+      operationId: "getUsers"
       parameters:
         - $ref: '#/components/parameters/SortBy'
         - $ref: '#/components/parameters/Order'
@@ -120,42 +125,49 @@ paths:
         - $ref: '#/components/parameters/Count'
         - in: query
           name: id
+          description: "Query by unique user ID"
           schema:
             $ref: '#/components/schemas/Predicate'
           style: deepObject
           explode: true
         - in: query
           name: email
+          description: "Query on users email address"
           schema:
             $ref: '#/components/schemas/Predicate'
           style: deepObject
           explode: true
         - in: query
           name: name
+          description: "Query on users natural name"
           schema:
             $ref: '#/components/schemas/Predicate'
           style: deepObject
           explode: true
         - in: query
           name: added
+          description: "Query on time of user ceration"
           schema:
             $ref: '#/components/schemas/Predicate'
           style: deepObject
           explode: true
         - in: query
           name: modified
+          description: "Query on time of last modifcation"
           schema:
             $ref: '#/components/schemas/Predicate'
           style: deepObject
           explode: true
         - in: query
           name: roles
+          description: "Query based on roles assigned to user"
           schema:
             $ref: '#/components/schemas/Predicate'
           style: deepObject
           explode: true
         - in: query
           name: email_verified
+          description: "Query on email verifiation status of user"
           schema:
             $ref: '#/components/schemas/Predicate'
           style: deepObject
@@ -187,6 +199,7 @@ paths:
       tags:
         - users
       summary: Get user info
+      operationId: "getUser"
       parameters:
         - $ref: '#/components/parameters/ID'
       responses:
@@ -201,6 +214,7 @@ paths:
         - users
       summary: Modify user's properties
       description: Modify user's properties using JSON Patch encoding
+      operationId: patchUsers
       parameters:
         - $ref: '#/components/parameters/ID'
       requestBody:
@@ -221,6 +235,7 @@ paths:
       tags:
         - users
       summary: Delete user
+      operationId: "deleteUser"
       parameters:
         - $ref: '#/components/parameters/ID'
       responses:
@@ -232,7 +247,10 @@ paths:
         - jwtAuth: []
   /version:
     get:
+      tags:
+        - operational
       summary: Version info
+      operationId: "getVersion"
       responses:
         '200':
           description: Version info
@@ -247,7 +265,10 @@ paths:
                     type: string
   /metrics:
     get:
+      tags:
+        - operational
       summary: Prometheus metrics
+      operationId: "getMetrics"
       responses:
         '200':
           description: Prometheus metrics
