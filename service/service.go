@@ -21,7 +21,7 @@ const (
 	defaultConnectTimeout = 10
 )
 
-var jwtSigningMethod = jwt.SigningMethodHS256
+var JWTSigningMethod = jwt.SigningMethodHS256
 
 type Service struct {
 	config  Config
@@ -53,6 +53,8 @@ func (c *Config) New() (*Service, error) {
 }
 
 func (s *Service) APIHandler() http.Handler {
+	baseURLFunc := s.config.GetBaseURLFunc()
+
 	tokenHandler := handlers.TokenHandler{
 		Storage:       s.storage,
 		Timeout:       time.Duration(s.config.DBTimeout) * time.Second,
@@ -60,24 +62,21 @@ func (s *Service) APIHandler() http.Handler {
 		JWTSecretGetter: func() ([]byte, error) {
 			return []byte(s.config.JWTSecret), nil
 		},
-		JWTSigningMethod: jwtSigningMethod,
+		JWTSigningMethod: JWTSigningMethod,
+		RefreshURL:       func() string { return baseURLFunc() + "/refresh" },
 		Namespace:        s.config.BaseURL,
-	}
-
-	if s.config.BaseURL != "" {
-		tokenHandler.RefreshURL = s.config.BaseURL + "/refresh"
 	}
 
 	usersHandler := handlers.Users{
 		Storage:   s.storage,
-		BaseURL:   s.config.BaseURL + "/users/",
+		BaseURL:   func() string { return baseURLFunc() + "/users/" },
 		Namespace: s.config.BaseURL,
 		Timeout:   time.Duration(s.config.DBTimeout) * time.Second,
 	}
 
 	jwtOptions := jwtmiddleware.Options{
 		ValidationKeyGetter: func(token *jwt.Token) (interface{}, error) { return []byte(s.config.JWTSecret), nil },
-		SigningMethod:       jwtSigningMethod,
+		SigningMethod:       JWTSigningMethod,
 		UserProperty:        handlers.TokenContextKey,
 		ErrorHandler: func(w http.ResponseWriter, r *http.Request, err string) {
 			handlers.JSONError(w, err, http.StatusUnauthorized)

@@ -24,5 +24,5 @@ test-auth:
   script:
     - mkdir -p /go/src/git.ecadlabs.com/ecad/auth
     - cp -r * /go/src/git.ecadlabs.com/ecad/auth
-    - cd /go/src/git.ecadlabs.com/ecad/auth
+    - cd /go/src/git.ecadlabs.com/ecad/auth/intergationtesting
     - go test -db "postgres://postgres@postgres/postgres?connect_timeout=10&sslmode=disable"

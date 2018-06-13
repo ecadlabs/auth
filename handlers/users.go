@@ -27,7 +27,7 @@ const (
 var schemaDecoder = schema.NewDecoder()
 
 type Users struct {
-	BaseURL   string
+	BaseURL   func() string
 	Namespace string
 	Storage   *users.Storage
 	Timeout   time.Duration
@@ -155,7 +155,7 @@ func (u *Users) GetUsers(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if nextQuery != nil {
-		nextUrl, err := url.Parse(u.BaseURL)
+		nextUrl, err := url.Parse(u.BaseURL())
 		if err != nil {
 			log.Error(err)
 			JSONError(w, err.Error(), http.StatusInternalServerError)
@@ -230,7 +230,7 @@ func (u *Users) NewUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Location", u.BaseURL+"/"+ret.ID.String())
+	w.Header().Set("Location", u.BaseURL()+ret.ID.String())
 	JSONResponse(w, http.StatusCreated, ret)
 }
 

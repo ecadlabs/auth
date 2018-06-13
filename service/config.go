@@ -6,17 +6,26 @@ import (
 )
 
 type Config struct {
-	BaseURL       string `json:"base_url"`
-	TLS           bool   `json:"tls"`
-	TLSCert       string `json:"tls_cert"`
-	TLSKey        string `json:"tls_key"`
-	JWTSecret     string `json:"jwt_secret"`
-	JWTSecretFile string `json:"jwt_secret_file"`
-	SessionMaxAge int    `json:"session_max_age"`
-	PostgresURL   string `json:"db_url"`
-	Address       string `json:"address"`
-	HealthAddress string `json:"health_address"`
-	DBTimeout     int    `json:"db_timeout"`
+	BaseURL       string        `json:"base_url"`
+	BaseURLFunc   func() string `json:"-"`
+	TLS           bool          `json:"tls"`
+	TLSCert       string        `json:"tls_cert"`
+	TLSKey        string        `json:"tls_key"`
+	JWTSecret     string        `json:"jwt_secret"`
+	JWTSecretFile string        `json:"jwt_secret_file"`
+	SessionMaxAge int           `json:"session_max_age"`
+	PostgresURL   string        `json:"db_url"`
+	Address       string        `json:"address"`
+	HealthAddress string        `json:"health_address"`
+	DBTimeout     int           `json:"db_timeout"`
+}
+
+func (c *Config) GetBaseURLFunc() func() string {
+	if c.BaseURLFunc != nil {
+		return c.BaseURLFunc
+	}
+
+	return func() string { return c.BaseURL }
 }
 
 func (c *Config) Load(name string) error {

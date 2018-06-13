@@ -24,7 +24,7 @@ type TokenHandler struct {
 	JWTSecretGetter  func() ([]byte, error)
 	JWTSigningMethod jwt.SigningMethod
 	Namespace        string
-	RefreshURL       string
+	RefreshURL       func() string
 }
 
 func (t *TokenHandler) context(parent context.Context) context.Context {
@@ -54,7 +54,7 @@ func (t *TokenHandler) writeTokenWithClaims(w http.ResponseWriter, claims jwt.Cl
 		RefreshURL string `json:"refresh,omitempty"`
 	}{
 		Token:      tokenString,
-		RefreshURL: t.RefreshURL,
+		RefreshURL: t.RefreshURL(),
 	}
 
 	w.Header().Set("Access-Control-Allow-Origin", "*")
