@@ -127,7 +127,7 @@ func (s *Storage) GetUsers(ctx context.Context, q *query.Query) (users []*User, 
 
 	// Count
 	if q.TotalCount {
-		stmt, args := q.CountStmt("users")
+		stmt, args := q.CountStmt(&selOpt)
 		if err = s.DB.Get(&count, stmt, args...); err != nil {
 			return
 		}
