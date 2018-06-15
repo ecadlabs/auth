@@ -4,6 +4,8 @@
 // data/1_add_users_table.up.sql
 // data/2_add_roles_table.down.sql
 // data/2_add_roles_table.up.sql
+// data/3_add_log_table.down.sql
+// data/3_add_log_table.up.sql
 // DO NOT EDIT!
 
 package migrations
@@ -151,6 +153,46 @@ func _2_add_roles_tableUpSql() (*asset, error) {
 	return a, nil
 }
 
+var __3_add_log_tableDownSql = []byte("\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\x72\x09\xf2\x0f\x50\x08\x71\x74\xf2\x71\x55\xc8\xc9\x4f\xb7\x06\x04\x00\x00\xff\xff\x5e\x0c\xb6\xd7\x0f\x00\x00\x00")
+
+func _3_add_log_tableDownSqlBytes() ([]byte, error) {
+	return bindataRead(
+		__3_add_log_tableDownSql,
+		"3_add_log_table.down.sql",
+	)
+}
+
+func _3_add_log_tableDownSql() (*asset, error) {
+	bytes, err := _3_add_log_tableDownSqlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "3_add_log_table.down.sql", size: 15, mode: os.FileMode(420), modTime: time.Unix(1529083289, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
+var __3_add_log_tableUpSql = []byte("\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\x4c\xc8\xb1\x0a\xc2\x30\x10\x06\xe0\xb9\x79\x8a\x7f\x6c\xa1\xa3\xb8\x38\x9d\xed\x49\x23\x69\x22\xe9\xc5\x82\x8b\x04\x1a\x8a\x20\x0a\x6d\xf4\xf9\x45\x27\xc7\xef\x6b\x3c\x93\x30\x84\xf6\x86\x71\x7f\xce\xa5\x2a\xf2\x0a\xd1\x3d\x0f\x42\xfd\x09\xa3\x96\xee\x47\x5c\x9c\x65\x58\x27\xb0\xc1\x18\xb4\x7c\xa0\x60\x04\xd6\x8d\x65\x55\xab\x22\xbd\xd3\x23\xe3\x4c\xbe\xe9\xc8\x97\xdb\xcd\xf7\x5e\x6b\x5a\xae\xb7\x09\x21\xe8\xb6\x56\x45\x8e\xcb\x9c\xf2\x5f\x4c\x31\x47\x1c\x07\x67\x55\xb5\xfb\x04\x00\x00\xff\xff\x68\xb3\x50\x13\x88\x00\x00\x00")
+
+func _3_add_log_tableUpSqlBytes() ([]byte, error) {
+	return bindataRead(
+		__3_add_log_tableUpSql,
+		"3_add_log_table.up.sql",
+	)
+}
+
+func _3_add_log_tableUpSql() (*asset, error) {
+	bytes, err := _3_add_log_tableUpSqlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "3_add_log_table.up.sql", size: 136, mode: os.FileMode(420), modTime: time.Unix(1529089274, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
 // Asset loads and returns the asset for the given name.
 // It returns an error if the asset could not be found or
 // could not be loaded.
@@ -207,6 +249,8 @@ var _bindata = map[string]func() (*asset, error){
 	"1_add_users_table.up.sql": _1_add_users_tableUpSql,
 	"2_add_roles_table.down.sql": _2_add_roles_tableDownSql,
 	"2_add_roles_table.up.sql": _2_add_roles_tableUpSql,
+	"3_add_log_table.down.sql": _3_add_log_tableDownSql,
+	"3_add_log_table.up.sql": _3_add_log_tableUpSql,
 }
 
 // AssetDir returns the file names below a certain
@@ -253,6 +297,8 @@ var _bintree = &bintree{nil, map[string]*bintree{
 	"1_add_users_table.up.sql": &bintree{_1_add_users_tableUpSql, map[string]*bintree{}},
 	"2_add_roles_table.down.sql": &bintree{_2_add_roles_tableDownSql, map[string]*bintree{}},
 	"2_add_roles_table.up.sql": &bintree{_2_add_roles_tableUpSql, map[string]*bintree{}},
+	"3_add_log_table.down.sql": &bintree{_3_add_log_tableDownSql, map[string]*bintree{}},
+	"3_add_log_table.up.sql": &bintree{_3_add_log_tableUpSql, map[string]*bintree{}},
 }}
 
 // RestoreAsset restores an asset under the given directory
