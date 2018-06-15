@@ -34,7 +34,7 @@ func (u *userModel) toUser() *User {
 		Name:          u.Name.String,
 		Added:         u.Added,
 		Modified:      u.Modified,
-		Roles:         make(map[string]interface{}),
+		Roles:         make(map[string]interface{}, len(u.Roles)),
 		EmailVerified: u.EmailVerified,
 	}
 
