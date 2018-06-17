@@ -1,0 +1,7 @@
+CREATE TABLE log(
+	ts TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+	event VARCHAR(64),
+	user_id UUID,
+	target_id UUID,
+	data JSON
+);

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"git.ecadlabs.com/ecad/auth/handlers"
+	"git.ecadlabs.com/ecad/auth/logger"
 	"git.ecadlabs.com/ecad/auth/middleware"
 	"git.ecadlabs.com/ecad/auth/users"
 	"github.com/auth0/go-jwt-middleware"
@@ -13,6 +14,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/jmoiron/sqlx"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/sirupsen/logrus"
 	"strconv"
 )
 
@@ -26,6 +28,7 @@ var JWTSigningMethod = jwt.SigningMethodHS256
 type Service struct {
 	config  Config
 	storage *users.Storage
+	db      *sqlx.DB
 }
 
 func (c *Config) New() (*Service, error) {
@@ -49,6 +52,7 @@ func (c *Config) New() (*Service, error) {
 	return &Service{
 		config:  *c,
 		storage: &users.Storage{DB: db},
+		db:      db,
 	}, nil
 }
 
@@ -67,11 +71,17 @@ func (s *Service) APIHandler() http.Handler {
 		Namespace:        s.config.BaseURL,
 	}
 
+	dbLogger := logrus.New()
+	dbLogger.AddHook(&logger.Hook{
+		DB: s.db.DB,
+	})
+
 	usersHandler := handlers.Users{
 		Storage:   s.storage,
 		BaseURL:   func() string { return baseURLFunc() + "/users/" },
 		Namespace: s.config.BaseURL,
 		Timeout:   time.Duration(s.config.DBTimeout) * time.Second,
+		AuxLogger: dbLogger,
 	}
 
 	jwtOptions := jwtmiddleware.Options{

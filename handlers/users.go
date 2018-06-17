@@ -31,6 +31,7 @@ type Users struct {
 	Namespace string
 	Storage   *users.Storage
 	Timeout   time.Duration
+	AuxLogger *log.Logger
 }
 
 func (u *Users) context(r *http.Request) context.Context {
@@ -171,7 +172,6 @@ func (u *Users) GetUsers(w http.ResponseWriter, r *http.Request) {
 
 func (u *Users) NewUser(w http.ResponseWriter, r *http.Request) {
 	// TODO Email confirmation
-	// TODO Access control
 
 	var user users.User
 
@@ -209,7 +209,7 @@ func (u *Users) NewUser(w http.ResponseWriter, r *http.Request) {
 		user.Roles.Add(RoleRegular)
 	}
 
-	_, userRoles := u.getTokenData(r)
+	self, userRoles := u.getTokenData(r)
 	if err = userRoles.IsGranted(permissionCreate, map[string]interface{}{"user": &user}); err != nil {
 		log.Error(err)
 		JSONError(w, err.Error(), http.StatusForbidden)
@@ -230,6 +230,17 @@ func (u *Users) NewUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Log
+	if u.AuxLogger != nil {
+		u.AuxLogger.WithFields(logFields(map[string]interface{}{
+			"email":          ret.Email,
+			"name":           ret.Name,
+			"added":          ret.Added,
+			"email_verified": ret.EmailVerified,
+			"roles":          ret.Roles,
+		}, EvCreate, self, ret.ID)).Printf("User %v created account %v", self, ret.ID)
+	}
+
 	w.Header().Set("Location", u.BaseURL()+ret.ID.String())
 	JSONResponse(w, http.StatusCreated, ret)
 }
@@ -239,7 +250,23 @@ func (u *Users) PatchUser(w http.ResponseWriter, r *http.Request) {
 
 	uid, err := uuid.FromString(mux.Vars(r)["id"])
 	if err != nil {
+		log.Error(err)
 		JSONError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	var p jsonpatch.Patch
+
+	if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
+		log.Error(err)
+		JSONError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	ops, err := users.OpsFromPatch(p)
+	if err != nil {
+		log.Error(err)
+		JSONError(w, err.Error(), errorHTTPStatus(err))
 		return
 	}
 
@@ -253,38 +280,42 @@ func (u *Users) PatchUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var p jsonpatch.Patch
-
-	if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
-		log.Error(err)
-		JSONError(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	for _, op := range p {
-		if strings.HasPrefix(op.Path, "/roles/") {
-			role := strings.TrimPrefix(op.Path, "/roles/")
-
-			switch op.Op {
-			case "add":
-				err = userRoles.IsGranted(permissionAddRole, map[string]interface{}{"role": role})
-			case "remove":
-				err = userRoles.IsGranted(permissionDeleteRole, map[string]interface{}{"role": role})
-			}
-
-			if err != nil {
-				log.Error(err)
-				JSONError(w, err.Error(), http.StatusForbidden)
-				return
-			}
+	for _, r := range ops.AddRoles {
+		if err := userRoles.IsGranted(permissionAddRole, map[string]interface{}{"role": r}); err != nil {
+			log.Error(err)
+			JSONError(w, err.Error(), http.StatusForbidden)
+			return
 		}
 	}
 
-	user, err := u.Storage.PatchUser(u.context(r), uid, p)
+	for _, r := range ops.RemoveRoles {
+		if err := userRoles.IsGranted(permissionDeleteRole, map[string]interface{}{"role": r}); err != nil {
+			log.Error(err)
+			JSONError(w, err.Error(), http.StatusForbidden)
+			return
+		}
+	}
+
+	user, err := u.Storage.UpdateUser(u.context(r), uid, ops)
 	if err != nil {
 		log.Error(err)
 		JSONError(w, err.Error(), errorHTTPStatus(err))
 		return
+	}
+
+	// Log
+	if u.AuxLogger != nil {
+		if len(ops.Update) != 0 {
+			u.AuxLogger.WithFields(logFields(ops.Update, EvUpdate, self, uid)).Printf("User %v updated account %v", self, uid)
+		}
+
+		for _, role := range ops.AddRoles {
+			u.AuxLogger.WithFields(logFields(map[string]interface{}{"role": role}, EvAddRole, self, uid)).Printf("User %v added role `%s' to account %v", self, role, uid)
+		}
+
+		for _, role := range ops.RemoveRoles {
+			u.AuxLogger.WithFields(logFields(map[string]interface{}{"role": role}, EvRemoveRole, self, uid)).Printf("User %v removed role `%s' from account %v", self, role, uid)
+		}
 	}
 
 	JSONResponse(w, http.StatusOK, user)
@@ -311,6 +342,11 @@ func (u *Users) DeleteUser(w http.ResponseWriter, r *http.Request) {
 		log.Error(err)
 		JSONError(w, err.Error(), errorHTTPStatus(err))
 		return
+	}
+
+	// Log
+	if u.AuxLogger != nil {
+		u.AuxLogger.WithFields(logFields(nil, EvDelete, self, uid)).Printf("User %v deleted account %v", self, uid)
 	}
 
 	w.WriteHeader(http.StatusNoContent)
