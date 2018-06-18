@@ -15,6 +15,7 @@ import (
 	"git.ecadlabs.com/ecad/auth/migrations"
 	"git.ecadlabs.com/ecad/auth/service"
 	"github.com/dgrijalva/jwt-go"
+	"github.com/golang-migrate/migrate"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -107,8 +108,26 @@ func main() {
 		}
 	}
 
-	log.Println("Running migrations...")
-	if err := migrations.Migrate(config.PostgresURL); err != nil {
+	m, err := migrations.New(config.PostgresURL)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	ver, _, err := m.Version()
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.WithField("version", ver).Println("Current DB Version")
+
+	if err := m.Up(); err == nil {
+		ver, _, err := m.Version()
+		if err != nil {
+			log.Fatal(err)
+		}
+		log.WithField("version", ver).Println("Migrated successfully")
+	} else if err == migrate.ErrNoChange {
+		log.Println("No migrations")
+	} else {
 		log.Fatal(err)
 	}
 

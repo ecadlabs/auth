@@ -223,8 +223,8 @@ type SelectOptions struct {
 	ValidateColumn func(string) bool
 }
 
-func (q *Query) CountStmt(from string) (string, []interface{}) {
-	stmt := "SELECT COUNT(*) FROM " + from
+func (q *Query) CountStmt(o *SelectOptions) (string, []interface{}) {
+	stmt := "SELECT COUNT(*) FROM " + o.FromExpr
 	arg := make([]interface{}, len(q.Match))
 
 	var (

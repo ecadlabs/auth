@@ -10,6 +10,7 @@ import (
 	"git.ecadlabs.com/ecad/auth/service"
 	"git.ecadlabs.com/ecad/auth/users"
 	"github.com/dgrijalva/jwt-go"
+	"github.com/golang-migrate/migrate"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
 	"github.com/satori/go.uuid"
@@ -222,7 +223,13 @@ func TestService(t *testing.T) {
 	}
 
 	// Migrate
-	if err := migrations.Migrate(*dbURL); err != nil {
+	m, err := migrations.New(*dbURL)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
 		t.Error(err)
 		return
 	}

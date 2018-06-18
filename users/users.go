@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"git.ecadlabs.com/ecad/auth/jsonpatch"
 	"git.ecadlabs.com/ecad/auth/query"
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
@@ -34,7 +33,7 @@ func (u *userModel) toUser() *User {
 		Name:          u.Name.String,
 		Added:         u.Added,
 		Modified:      u.Modified,
-		Roles:         make(map[string]interface{}),
+		Roles:         make(map[string]interface{}, len(u.Roles)),
 		EmailVerified: u.EmailVerified,
 	}
 
@@ -127,7 +126,7 @@ func (s *Storage) GetUsers(ctx context.Context, q *query.Query) (users []*User, 
 
 	// Count
 	if q.TotalCount {
-		stmt, args := q.CountStmt("users")
+		stmt, args := q.CountStmt(&selOpt)
 		if err = s.DB.Get(&count, stmt, args...); err != nil {
 			return
 		}
@@ -221,49 +220,20 @@ func (s *Storage) NewUser(ctx context.Context, user *User) (res *User, err error
 	return
 }
 
-func errPatchOp(o *jsonpatch.Op) error {
-	return &Error{fmt.Errorf("Incorrect JSON patch op `%s' for path `%s'", o.Op, o.Path), http.StatusBadRequest}
+func errPatchPath(p string) error {
+	return &Error{fmt.Errorf("Incorrect JSON patch path `%s'", p), http.StatusBadRequest}
 }
 
 var updatePaths = map[string]struct{}{
-	"/email": struct{}{},
-	"/name":  struct{}{},
+	"email": struct{}{},
+	"name":  struct{}{},
 }
 
-func (s *Storage) PatchUser(ctx context.Context, id uuid.UUID, patch jsonpatch.Patch) (user *User, err error) {
-	updateCols := make([]string, 0, len(patch))
-	updateArgs := make([]interface{}, 0, len(patch)+1)
-
-	addRolesArgs := make([]interface{}, 0, len(patch)+1)
-	removeRolesArgs := make([]interface{}, 0, len(patch)+1)
-
-	addRolesArgs = append(addRolesArgs, id)
-	removeRolesArgs = append(removeRolesArgs, id)
-
-	// Verify everything
-	for _, o := range patch {
-		if _, ok := updatePaths[o.Path]; ok {
-			if o.Op != "replace" {
-				return nil, errPatchOp(o)
-			}
-
-			if o.Value == nil {
-				return nil, ErrPatchValue
-			}
-
-			updateCols = append(updateCols, o.Path[1:])
-			updateArgs = append(updateArgs, o.Value)
-		} else if strings.HasPrefix(o.Path, "/roles/") {
-			role := strings.TrimPrefix(o.Path, "/roles/")
-
-			switch o.Op {
-			case "add":
-				addRolesArgs = append(addRolesArgs, role)
-			case "remove":
-				removeRolesArgs = append(removeRolesArgs, role)
-			default:
-				return nil, errPatchOp(o)
-			}
+func (s *Storage) UpdateUser(ctx context.Context, id uuid.UUID, ops *UserOps) (user *User, err error) {
+	// Verify columns
+	for k := range ops.Update {
+		if _, ok := updatePaths[k]; !ok {
+			return nil, errPatchPath(k)
 		}
 	}
 
@@ -281,22 +251,29 @@ func (s *Storage) PatchUser(ctx context.Context, id uuid.UUID, patch jsonpatch.P
 		err = tx.Commit()
 	}()
 
-	updateExpr := "UPDATE users SET "
-	for i, c := range updateCols {
+	// Update properties
+	var i int
+	expr := "UPDATE users SET "
+	args := make([]interface{}, len(ops.Update)+1)
+
+	for k, v := range ops.Update {
 		if i != 0 {
-			updateExpr += ", "
+			expr += ", "
 		}
-		updateExpr += fmt.Sprintf("%s = $%d", pq.QuoteIdentifier(c), i+1)
+		expr += fmt.Sprintf("%s = $%d", pq.QuoteIdentifier(k), i+1)
+		args[i] = v
+		i++
 	}
 
-	if len(updateCols) != 0 {
-		updateExpr += ", "
+	if len(ops.Update) != 0 {
+		expr += ", "
 	}
-	updateExpr += fmt.Sprintf("modified = DEFAULT WHERE id = $%d RETURNING *", len(updateCols)+1)
-	updateArgs = append(updateArgs, id)
+
+	expr += fmt.Sprintf("modified = DEFAULT WHERE id = $%d RETURNING *", len(ops.Update)+1)
+	args[len(ops.Update)] = id
 
 	var u userModel
-	if err = tx.GetContext(ctx, &u, updateExpr, updateArgs...); err != nil {
+	if err = tx.GetContext(ctx, &u, expr, args...); err != nil {
 		if err == sql.ErrNoRows {
 			err = ErrNotFound
 		}
@@ -304,17 +281,21 @@ func (s *Storage) PatchUser(ctx context.Context, id uuid.UUID, patch jsonpatch.P
 	}
 
 	// Update roles
-	if len(addRolesArgs) > 1 {
-		insertExpr := "INSERT INTO roles (user_id, role) VALUES "
+	if len(ops.AddRoles) != 0 {
+		expr := "INSERT INTO roles (user_id, role) VALUES "
+		args := make([]interface{}, len(ops.AddRoles)+1)
 
-		for i := 0; i < len(addRolesArgs)-1; i++ {
+		for i, r := range ops.AddRoles {
 			if i != 0 {
-				insertExpr += ", "
+				expr += ", "
 			}
-			insertExpr += fmt.Sprintf("($1, $%d)", i+2)
+			expr += fmt.Sprintf("($1, $%d)", i+2)
+			args[i+1] = r
 		}
 
-		if _, err = tx.ExecContext(ctx, insertExpr, addRolesArgs...); err != nil {
+		args[0] = id
+
+		if _, err = tx.ExecContext(ctx, expr, args...); err != nil {
 			if isUniqueViolation(err, "roles_pkey") {
 				err = ErrRoleExists
 			}
@@ -322,19 +303,22 @@ func (s *Storage) PatchUser(ctx context.Context, id uuid.UUID, patch jsonpatch.P
 		}
 	}
 
-	if len(removeRolesArgs) > 1 {
-		deleteExpr := "DELETE FROM roles WHERE user_id = $1 AND ("
+	if len(ops.RemoveRoles) != 0 {
+		expr := "DELETE FROM roles WHERE user_id = $1 AND ("
+		args := make([]interface{}, len(ops.RemoveRoles)+1)
 
-		for i := 0; i < len(removeRolesArgs)-1; i++ {
+		for i, r := range ops.RemoveRoles {
 			if i != 0 {
-				deleteExpr += " OR "
+				expr += " OR "
 			}
-			deleteExpr += fmt.Sprintf("role = $%d", i+2)
+			expr += fmt.Sprintf("role = $%d", i+2)
+			args[i+1] = r
 		}
 
-		deleteExpr += ")"
+		expr += ")"
+		args[0] = id
 
-		if _, err = tx.ExecContext(ctx, deleteExpr, removeRolesArgs...); err != nil {
+		if _, err = tx.ExecContext(ctx, expr, args...); err != nil {
 			return nil, err
 		}
 	}
