@@ -5,6 +5,7 @@ import (
 	"net/url"
 	"time"
 
+	"database/sql"
 	"git.ecadlabs.com/ecad/auth/handlers"
 	"git.ecadlabs.com/ecad/auth/logger"
 	"git.ecadlabs.com/ecad/auth/middleware"
@@ -28,7 +29,7 @@ var JWTSigningMethod = jwt.SigningMethodHS256
 type Service struct {
 	config  Config
 	storage *users.Storage
-	db      *sqlx.DB
+	DB      *sql.DB
 }
 
 func (c *Config) New() (*Service, error) {
@@ -44,15 +45,15 @@ func (c *Config) New() (*Service, error) {
 	}
 	url.RawQuery = q.Encode()
 
-	db, err := sqlx.Open("postgres", url.String())
+	db, err := sql.Open("postgres", url.String())
 	if err != nil {
 		return nil, err
 	}
 
 	return &Service{
 		config:  *c,
-		storage: &users.Storage{DB: db},
-		db:      db,
+		storage: &users.Storage{DB: sqlx.NewDb(db, "postgres")},
+		DB:      db,
 	}, nil
 }
 
@@ -73,7 +74,7 @@ func (s *Service) APIHandler() http.Handler {
 
 	dbLogger := logrus.New()
 	dbLogger.AddHook(&logger.Hook{
-		DB: s.db.DB,
+		DB: s.DB,
 	})
 
 	usersHandler := handlers.Users{
