@@ -1,0 +1,13 @@
+<form #loginform="ngForm" (ngSubmit)="onSubmit()">
+  <mat-card>
+      <mat-card-title>Login {{isLoggedIn}}</mat-card-title>
+      <mat-form-field>
+        <input [(ngModel)]="username" name="username" matInput placeholder="Email">
+      </mat-form-field>
+      <mat-form-field>
+          <input [(ngModel)]="password" name="password" matInput placeholder="Password" type="password">
+      </mat-form-field>
+      <br>
+      <button type="submit" mat-raised-button color="primary">Submit</button>
+  </mat-card>
+</form>
