@@ -17,7 +17,7 @@ type userModel struct {
 	ID            uuid.UUID      `db:"id"`
 	Email         string         `db:"email"`
 	PasswordHash  []byte         `db:"password_hash"`
-	Name          sql.NullString `db:"name"`
+	Name          string         `db:"name"`
 	Added         time.Time      `db:"added"`
 	Modified      time.Time      `db:"modified"`
 	EmailVerified bool           `db:"email_verified"`
@@ -30,7 +30,7 @@ func (u *userModel) toUser() *User {
 		ID:            u.ID,
 		Email:         u.Email,
 		PasswordHash:  u.PasswordHash,
-		Name:          u.Name.String,
+		Name:          u.Name,
 		Added:         u.Added,
 		Modified:      u.Modified,
 		Roles:         make(map[string]interface{}, len(u.Roles)),
@@ -158,7 +158,7 @@ func (s *Storage) NewUser(ctx context.Context, user *User) (res *User, err error
 		ID:           uuid.NewV4(),
 		Email:        user.Email,
 		PasswordHash: user.PasswordHash,
-		Name:         sql.NullString{String: user.Name, Valid: user.Name != ""},
+		Name:         user.Name,
 	}
 
 	tx, err := s.DB.Beginx()
