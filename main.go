@@ -114,10 +114,11 @@ func main() {
 	}
 
 	ver, _, err := m.Version()
-	if err != nil {
+	if err == nil {
+		log.WithField("version", ver).Println("Current DB Version")
+	} else if err != migrate.ErrNilVersion {
 		log.Fatal(err)
 	}
-	log.WithField("version", ver).Println("Current DB Version")
 
 	if err := m.Up(); err == nil {
 		ver, _, err := m.Version()
