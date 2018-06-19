@@ -1,0 +1,47 @@
+version: '3'
+services:
+  envoy:
+    image: envoyproxy/envoy-alpine
+    volumes:
+      - ./envoy/:/etc/envoy
+    command: /usr/local/bin/envoy -c /etc/envoy/envoy_dev.yaml
+    ports:
+      - "80:10000"
+      - "9901:9901"
+  db:
+    image: "postgres:alpine"
+    environment:
+      - POSTGRES_USER=auth
+      - POSTGRES_PASSWORD=auth
+      - POSTGRES_DB=auth
+  auth:
+    build:
+      context: .
+    entrypoint: /app/auth -secret foobar -db "postgres://auth:auth@db/auth?connect_timeout=10&sslmode=disable"
+    volumes:
+      - ./config.json:/app/config.json
+    depends_on:
+      - db
+  apidocs:
+    build:
+      context: apidocs/
+    ports:
+      - "8900:80"
+    command: /bin/bash -c "nginx -g 'daemon off;'"
+    depends_on:
+      - envoy 
+
+  webapp:
+    build:
+      dockerfile: Dockerfile.dev
+      context: webapp/
+    volumes:
+      - ./webapp/:/app
+      - node_modules_volume:/app/node_modules
+    depends_on:
+      - envoy
+      - auth
+    depends_on:
+      - envoy 
+volumes:
+  node_modules_volume:
