@@ -7,5 +7,10 @@
   user/roles CRUD operations. It's a counterpart to the ecad JWT auth daemon
   &amp; users api.</p>
 </div>
+<mat-toolbar>
+    <span>{{title}}</span>
+    <div class='splitter'></div>
+    <a [routerLink]='["protected"]'>Navigate to protected page</a>
+</mat-toolbar>
 <router-outlet></router-outlet>
 

@@ -3,4 +3,6 @@ export interface AuthConfig {
     whiteListUrl: string;
     tokenName: string;
     passwordResetUrl: string;
+    sendResetEmailUrl: string;
+    loginPageUrl: string;
 }

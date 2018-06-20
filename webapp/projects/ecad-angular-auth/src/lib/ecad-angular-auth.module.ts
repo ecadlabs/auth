@@ -5,6 +5,8 @@ import { authConfig, LoginService, PasswordReset } from './tokens';
 import { StandardLoginService } from './login/standard-login.service';
 import { AuthConfig } from './interfaces';
 import { PasswordResetService } from './password-reset/password-reset.service';
+import { IpWhiteListedGuard } from './guards/ip-whitelisted.guard';
+import { LoggedinGuard } from './guards/loggedin.guard';
 
 export const blacklistedRoutes = [];
 export let tokenName = '';
@@ -34,7 +36,9 @@ export class EcadAngularAuthModule {
       providers: [
           { provide: authConfig, useValue: config },
           { provide: LoginService, useClass: StandardLoginService},
-          { provide: PasswordReset, useClass: PasswordResetService}
+          { provide: PasswordReset, useClass: PasswordResetService},
+          IpWhiteListedGuard,
+          LoggedinGuard
       ]
     };
   }

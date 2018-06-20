@@ -46,7 +46,8 @@ export class StandardLoginService implements ILoginService {
   public login(credential: Credentials): Observable<LoginResult> {
     const requestOptions = this.createRequestOptions(credential);
     return this.httpClient.get<LoginResult>(this.config.loginUrl, requestOptions).pipe(
-      tap((result) => localStorage.setItem('token', result.token)),
+      tap((result) => localStorage.setItem(this.config.tokenName, result.token)),
+      tap((result) => localStorage.setItem('refreshTokenUrl', result.refresh)),
     );
   }
 
@@ -61,6 +62,10 @@ export class StandardLoginService implements ILoginService {
       localStorage.setItem(this.config.tokenName, '');
       observer.next(true);
     });
+  }
+
+  public refreshToken(): Observable<boolean> {
+    return this.httpClient.get(localStorage.getItem('refreshTokenUrl')).pipe(map(() => true));
   }
 
   public isLoggedIn(): boolean {
