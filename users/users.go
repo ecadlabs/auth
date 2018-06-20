@@ -152,28 +152,13 @@ func isUniqueViolation(err error, constraint string) bool {
 	return ok && e.Code.Name() == "unique_violation" && e.Constraint == constraint
 }
 
-func (s *Storage) NewUser(ctx context.Context, user *User) (res *User, err error) {
-	// TODO Check allowed roles
+func NewUserInt(ctx context.Context, tx *sqlx.Tx, user *User) (res *User, err error) {
 	model := userModel{
 		ID:           uuid.NewV4(),
 		Email:        user.Email,
 		PasswordHash: user.PasswordHash,
 		Name:         user.Name,
 	}
-
-	tx, err := s.DB.Beginx()
-	if err != nil {
-		return
-	}
-
-	defer func() {
-		if err != nil {
-			tx.Rollback()
-			return
-		}
-
-		err = tx.Commit()
-	}()
 
 	// Create user
 	rows, err := sqlx.NamedQueryContext(ctx, tx, "INSERT INTO users (id, email, password_hash, name) VALUES (:id, :email, :password_hash, :name) RETURNING added, modified, email_verified", &model)
@@ -217,6 +202,25 @@ func (s *Storage) NewUser(ctx context.Context, user *User) (res *User, err error
 	}
 
 	_, err = tx.ExecContext(ctx, "INSERT INTO roles (user_id, role) VALUES "+strings.Join(valuesExprs, ", "), args...)
+	return
+}
+
+func (s *Storage) NewUser(ctx context.Context, user *User) (res *User, err error) {
+	tx, err := s.DB.Beginx()
+	if err != nil {
+		return
+	}
+
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+			return
+		}
+
+		err = tx.Commit()
+	}()
+
+	res, err = NewUserInt(ctx, tx, user)
 	return
 }
 

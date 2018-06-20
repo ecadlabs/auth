@@ -63,6 +63,7 @@ func main() {
 		genSecret   int
 		useBase64   bool
 		migrateOnly bool
+		bootstrap   bool
 	)
 
 	flag.StringVar(&genPwd, "bcrypt", "", "Generate password hash.")
@@ -70,6 +71,7 @@ func main() {
 	flag.BoolVar(&useBase64, "base64_secret", false, "Encode generated secret using base64.")
 	flag.StringVar(&configFile, "c", "", "Config file.")
 	flag.BoolVar(&migrateOnly, "migrate", false, "Migrate and exit immediately.")
+	flag.BoolVar(&bootstrap, "bootstrap", false, "Bootstrap DB.")
 
 	flag.StringVar(&config.BaseURL, "base", "http://localhost:8000", "Base URL.")
 	flag.StringVar(&config.Address, "http", ":8000", "HTTP service address.")
@@ -194,6 +196,16 @@ func main() {
 
 	if err := doMigrate(svc.DB); err != nil {
 		log.Fatal(err)
+	}
+
+	if bootstrap {
+		if err := svc.Bootstrap(); err != nil {
+			if err != service.ErrNoBootstrap {
+				log.Fatal(err)
+			}
+		} else {
+			log.Println("DB bootstrapped successfully")
+		}
 	}
 
 	log.Printf("HTTP service listening on %s", config.Address)
