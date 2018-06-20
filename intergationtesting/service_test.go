@@ -2,6 +2,7 @@ package intergationtesting
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -14,6 +15,7 @@ import (
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
 	"github.com/satori/go.uuid"
+	"golang.org/x/crypto/bcrypt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -216,7 +218,7 @@ func TestService(t *testing.T) {
 	}
 	defer db.Close()
 
-	_, err = db.Exec("DROP TABLE IF EXISTS schema_migrations, users, roles")
+	_, err = db.Exec("DROP TABLE IF EXISTS schema_migrations, users, roles, log")
 	if err != nil {
 		t.Error(err)
 		return
@@ -254,13 +256,49 @@ func TestService(t *testing.T) {
 	srv = httptest.NewServer(svc.APIHandler())
 	defer srv.Close()
 
-	usersList := make([]*users.User, 0)
+	// Create superuser
+	storage := users.Storage{
+		DB: sqlx.NewDb(svc.DB, "postgres"),
+	}
 
-	// Create users
+	hash, _ := bcrypt.GenerateFromPassword([]byte(testPassword), bcrypt.DefaultCost)
+
+	u := users.User{
+		Email:        superUserEmail,
+		Name:         "Super User",
+		PasswordHash: hash,
+		Roles: users.Roles{
+			handlers.RoleAdmin: struct{}{},
+		},
+	}
+
+	res, err := storage.NewUser(context.Background(), &u)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	// Login as superuser
+	code, token, _, err := doLogin(srv, superUserEmail, testPassword)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	fmt.Println(token)
+
+	if code != http.StatusOK {
+		t.Error(code)
+		return
+	}
+
+	usersList := []*users.User{res}
+
+	// Create other users
 	for i := 0; i < usersNum; i++ {
 		u := genTestUser(i)
 
-		code, res, err := createUser(srv, u, "")
+		code, res, err := createUser(srv, u, token)
 		if err != nil {
 			t.Error(err)
 			return
@@ -274,61 +312,7 @@ func TestService(t *testing.T) {
 		usersList = append(usersList, res)
 	}
 
-	// Create superuser
-	u := users.User{
-		Email:    superUserEmail,
-		Name:     "Super User",
-		Password: testPassword,
-	}
-
-	code, res, err := createUser(srv, &u, "")
-	if err != nil {
-		t.Error(err)
-		return
-	}
-
-	usersList = append(usersList, res)
-
-	if code != http.StatusCreated {
-		t.Error(code)
-		return
-	}
-
-	_, err = db.Exec("INSERT INTO roles (user_id, role) VALUES ($1, $2)", res.ID, handlers.RoleAdmin)
-	if err != nil {
-		t.Error(err)
-		return
-	}
-
 	// Run all other tests in parallel
-	t.Run("TestGetAllAnonymous", func(t *testing.T) {
-		for _, u := range usersList {
-			code, _, err := getUser(srv, "", u.ID)
-			if err != nil {
-				t.Error(err)
-				return
-			}
-
-			if code != http.StatusUnauthorized {
-				t.Error(code)
-				return
-			}
-		}
-	})
-
-	t.Run("TestGetListAnonymous", func(t *testing.T) {
-		code, _, err := getList(srv, "", url.Values{})
-		if err != nil {
-			t.Error(err)
-			return
-		}
-
-		if code != http.StatusUnauthorized {
-			t.Error(code)
-			return
-		}
-	})
-
 	t.Run("TestRegularUser", func(t *testing.T) {
 		code, token, refresh, err := doLogin(srv, "user0@example.com", testPassword)
 		if err != nil {

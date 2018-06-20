@@ -2,6 +2,7 @@ package users
 
 import (
 	"errors"
+	"git.ecadlabs.com/ecad/auth/roles"
 	"github.com/satori/go.uuid"
 	"net/http"
 	"strings"
@@ -39,14 +40,14 @@ func (r Roles) HasPrefix(prefix string) bool {
 	return false
 }
 
-func (r Roles) Prefixed(prefix string) Roles {
-	ret := make(Roles)
+func (r Roles) Get() roles.Roles {
+	s := make([]string, len(r))
+	var i int
 	for role := range r {
-		if strings.HasPrefix(role, prefix) {
-			ret[role] = struct{}{}
-		}
+		s[i] = role
+		i++
 	}
-	return ret
+	return roles.GetKnownRoles(s)
 }
 
 func (r Roles) Has(role string) bool {

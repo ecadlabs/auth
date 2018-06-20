@@ -5,6 +5,8 @@ import (
 	"io/ioutil"
 )
 
+const defaultNamespace = "com.ecadlabs.auth"
+
 type Config struct {
 	BaseURL            string        `json:"base_url"`
 	BaseURLFunc        func() string `json:"-"`
@@ -50,4 +52,12 @@ func (c *Config) Load(name string) error {
 	}
 
 	return nil
+}
+
+func (c *Config) Namespace() string {
+	if c.BaseURL != "" {
+		return c.BaseURL
+	}
+
+	return defaultNamespace
 }

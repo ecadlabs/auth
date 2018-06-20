@@ -5,9 +5,7 @@ import (
 	"encoding/json"
 	"git.ecadlabs.com/ecad/auth/jsonpatch"
 	"git.ecadlabs.com/ecad/auth/query"
-	"git.ecadlabs.com/ecad/auth/roles"
 	"git.ecadlabs.com/ecad/auth/users"
-	"github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/schema"
 	"github.com/satori/go.uuid"
@@ -28,7 +26,6 @@ var schemaDecoder = schema.NewDecoder()
 
 type Users struct {
 	BaseURL   func() string
-	Namespace string
 	Storage   *users.Storage
 	Timeout   time.Duration
 	AuxLogger *log.Logger
@@ -50,51 +47,17 @@ func errorHTTPStatus(err error) int {
 	return http.StatusInternalServerError
 }
 
-func (u *Users) getTokenData(r *http.Request) (uid uuid.UUID, ret roles.Roles) {
-	if token, ok := r.Context().Value(TokenContextKey).(*jwt.Token); ok {
-		claims := token.Claims.(jwt.MapClaims)
-		ns := u.Namespace
-		if ns == "" {
-			ns = DefaultNamespace
-		}
-
-		if n, ok := claims[nsClaim(ns, "roles")].([]interface{}); ok {
-			names := make([]string, 0, len(n))
-			for _, name := range n {
-				if s, ok := name.(string); ok {
-					names = append(names, s)
-				}
-			}
-
-			if len(names) != 0 {
-				ret = roles.GetKnownRoles(names)
-			}
-		}
-
-		if sub, ok := claims["sub"].(string); ok {
-			if id, err := uuid.FromString(sub); err == nil {
-				uid = id
-			}
-		}
-	}
-
-	if len(ret) == 0 {
-		ret = roles.Roles{roles.GetRole(RoleAnonymous)}
-	}
-
-	return
-}
-
 func (u *Users) GetUser(w http.ResponseWriter, r *http.Request) {
+	self := r.Context().Value(UserContextKey).(*users.User)
+
 	uid, err := uuid.FromString(mux.Vars(r)["id"])
 	if err != nil {
 		JSONError(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	self, userRoles := u.getTokenData(r)
-	if err = userRoles.IsGranted(permissionGet, map[string]interface{}{
-		"self": self,
+	if err = self.Roles.Get().IsGranted(permissionGet, map[string]interface{}{
+		"self": self.ID,
 		"id":   uid,
 	}); err != nil {
 		log.Error(err)
@@ -114,10 +77,9 @@ func (u *Users) GetUser(w http.ResponseWriter, r *http.Request) {
 
 func (u *Users) GetUsers(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
+	self := r.Context().Value(UserContextKey).(*users.User)
 
-	_, userRoles := u.getTokenData(r)
-
-	if err := userRoles.IsGranted(permissionList, nil); err != nil {
+	if err := self.Roles.Get().IsGranted(permissionList, nil); err != nil {
 		log.Error(err)
 		JSONError(w, err.Error(), http.StatusForbidden)
 		return
@@ -172,6 +134,7 @@ func (u *Users) GetUsers(w http.ResponseWriter, r *http.Request) {
 
 func (u *Users) NewUser(w http.ResponseWriter, r *http.Request) {
 	// TODO Email confirmation
+	self := r.Context().Value(UserContextKey).(*users.User)
 
 	var user users.User
 
@@ -209,8 +172,7 @@ func (u *Users) NewUser(w http.ResponseWriter, r *http.Request) {
 		user.Roles.Add(RoleRegular)
 	}
 
-	self, userRoles := u.getTokenData(r)
-	if err = userRoles.IsGranted(permissionCreate, map[string]interface{}{"user": &user}); err != nil {
+	if err = self.Roles.Get().IsGranted(permissionCreate, map[string]interface{}{"user": &user}); err != nil {
 		log.Error(err)
 		JSONError(w, err.Error(), http.StatusForbidden)
 		return
@@ -238,7 +200,7 @@ func (u *Users) NewUser(w http.ResponseWriter, r *http.Request) {
 			"added":          ret.Added,
 			"email_verified": ret.EmailVerified,
 			"roles":          ret.Roles,
-		}, EvCreate, self, ret.ID)).Printf("User %v created account %v", self, ret.ID)
+		}, EvCreate, self.ID, ret.ID)).Printf("User %v created account %v", self.ID, ret.ID)
 	}
 
 	w.Header().Set("Location", u.BaseURL()+ret.ID.String())
@@ -247,6 +209,7 @@ func (u *Users) NewUser(w http.ResponseWriter, r *http.Request) {
 
 func (u *Users) PatchUser(w http.ResponseWriter, r *http.Request) {
 	// TODO Email verification
+	self := r.Context().Value(UserContextKey).(*users.User)
 
 	uid, err := uuid.FromString(mux.Vars(r)["id"])
 	if err != nil {
@@ -270,9 +233,10 @@ func (u *Users) PatchUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	self, userRoles := u.getTokenData(r)
+	userRoles := self.Roles.Get()
+
 	if err = userRoles.IsGranted(permissionModify, map[string]interface{}{
-		"self": self,
+		"self": self.ID,
 		"id":   uid,
 	}); err != nil {
 		log.Error(err)
@@ -306,15 +270,15 @@ func (u *Users) PatchUser(w http.ResponseWriter, r *http.Request) {
 	// Log
 	if u.AuxLogger != nil {
 		if len(ops.Update) != 0 {
-			u.AuxLogger.WithFields(logFields(ops.Update, EvUpdate, self, uid)).Printf("User %v updated account %v", self, uid)
+			u.AuxLogger.WithFields(logFields(ops.Update, EvUpdate, self.ID, uid)).Printf("User %v updated account %v", self.ID, uid)
 		}
 
 		for _, role := range ops.AddRoles {
-			u.AuxLogger.WithFields(logFields(map[string]interface{}{"role": role}, EvAddRole, self, uid)).Printf("User %v added role `%s' to account %v", self, role, uid)
+			u.AuxLogger.WithFields(logFields(map[string]interface{}{"role": role}, EvAddRole, self.ID, uid)).Printf("User %v added role `%s' to account %v", self.ID, role, uid)
 		}
 
 		for _, role := range ops.RemoveRoles {
-			u.AuxLogger.WithFields(logFields(map[string]interface{}{"role": role}, EvRemoveRole, self, uid)).Printf("User %v removed role `%s' from account %v", self, role, uid)
+			u.AuxLogger.WithFields(logFields(map[string]interface{}{"role": role}, EvRemoveRole, self.ID, uid)).Printf("User %v removed role `%s' from account %v", self.ID, role, uid)
 		}
 	}
 
@@ -322,15 +286,16 @@ func (u *Users) PatchUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func (u *Users) DeleteUser(w http.ResponseWriter, r *http.Request) {
+	self := r.Context().Value(UserContextKey).(*users.User)
+
 	uid, err := uuid.FromString(mux.Vars(r)["id"])
 	if err != nil {
 		JSONError(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	self, userRoles := u.getTokenData(r)
-	if err = userRoles.IsGranted(permissionDelete, map[string]interface{}{
-		"self": self,
+	if err = self.Roles.Get().IsGranted(permissionDelete, map[string]interface{}{
+		"self": self.ID,
 		"id":   uid,
 	}); err != nil {
 		log.Error(err)
@@ -346,7 +311,7 @@ func (u *Users) DeleteUser(w http.ResponseWriter, r *http.Request) {
 
 	// Log
 	if u.AuxLogger != nil {
-		u.AuxLogger.WithFields(logFields(nil, EvDelete, self, uid)).Printf("User %v deleted account %v", self, uid)
+		u.AuxLogger.WithFields(logFields(nil, EvDelete, self.ID, uid)).Printf("User %v deleted account %v", self.ID, uid)
 	}
 
 	w.WriteHeader(http.StatusNoContent)

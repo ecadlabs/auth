@@ -69,7 +69,7 @@ func (s *Service) APIHandler() http.Handler {
 		},
 		JWTSigningMethod: JWTSigningMethod,
 		RefreshURL:       func() string { return baseURLFunc() + "/refresh" },
-		Namespace:        s.config.BaseURL,
+		Namespace:        s.config.Namespace(),
 	}
 
 	dbLogger := logrus.New()
@@ -80,7 +80,6 @@ func (s *Service) APIHandler() http.Handler {
 	usersHandler := handlers.Users{
 		Storage:   s.storage,
 		BaseURL:   func() string { return baseURLFunc() + "/users/" },
-		Namespace: s.config.BaseURL,
 		Timeout:   time.Duration(s.config.DBTimeout) * time.Second,
 		AuxLogger: dbLogger,
 	}
@@ -95,9 +94,6 @@ func (s *Service) APIHandler() http.Handler {
 	}
 	jwtMiddleware := jwtmiddleware.New(jwtOptions)
 
-	jwtOptions.CredentialsOptional = true
-	jwtMiddlewareOptionalAuth := jwtmiddleware.New(jwtOptions)
-
 	m := mux.NewRouter()
 
 	m.Use((&middleware.Logging{}).Handler)
@@ -109,11 +105,19 @@ func (s *Service) APIHandler() http.Handler {
 	m.Methods("GET").Path("/refresh").Handler(jwtMiddleware.Handler(http.HandlerFunc(tokenHandler.Refresh)))
 
 	// Users API
-	m.Methods("POST").Path("/users/").Handler(jwtMiddlewareOptionalAuth.Handler(http.HandlerFunc(usersHandler.NewUser)))
+	ud := middleware.UserData{
+		Namespace:       s.config.Namespace(),
+		TokenContextKey: handlers.TokenContextKey,
+		UserContextKey:  handlers.UserContextKey,
+		DefaultRole:     handlers.RoleAnonymous,
+		RolePrefix:      handlers.RolePrefix,
+	}
 
 	umux := m.PathPrefix("/users").Subrouter()
 	umux.Use(jwtMiddleware.Handler)
+	umux.Use(ud.Handler)
 
+	umux.Methods("POST").Path("/").HandlerFunc(usersHandler.NewUser)
 	umux.Methods("GET").Path("/").HandlerFunc(usersHandler.GetUsers)
 	umux.Methods("GET").Path("/{id}").HandlerFunc(usersHandler.GetUser)
 	umux.Methods("PATCH").Path("/{id}").HandlerFunc(usersHandler.PatchUser)
