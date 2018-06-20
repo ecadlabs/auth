@@ -15,6 +15,7 @@ type UserData struct {
 	TokenContextKey string
 	UserContextKey  string
 	DefaultRole     string
+	RolePrefix      string
 }
 
 func (u *UserData) Handler(h http.Handler) http.Handler {
@@ -42,7 +43,7 @@ func (u *UserData) Handler(h http.Handler) http.Handler {
 			}
 		}
 
-		if len(user.Roles) == 0 {
+		if !user.Roles.HasPrefix(u.RolePrefix) {
 			user.Roles[u.DefaultRole] = struct{}{}
 		}
 

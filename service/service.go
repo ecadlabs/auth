@@ -110,6 +110,7 @@ func (s *Service) APIHandler() http.Handler {
 		TokenContextKey: handlers.TokenContextKey,
 		UserContextKey:  handlers.UserContextKey,
 		DefaultRole:     handlers.RoleAnonymous,
+		RolePrefix:      handlers.RolePrefix,
 	}
 
 	umux := m.PathPrefix("/users").Subrouter()
