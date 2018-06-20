@@ -29,8 +29,8 @@ docker-build-auth:
       -t "${DOCKER_REGISTRY_URL}/auth:${CI_COMMIT_REF_NAME}" 
       -t "${DOCKER_REGISTRY_URL}/auth:latest" 
       .
-    - docker push "${DOCKER_REGISTRY_URL}/postgres-auth:${CI_COMMIT_REF_NAME}"
-    - docker push "${DOCKER_REGISTRY_URL}/postgres-auth:latest"
+    - docker push "${DOCKER_REGISTRY_URL}/auth:${CI_COMMIT_REF_NAME}"
+    - docker push "${DOCKER_REGISTRY_URL}/auth:latest"
 
 build-auth-api-docs:
   stage: build
