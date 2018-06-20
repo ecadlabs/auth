@@ -24,8 +24,13 @@ docker-build-auth:
     - docker:dind
   script:
     - echo ${GOOGLE_GCR_KEY} | docker login -u _json_key --password-stdin ${DOCKER_REGISTRY}
-    - docker build -t "${DOCKER_REGISTRY_URL}/postgres-auth:${CI_COMMIT_REF_NAME:0:8}-${CI_COMMIT_SHA:0:8}" .
-    - docker push "${DOCKER_REGISTRY_URL}/postgres-auth:${CI_COMMIT_REF_NAME:0:8}-${CI_COMMIT_SHA:0:8}"
+    - >
+      docker build 
+      -t "${DOCKER_REGISTRY_URL}/auth:${CI_COMMIT_REF_NAME}" 
+      -t "${DOCKER_REGISTRY_URL}/auth:latest" 
+      .
+    - docker push "${DOCKER_REGISTRY_URL}/postgres-auth:${CI_COMMIT_REF_NAME}"
+    - docker push "${DOCKER_REGISTRY_URL}/postgres-auth:latest"
 
 build-auth-api-docs:
   stage: build
@@ -34,5 +39,10 @@ build-auth-api-docs:
     - docker:dind
   script:
     - echo ${GOOGLE_GCR_KEY} | docker login -u _json_key --password-stdin ${DOCKER_REGISTRY}
-    - docker build -t "${DOCKER_REGISTRY_URL}/auth_api_docs:${CI_COMMIT_REF_NAME:0:8}-${CI_COMMIT_SHA:0:8}" .
-    - docker push "${DOCKER_REGISTRY_URL}/auth_api_docs:${CI_COMMIT_REF_NAME:0:8}-${CI_COMMIT_SHA:0:8}"
+    - >
+      docker build 
+      -t "${DOCKER_REGISTRY_URL}/auth_api_docs:${CI_COMMIT_REF_NAME}" 
+      -t "${DOCKER_REGISTRY_URL}/auth_api_docs:latest" 
+      .
+    - docker push "${DOCKER_REGISTRY_URL}/auth_api_docs:${CI_COMMIT_REF_NAME}"
+    - docker push "${DOCKER_REGISTRY_URL}/auth_api_docs:latest"
