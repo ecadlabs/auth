@@ -69,7 +69,7 @@ func (s *Service) APIHandler() http.Handler {
 		},
 		JWTSigningMethod: JWTSigningMethod,
 		RefreshURL:       func() string { return baseURLFunc() + "/refresh" },
-		Namespace:        s.config.BaseURL,
+		Namespace:        s.config.Namespace(),
 	}
 
 	dbLogger := logrus.New()
@@ -106,7 +106,7 @@ func (s *Service) APIHandler() http.Handler {
 
 	// Users API
 	ud := middleware.UserData{
-		Namespace:       s.config.BaseURL,
+		Namespace:       s.config.Namespace(),
 		TokenContextKey: handlers.TokenContextKey,
 		UserContextKey:  handlers.UserContextKey,
 		DefaultRole:     handlers.RoleAnonymous,

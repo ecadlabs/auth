@@ -13,8 +13,7 @@ import (
 )
 
 const (
-	TokenContextKey  = "token"
-	DefaultNamespace = "com.ecadlabs.auth"
+	TokenContextKey = "token"
 )
 
 type TokenHandler struct {
@@ -111,10 +110,6 @@ func (t *TokenHandler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ns := t.Namespace
-	if ns == "" {
-		ns = DefaultNamespace
-	}
-
 	now := time.Now()
 
 	claims := jwt.MapClaims{
