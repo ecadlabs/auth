@@ -7,4 +7,12 @@
   user/roles CRUD operations. It's a counterpart to the ecad JWT auth daemon
   &amp; users api.</p>
 </div>
+<mat-toolbar>
+    <span>{{title}}</span>
+    <a [routerLink]='["protected"]'>Navigate to protected page</a>
+    <div class='splitter'></div>
+    <span *ngIf='isLoggedIn | async'>Welcome {{(user | async)['http://localhost:8000/email']}}</span>
+    <a *ngIf='isLoggedIn | async' href (click)='logout()'>Logout</a>
+</mat-toolbar>
+<router-outlet></router-outlet>
 
