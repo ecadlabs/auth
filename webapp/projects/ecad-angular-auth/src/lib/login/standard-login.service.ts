@@ -3,9 +3,10 @@ import { HttpClient } from '@angular/common/http';
 import { JwtHelperService } from '@auth0/angular-jwt';
 
 import { map, catchError, tap } from 'rxjs/operators';
-import { of as observableOf, Observable, Observer } from 'rxjs';
+import { of as observableOf, Observable, Observer, BehaviorSubject } from 'rxjs';
 import { authConfig } from '../tokens';
-import { ILoginService, Credentials, AuthConfig, LoginResult } from '../interfaces';
+import { ILoginService, Credentials, AuthConfig, LoginResult, User } from '../interfaces';
+import { NullInjector } from '@angular/core/src/di/injector';
 
 @Injectable({
   providedIn: 'root'
@@ -35,19 +36,18 @@ export class StandardLoginService implements ILoginService {
     if (token) {
       return this.jwtHelper.decodeToken(token);
     } else {
-      return {};
+      return null;
     }
   }
 
-  get username() {
-    return this.token.name;
-  }
+  public user: BehaviorSubject<User> = new BehaviorSubject(this.token);
 
   public login(credential: Credentials): Observable<LoginResult> {
     const requestOptions = this.createRequestOptions(credential);
     return this.httpClient.get<LoginResult>(this.config.loginUrl, requestOptions).pipe(
       tap((result) => localStorage.setItem(this.config.tokenName, result.token)),
       tap((result) => localStorage.setItem('refreshTokenUrl', result.refresh)),
+      tap(() => this.user.next(this.token))
     );
   }
 
@@ -60,6 +60,7 @@ export class StandardLoginService implements ILoginService {
   public logout(): Observable<Boolean> {
     return Observable.create((observer: Observer<Boolean>) => {
       localStorage.setItem(this.config.tokenName, '');
+      this.user.next(this.token);
       observer.next(true);
     });
   }
@@ -68,8 +69,8 @@ export class StandardLoginService implements ILoginService {
     return this.httpClient.get(localStorage.getItem('refreshTokenUrl')).pipe(map(() => true));
   }
 
-  public isLoggedIn(): boolean {
-    const rawToken = localStorage.getItem(this.config.tokenName) || null;
-    return !!(rawToken && !this.jwtHelper.isTokenExpired(rawToken));
-  }
+  public isLoggedIn: Observable<Boolean> = this.user.pipe(map(() => {
+      const rawToken = localStorage.getItem(this.config.tokenName) || null;
+      return !!(rawToken && !this.jwtHelper.isTokenExpired(rawToken));
+    }));
 }

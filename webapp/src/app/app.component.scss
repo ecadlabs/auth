@@ -4,6 +4,11 @@
     flex-direction: column;
     flex: 1;
 
+    a {
+        font-size: 12px;
+        margin:0 10px;
+    }
+    
     .splitter {
         flex:1;
     }

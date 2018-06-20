@@ -4,6 +4,7 @@ import { Observable } from 'rxjs';
 import { Router } from '@angular/router';
 import { ILoginService, AuthConfig } from '../interfaces';
 import { LoginService, authConfig } from '../tokens';
+import { tap, map } from 'rxjs/operators';
 
 @Injectable()
 export class LoggedinGuard implements CanActivate {
@@ -14,13 +15,14 @@ export class LoggedinGuard implements CanActivate {
     @Inject(authConfig)
     protected config: AuthConfig,
     protected router: Router
-  ) {}
+  ) { }
 
   canActivate(
     next: ActivatedRouteSnapshot,
     state: RouterStateSnapshot,
-    redirect = true): Observable<boolean> | Promise<boolean> | boolean {
-      if (!this.loginService.isLoggedIn()) {
+    redirect = true): Observable<boolean> {
+    return this.loginService.isLoggedIn.pipe(map((isLoggedIn) => {
+      if (!isLoggedIn) {
         if (redirect) {
           this.redirectOnNotAuthorized();
         }
@@ -28,6 +30,7 @@ export class LoggedinGuard implements CanActivate {
       } else {
         return true;
       }
+    }));
   }
 
   protected redirectOnNotAuthorized() {
