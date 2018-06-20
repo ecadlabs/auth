@@ -1,7 +1,7 @@
 
-import {map, tap, switchMap} from 'rxjs/operators';
+import { map, switchMap} from 'rxjs/operators';
 import { Injectable, Inject, Optional } from '@angular/core';
-import { CanActivate, ActivatedRouteSnapshot, RouterStateSnapshot } from '@angular/router';
+import { ActivatedRouteSnapshot, RouterStateSnapshot } from '@angular/router';
 import { Observable, of } from 'rxjs';
 import { Router } from '@angular/router';
 import { LoggedinGuard } from './loggedin.guard';

@@ -5,4 +5,5 @@ export interface AuthConfig {
     passwordResetUrl: string;
     sendResetEmailUrl: string;
     loginPageUrl: string;
+    autoRefreshInterval?: number;
 }

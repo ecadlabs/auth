@@ -2,16 +2,17 @@ import { Injectable, Optional, Inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { JwtHelperService } from '@auth0/angular-jwt';
 
-import { map, catchError, tap } from 'rxjs/operators';
-import { of as observableOf, Observable, Observer, BehaviorSubject } from 'rxjs';
+import { map, catchError, tap, filter, switchMap, distinctUntilChanged } from 'rxjs/operators';
+import { of as observableOf, Observable, Observer, BehaviorSubject, interval } from 'rxjs';
 import { authConfig } from '../tokens';
 import { ILoginService, Credentials, AuthConfig, LoginResult, User } from '../interfaces';
-import { NullInjector } from '@angular/core/src/di/injector';
 
 @Injectable({
   providedIn: 'root'
 })
 export class StandardLoginService implements ILoginService {
+
+  private readonly AUTO_REFRESH_INTERVAL = (this.config && this.config.autoRefreshInterval) || 60000;
 
   constructor(
     @Optional()
@@ -19,7 +20,24 @@ export class StandardLoginService implements ILoginService {
     private config: AuthConfig,
     private httpClient: HttpClient,
     private jwtHelper: JwtHelperService
-  ) { }
+  ) {
+    this.initAutoRefresh();
+  }
+
+  private initAutoRefresh() {
+    this.isLoggedIn.pipe(
+      filter(isLoggedIn => !!isLoggedIn),
+      switchMap(() => this.user),
+      switchMap((user) => {
+        return interval(this.AUTO_REFRESH_INTERVAL)
+        .pipe(switchMap(() => {
+          return this.refreshToken().pipe(catchError(() => observableOf(false)));
+        }))
+      }),
+      tap(() => this.user.next(this.token))
+    )
+    .subscribe()
+  }
 
   private createRequestOptions(credential: Credentials) {
     const credentialString = btoa(`${credential.username}:${credential.password}`);
@@ -69,8 +87,11 @@ export class StandardLoginService implements ILoginService {
     return this.httpClient.get(localStorage.getItem('refreshTokenUrl')).pipe(map(() => true));
   }
 
-  public isLoggedIn: Observable<Boolean> = this.user.pipe(map(() => {
+  public isLoggedIn: Observable<Boolean> = this.user.pipe(
+    map(() => {
       const rawToken = localStorage.getItem(this.config.tokenName) || null;
       return !!(rawToken && !this.jwtHelper.isTokenExpired(rawToken));
-    }));
+    }),
+    distinctUntilChanged()
+  );
 }
