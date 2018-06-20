@@ -17,7 +17,10 @@ services:
   auth:
     build:
       context: .
-    entrypoint: /app/auth -secret foobar -db "postgres://auth:auth@db/auth?connect_timeout=10&sslmode=disable"
+    entrypoint: /app/auth -secret foobar -db "postgres://auth:auth@db/auth?connect_timeout=10&sslmode=disable" -bootstrap
+    environment:
+      - AUTH_ADMIN_EMAIL=admin@admin
+      - AUTH_ADMIN_PASSWORD=admin
     volumes:
       - ./config.json:/app/config.json
     depends_on:
