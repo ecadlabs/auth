@@ -167,6 +167,7 @@ func (u *Users) NewUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	user.PasswordHash = hash
+	user.EmailVerified = false
 
 	if !user.Roles.HasPrefix(RolePrefix) {
 		user.Roles.Add(RoleRegular)

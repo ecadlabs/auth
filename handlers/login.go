@@ -104,6 +104,12 @@ func (t *TokenHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Don't allow unverified users to log in
+	if !user.EmailVerified {
+		JSONError(w, "Email is not verified", http.StatusForbidden)
+		return
+	}
+
 	roles := make([]string, 0, len(user.Roles))
 	for r := range user.Roles {
 		roles = append(roles, r)

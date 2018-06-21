@@ -61,8 +61,9 @@ func (s *Service) Bootstrap() (err error) {
 	hash, _ := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 
 	u := users.User{
-		Email:        email,
-		PasswordHash: hash,
+		Email:         email,
+		PasswordHash:  hash,
+		EmailVerified: true, // Allow logging in !!!
 		Roles: users.Roles{
 			handlers.RoleAdmin: struct{}{},
 		},

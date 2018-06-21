@@ -154,14 +154,15 @@ func isUniqueViolation(err error, constraint string) bool {
 
 func NewUserInt(ctx context.Context, tx *sqlx.Tx, user *User) (res *User, err error) {
 	model := userModel{
-		ID:           uuid.NewV4(),
-		Email:        user.Email,
-		PasswordHash: user.PasswordHash,
-		Name:         user.Name,
+		ID:            uuid.NewV4(),
+		Email:         user.Email,
+		PasswordHash:  user.PasswordHash,
+		Name:          user.Name,
+		EmailVerified: user.EmailVerified,
 	}
 
 	// Create user
-	rows, err := sqlx.NamedQueryContext(ctx, tx, "INSERT INTO users (id, email, password_hash, name) VALUES (:id, :email, :password_hash, :name) RETURNING added, modified, email_verified", &model)
+	rows, err := sqlx.NamedQueryContext(ctx, tx, "INSERT INTO users (id, email, password_hash, name) VALUES (:id, :email, :password_hash, :name, :email_verified) RETURNING added, modified", &model)
 	if err != nil {
 		if isUniqueViolation(err, "users_email_key") {
 			err = ErrEmail

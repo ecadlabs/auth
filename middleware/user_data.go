@@ -10,7 +10,8 @@ import (
 	"net/http"
 )
 
-type UserData struct {
+// Extracts user data from token itself (only ID and Roles are set)
+type TokenUserData struct {
 	Namespace       string
 	TokenContextKey string
 	UserContextKey  string
@@ -18,24 +19,24 @@ type UserData struct {
 	RolePrefix      string
 }
 
-func (u *UserData) Handler(h http.Handler) http.Handler {
+func (t *TokenUserData) Handler(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		user := users.User{
 			Roles: make(users.Roles),
 		}
-		req := r.WithContext(context.WithValue(r.Context(), u.UserContextKey, &user))
+		req := r.WithContext(context.WithValue(r.Context(), t.UserContextKey, &user))
 
-		token, ok := r.Context().Value(u.TokenContextKey).(*jwt.Token)
+		token, ok := r.Context().Value(t.TokenContextKey).(*jwt.Token)
 
 		if !ok {
-			user.Roles[u.DefaultRole] = struct{}{}
+			user.Roles[t.DefaultRole] = struct{}{}
 			h.ServeHTTP(w, req)
 			return
 		}
 
 		claims := token.Claims.(jwt.MapClaims)
 
-		if names, ok := claims[nsClaim(u.Namespace, "roles")].([]interface{}); ok {
+		if names, ok := claims[nsClaim(t.Namespace, "roles")].([]interface{}); ok {
 			for _, name := range names {
 				if s, ok := name.(string); ok {
 					user.Roles[s] = struct{}{}
@@ -43,8 +44,8 @@ func (u *UserData) Handler(h http.Handler) http.Handler {
 			}
 		}
 
-		if !user.Roles.HasPrefix(u.RolePrefix) {
-			user.Roles[u.DefaultRole] = struct{}{}
+		if !user.Roles.HasPrefix(t.RolePrefix) {
+			user.Roles[t.DefaultRole] = struct{}{}
 		}
 
 		if sub, ok := claims["sub"].(string); ok {
@@ -55,6 +56,45 @@ func (u *UserData) Handler(h http.Handler) http.Handler {
 			} else {
 				log.Errorln(err)
 			}
+		}
+
+		handlers.JSONError(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+	})
+}
+
+// Gets user data from DB
+type UserData struct {
+	Storage         *users.Storage
+	TokenContextKey string
+	UserContextKey  string
+}
+
+func (u *UserData) Handler(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var err error
+
+		if token, ok := r.Context().Value(u.TokenContextKey).(*jwt.Token); ok {
+			claims := token.Claims.(jwt.MapClaims)
+
+			if sub, ok := claims["sub"].(string); ok {
+				var id uuid.UUID
+
+				if id, err = uuid.FromString(sub); err == nil {
+					var user *users.User
+
+					if user, err = u.Storage.GetUserByID(r.Context(), id); err == nil {
+						if user.EmailVerified {
+							req := r.WithContext(context.WithValue(r.Context(), u.UserContextKey, user))
+							h.ServeHTTP(w, req)
+							return
+						}
+					}
+				}
+			}
+		}
+
+		if err != nil {
+			log.Errorln(err)
 		}
 
 		handlers.JSONError(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)

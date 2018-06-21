@@ -105,7 +105,7 @@ func (s *Service) APIHandler() http.Handler {
 	m.Methods("GET").Path("/refresh").Handler(jwtMiddleware.Handler(http.HandlerFunc(tokenHandler.Refresh)))
 
 	// Users API
-	ud := middleware.UserData{
+	ud := middleware.TokenUserData{
 		Namespace:       s.config.Namespace(),
 		TokenContextKey: handlers.TokenContextKey,
 		UserContextKey:  handlers.UserContextKey,
