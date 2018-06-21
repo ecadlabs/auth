@@ -6,11 +6,11 @@ import (
 	"git.ecadlabs.com/ecad/auth/jsonpatch"
 	"git.ecadlabs.com/ecad/auth/query"
 	"git.ecadlabs.com/ecad/auth/users"
+	"git.ecadlabs.com/ecad/auth/utils"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/schema"
 	"github.com/satori/go.uuid"
 	log "github.com/sirupsen/logrus"
-	"golang.org/x/crypto/bcrypt"
 	"net/http"
 	"net/url"
 	"strings"
@@ -52,7 +52,7 @@ func (u *Users) GetUser(w http.ResponseWriter, r *http.Request) {
 
 	uid, err := uuid.FromString(mux.Vars(r)["id"])
 	if err != nil {
-		JSONError(w, err.Error(), http.StatusBadRequest)
+		utils.JSONError(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -61,18 +61,18 @@ func (u *Users) GetUser(w http.ResponseWriter, r *http.Request) {
 		"id":   uid,
 	}); err != nil {
 		log.Error(err)
-		JSONError(w, err.Error(), http.StatusForbidden)
+		utils.JSONError(w, err.Error(), http.StatusForbidden)
 		return
 	}
 
 	user, err := u.Storage.GetUserByID(u.context(r), uid)
 	if err != nil {
 		log.Error(err)
-		JSONError(w, err.Error(), errorHTTPStatus(err))
+		utils.JSONError(w, err.Error(), errorHTTPStatus(err))
 		return
 	}
 
-	JSONResponse(w, http.StatusOK, user)
+	utils.JSONResponse(w, http.StatusOK, user)
 }
 
 func (u *Users) GetUsers(w http.ResponseWriter, r *http.Request) {
@@ -81,14 +81,14 @@ func (u *Users) GetUsers(w http.ResponseWriter, r *http.Request) {
 
 	if err := self.Roles.Get().IsGranted(permissionList, nil); err != nil {
 		log.Error(err)
-		JSONError(w, err.Error(), http.StatusForbidden)
+		utils.JSONError(w, err.Error(), http.StatusForbidden)
 		return
 	}
 
 	q, err := query.FromValues(r.Form)
 	if err != nil {
 		log.Error(err)
-		JSONError(w, err.Error(), http.StatusBadRequest)
+		utils.JSONError(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -99,7 +99,7 @@ func (u *Users) GetUsers(w http.ResponseWriter, r *http.Request) {
 	userSlice, count, nextQuery, err := u.Storage.GetUsers(u.context(r), q)
 	if err != nil {
 		log.Error(err)
-		JSONError(w, err.Error(), errorHTTPStatus(err))
+		utils.JSONError(w, err.Error(), errorHTTPStatus(err))
 		return
 	}
 
@@ -109,7 +109,7 @@ func (u *Users) GetUsers(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Pagination
-	res := Paginated{
+	res := utils.Paginated{
 		Value: userSlice,
 	}
 
@@ -121,7 +121,7 @@ func (u *Users) GetUsers(w http.ResponseWriter, r *http.Request) {
 		nextUrl, err := url.Parse(u.BaseURL())
 		if err != nil {
 			log.Error(err)
-			JSONError(w, err.Error(), http.StatusInternalServerError)
+			utils.JSONError(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
@@ -129,7 +129,7 @@ func (u *Users) GetUsers(w http.ResponseWriter, r *http.Request) {
 		res.Next = nextUrl.String()
 	}
 
-	JSONResponse(w, http.StatusOK, &res)
+	utils.JSONResponse(w, http.StatusOK, &res)
 }
 
 func (u *Users) NewUser(w http.ResponseWriter, r *http.Request) {
@@ -141,7 +141,7 @@ func (u *Users) NewUser(w http.ResponseWriter, r *http.Request) {
 	if strings.Contains(r.Header.Get("Content-Type"), "application/json") {
 		if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
 			log.Error(err)
-			JSONError(w, err.Error(), http.StatusBadRequest)
+			utils.JSONError(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 	} else {
@@ -149,33 +149,26 @@ func (u *Users) NewUser(w http.ResponseWriter, r *http.Request) {
 
 		if err := schemaDecoder.Decode(&user, r.PostForm); err != nil {
 			log.Error(err)
-			JSONError(w, err.Error(), http.StatusBadRequest)
+			utils.JSONError(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 	}
 
-	if user.Email == "" || user.Password == "" {
-		JSONError(w, "Email and password must not be empty", http.StatusBadRequest)
+	// Lazy email syntax verification
+	if i := strings.IndexByte(user.Email, '@'); i < 1 || i == len(user.Email)-1 || i != strings.LastIndexByte(user.Email, '@') {
+		utils.JSONError(w, "Invalid email syntax", http.StatusBadRequest)
 		return
 	}
 
-	hash, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
-	if err != nil {
-		log.Error(err)
-		JSONError(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	user.PasswordHash = hash
 	user.EmailVerified = false
 
 	if !user.Roles.HasPrefix(RolePrefix) {
 		user.Roles.Add(RoleRegular)
 	}
 
-	if err = self.Roles.Get().IsGranted(permissionCreate, map[string]interface{}{"user": &user}); err != nil {
+	if err := self.Roles.Get().IsGranted(permissionCreate, map[string]interface{}{"user": &user}); err != nil {
 		log.Error(err)
-		JSONError(w, err.Error(), http.StatusForbidden)
+		utils.JSONError(w, err.Error(), http.StatusForbidden)
 		return
 	}
 
@@ -189,7 +182,7 @@ func (u *Users) NewUser(w http.ResponseWriter, r *http.Request) {
 		} else {
 			code = http.StatusInternalServerError
 		}
-		JSONError(w, err.Error(), code)
+		utils.JSONError(w, err.Error(), code)
 		return
 	}
 
@@ -205,7 +198,7 @@ func (u *Users) NewUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Location", u.BaseURL()+ret.ID.String())
-	JSONResponse(w, http.StatusCreated, ret)
+	utils.JSONResponse(w, http.StatusCreated, ret)
 }
 
 func (u *Users) PatchUser(w http.ResponseWriter, r *http.Request) {
@@ -215,7 +208,7 @@ func (u *Users) PatchUser(w http.ResponseWriter, r *http.Request) {
 	uid, err := uuid.FromString(mux.Vars(r)["id"])
 	if err != nil {
 		log.Error(err)
-		JSONError(w, err.Error(), http.StatusBadRequest)
+		utils.JSONError(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -223,14 +216,14 @@ func (u *Users) PatchUser(w http.ResponseWriter, r *http.Request) {
 
 	if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
 		log.Error(err)
-		JSONError(w, err.Error(), http.StatusBadRequest)
+		utils.JSONError(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	ops, err := users.OpsFromPatch(p)
 	if err != nil {
 		log.Error(err)
-		JSONError(w, err.Error(), errorHTTPStatus(err))
+		utils.JSONError(w, err.Error(), errorHTTPStatus(err))
 		return
 	}
 
@@ -241,14 +234,14 @@ func (u *Users) PatchUser(w http.ResponseWriter, r *http.Request) {
 		"id":   uid,
 	}); err != nil {
 		log.Error(err)
-		JSONError(w, err.Error(), http.StatusForbidden)
+		utils.JSONError(w, err.Error(), http.StatusForbidden)
 		return
 	}
 
 	for _, r := range ops.AddRoles {
 		if err := userRoles.IsGranted(permissionAddRole, map[string]interface{}{"role": r}); err != nil {
 			log.Error(err)
-			JSONError(w, err.Error(), http.StatusForbidden)
+			utils.JSONError(w, err.Error(), http.StatusForbidden)
 			return
 		}
 	}
@@ -256,7 +249,7 @@ func (u *Users) PatchUser(w http.ResponseWriter, r *http.Request) {
 	for _, r := range ops.RemoveRoles {
 		if err := userRoles.IsGranted(permissionDeleteRole, map[string]interface{}{"role": r}); err != nil {
 			log.Error(err)
-			JSONError(w, err.Error(), http.StatusForbidden)
+			utils.JSONError(w, err.Error(), http.StatusForbidden)
 			return
 		}
 	}
@@ -264,7 +257,7 @@ func (u *Users) PatchUser(w http.ResponseWriter, r *http.Request) {
 	user, err := u.Storage.UpdateUser(u.context(r), uid, ops)
 	if err != nil {
 		log.Error(err)
-		JSONError(w, err.Error(), errorHTTPStatus(err))
+		utils.JSONError(w, err.Error(), errorHTTPStatus(err))
 		return
 	}
 
@@ -283,7 +276,7 @@ func (u *Users) PatchUser(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	JSONResponse(w, http.StatusOK, user)
+	utils.JSONResponse(w, http.StatusOK, user)
 }
 
 func (u *Users) DeleteUser(w http.ResponseWriter, r *http.Request) {
@@ -291,7 +284,7 @@ func (u *Users) DeleteUser(w http.ResponseWriter, r *http.Request) {
 
 	uid, err := uuid.FromString(mux.Vars(r)["id"])
 	if err != nil {
-		JSONError(w, err.Error(), http.StatusBadRequest)
+		utils.JSONError(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -300,13 +293,13 @@ func (u *Users) DeleteUser(w http.ResponseWriter, r *http.Request) {
 		"id":   uid,
 	}); err != nil {
 		log.Error(err)
-		JSONError(w, err.Error(), http.StatusForbidden)
+		utils.JSONError(w, err.Error(), http.StatusForbidden)
 		return
 	}
 
 	if err := u.Storage.DeleteUser(u.context(r), uid); err != nil {
 		log.Error(err)
-		JSONError(w, err.Error(), errorHTTPStatus(err))
+		utils.JSONError(w, err.Error(), errorHTTPStatus(err))
 		return
 	}
 

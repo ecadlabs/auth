@@ -2,8 +2,8 @@ package middleware
 
 import (
 	"context"
-	"git.ecadlabs.com/ecad/auth/handlers"
 	"git.ecadlabs.com/ecad/auth/users"
+	"git.ecadlabs.com/ecad/auth/utils"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/satori/go.uuid"
 	log "github.com/sirupsen/logrus"
@@ -36,7 +36,7 @@ func (t *TokenUserData) Handler(h http.Handler) http.Handler {
 
 		claims := token.Claims.(jwt.MapClaims)
 
-		if names, ok := claims[nsClaim(t.Namespace, "roles")].([]interface{}); ok {
+		if names, ok := claims[utils.NSClaim(t.Namespace, "roles")].([]interface{}); ok {
 			for _, name := range names {
 				if s, ok := name.(string); ok {
 					user.Roles[s] = struct{}{}
@@ -58,7 +58,7 @@ func (t *TokenUserData) Handler(h http.Handler) http.Handler {
 			}
 		}
 
-		handlers.JSONError(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		utils.JSONError(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 	})
 }
 
@@ -97,6 +97,6 @@ func (u *UserData) Handler(h http.Handler) http.Handler {
 			log.Errorln(err)
 		}
 
-		handlers.JSONError(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		utils.JSONError(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 	})
 }

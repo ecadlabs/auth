@@ -162,7 +162,7 @@ func NewUserInt(ctx context.Context, tx *sqlx.Tx, user *User) (res *User, err er
 	}
 
 	// Create user
-	rows, err := sqlx.NamedQueryContext(ctx, tx, "INSERT INTO users (id, email, password_hash, name) VALUES (:id, :email, :password_hash, :name, :email_verified) RETURNING added, modified", &model)
+	rows, err := sqlx.NamedQueryContext(ctx, tx, "INSERT INTO users (id, email, password_hash, name, email_verified) VALUES (:id, :email, :password_hash, :name, :email_verified) RETURNING added, modified", &model)
 	if err != nil {
 		if isUniqueViolation(err, "users_email_key") {
 			err = ErrEmail
@@ -370,6 +370,50 @@ func (s *Storage) DeleteUser(ctx context.Context, id uuid.UUID) (err error) {
 	_, err = tx.ExecContext(ctx, "DELETE FROM roles WHERE user_id = $1", id)
 	if err != nil {
 		return err
+	}
+
+	return nil
+}
+
+func (s *Storage) UpdatePasswordHash(ctx context.Context, id uuid.UUID, hash []byte, expectedTs time.Time) (err error) {
+	tx, err := s.DB.Beginx()
+	if err != nil {
+		return
+	}
+
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+			return
+		}
+
+		err = tx.Commit()
+	}()
+
+	var ts time.Time
+	if err := tx.GetContext(ctx, &ts, "SELECT modified FROM users WHERE id = $1", id); err != nil {
+		if err == sql.ErrNoRows {
+			err = ErrNotFound
+		}
+		return err
+	}
+
+	if ts.After(expectedTs) {
+		return ErrTokenExpired
+	}
+
+	res, err := tx.ExecContext(ctx, "UPDATE users SET password_hash = $1, email_verified = TRUE, modified = DEFAULT WHERE id = $2 AND modified = $3", hash, id, ts)
+	if err != nil {
+		return err
+	}
+
+	v, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if v == 0 {
+		return ErrNotFound // Unlikely
 	}
 
 	return nil

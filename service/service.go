@@ -10,6 +10,7 @@ import (
 	"git.ecadlabs.com/ecad/auth/logger"
 	"git.ecadlabs.com/ecad/auth/middleware"
 	"git.ecadlabs.com/ecad/auth/users"
+	"git.ecadlabs.com/ecad/auth/utils"
 	"github.com/auth0/go-jwt-middleware"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/mux"
@@ -68,7 +69,9 @@ func (s *Service) APIHandler() http.Handler {
 			return []byte(s.config.JWTSecret), nil
 		},
 		JWTSigningMethod: JWTSigningMethod,
+		BaseURL:          baseURLFunc,
 		RefreshURL:       func() string { return baseURLFunc() + "/refresh" },
+		ResetURL:         func() string { return baseURLFunc() + "/password_reset" },
 		Namespace:        s.config.Namespace(),
 	}
 
@@ -89,10 +92,16 @@ func (s *Service) APIHandler() http.Handler {
 		SigningMethod:       JWTSigningMethod,
 		UserProperty:        handlers.TokenContextKey,
 		ErrorHandler: func(w http.ResponseWriter, r *http.Request, err string) {
-			handlers.JSONError(w, err, http.StatusUnauthorized)
+			utils.JSONError(w, err, http.StatusUnauthorized)
 		},
 	}
 	jwtMiddleware := jwtmiddleware.New(jwtOptions)
+
+	// Check audience
+	aud := middleware.Audience{
+		Value:           baseURLFunc,
+		TokenContextKey: handlers.TokenContextKey,
+	}
 
 	m := mux.NewRouter()
 
@@ -102,7 +111,7 @@ func (s *Service) APIHandler() http.Handler {
 
 	// Login API
 	m.Methods("GET", "POST").Path("/login").HandlerFunc(tokenHandler.Login)
-	m.Methods("GET").Path("/refresh").Handler(jwtMiddleware.Handler(http.HandlerFunc(tokenHandler.Refresh)))
+	m.Methods("GET").Path("/refresh").Handler(jwtMiddleware.Handler(aud.Handler(http.HandlerFunc(tokenHandler.Refresh))))
 
 	// Users API
 	ud := middleware.TokenUserData{
@@ -115,6 +124,7 @@ func (s *Service) APIHandler() http.Handler {
 
 	umux := m.PathPrefix("/users").Subrouter()
 	umux.Use(jwtMiddleware.Handler)
+	umux.Use(aud.Handler)
 	umux.Use(ud.Handler)
 
 	umux.Methods("POST").Path("/").HandlerFunc(usersHandler.NewUser)
@@ -128,7 +138,7 @@ func (s *Service) APIHandler() http.Handler {
 	m.Methods("GET").Path("/metrics").Handler(promhttp.Handler())
 
 	m.NotFoundHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		handlers.JSONError(w, "Resource not found", http.StatusNotFound)
+		utils.JSONError(w, "Resource not found", http.StatusNotFound)
 	})
 
 	return m

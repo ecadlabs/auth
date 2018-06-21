@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"git.ecadlabs.com/ecad/auth/utils"
 	"net/http"
 )
 
@@ -13,5 +14,5 @@ func (h VersionHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Version: string(h),
 	}
 
-	JSONResponse(w, http.StatusOK, &response)
+	utils.JSONResponse(w, http.StatusOK, &response)
 }

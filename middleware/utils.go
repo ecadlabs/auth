@@ -2,7 +2,6 @@ package middleware
 
 import (
 	"net/http"
-	"strings"
 )
 
 // ResponseWriter wraps http.ResponseWriter to save HTTP status code
@@ -51,14 +50,6 @@ func (rw *responseWriter) Write(data []byte) (int, error) {
 	}
 
 	return rw.ResponseWriter.Write(data)
-}
-
-func nsClaim(ns, sufix string) string {
-	if strings.HasPrefix(ns, "http://") || strings.HasPrefix(ns, "https://") {
-		return ns + "/" + sufix
-	}
-
-	return ns + "." + sufix
 }
 
 var _ http.ResponseWriter = &responseWriter{}

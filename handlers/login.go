@@ -4,7 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"git.ecadlabs.com/ecad/auth/users"
+	"git.ecadlabs.com/ecad/auth/utils"
+	"github.com/auth0/go-jwt-middleware"
 	"github.com/dgrijalva/jwt-go"
+	"github.com/satori/go.uuid"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
 	"net/http"
@@ -23,7 +26,9 @@ type TokenHandler struct {
 	JWTSecretGetter  func() ([]byte, error)
 	JWTSigningMethod jwt.SigningMethod
 	Namespace        string
+	BaseURL          func() string
 	RefreshURL       func() string
+	ResetURL         func() string
 }
 
 func (t *TokenHandler) context(parent context.Context) context.Context {
@@ -38,13 +43,13 @@ func (t *TokenHandler) writeTokenWithClaims(w http.ResponseWriter, claims jwt.Cl
 	token := jwt.NewWithClaims(t.JWTSigningMethod, claims)
 	secret, err := t.JWTSecretGetter()
 	if err != nil {
-		JSONError(w, err.Error(), http.StatusInternalServerError)
+		utils.JSONError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	tokenString, err := token.SignedString(secret)
 	if err != nil {
-		JSONError(w, err.Error(), http.StatusInternalServerError)
+		utils.JSONError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -58,15 +63,7 @@ func (t *TokenHandler) writeTokenWithClaims(w http.ResponseWriter, claims jwt.Cl
 
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
-	JSONResponse(w, http.StatusOK, &response)
-}
-
-func nsClaim(ns, sufix string) string {
-	if strings.HasPrefix(ns, "http://") || strings.HasPrefix(ns, "https://") {
-		return ns + "/" + sufix
-	}
-
-	return ns + "." + sufix
+	utils.JSONResponse(w, http.StatusOK, &response)
 }
 
 // Login is a login endpoint handler
@@ -81,32 +78,37 @@ func (t *TokenHandler) Login(w http.ResponseWriter, r *http.Request) {
 		request.Password = password
 	} else {
 		if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
-			JSONError(w, err.Error(), http.StatusBadRequest)
+			utils.JSONError(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 	}
 
 	if request.Name == "" || request.Password == "" {
-		JSONError(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		utils.JSONError(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 		return
 	}
 
 	user, err := t.Storage.GetUserByEmail(t.context(r.Context()), request.Name)
 	if err != nil {
 		log.Error(err)
-		JSONError(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		utils.JSONError(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		return
+	}
+
+	if len(user.PasswordHash) == 0 {
+		utils.JSONError(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 		return
 	}
 
 	if err := bcrypt.CompareHashAndPassword(user.PasswordHash, []byte(request.Password)); err != nil {
 		log.Error(err)
-		JSONError(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		utils.JSONError(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 		return
 	}
 
 	// Don't allow unverified users to log in
 	if !user.EmailVerified {
-		JSONError(w, "Email is not verified", http.StatusForbidden)
+		utils.JSONError(w, "Email is not verified", http.StatusForbidden)
 		return
 	}
 
@@ -119,13 +121,14 @@ func (t *TokenHandler) Login(w http.ResponseWriter, r *http.Request) {
 	now := time.Now()
 
 	claims := jwt.MapClaims{
-		"sub":                user.ID,
-		"exp":                now.Add(t.SessionMaxAge).Unix(),
-		"iat":                now.Unix(),
-		"iss":                ns,
-		nsClaim(ns, "email"): user.Email,
-		nsClaim(ns, "name"):  user.Name,
-		nsClaim(ns, "roles"): roles,
+		"sub": user.ID,
+		"exp": now.Add(t.SessionMaxAge).Unix(),
+		"iat": now.Unix(),
+		"iss": t.BaseURL(),
+		"aud": t.BaseURL(),
+		utils.NSClaim(ns, "email"): user.Email,
+		utils.NSClaim(ns, "name"):  user.Name,
+		utils.NSClaim(ns, "roles"): roles,
 	}
 
 	t.writeTokenWithClaims(w, claims)
@@ -140,4 +143,109 @@ func (t *TokenHandler) Refresh(w http.ResponseWriter, req *http.Request) {
 	claims["iat"] = now.Unix()
 
 	t.writeTokenWithClaims(w, claims)
+}
+
+func (t *TokenHandler) ResetPassword(w http.ResponseWriter, r *http.Request) {
+	var request struct {
+		Token    string `json:"token" schema:"token"`
+		Password string `json:"password" schema:"password"`
+	}
+
+	if strings.Contains(r.Header.Get("Content-Type"), "application/json") {
+		if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+			log.Error(err)
+			utils.JSONError(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+	} else {
+		// Allow GET requests for testing purposes
+		r.ParseForm()
+
+		if err := schemaDecoder.Decode(&request, r.Form); err != nil {
+			log.Error(err)
+			utils.JSONError(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+	}
+
+	// Allow authorized requests too
+	if token, err := jwtmiddleware.FromAuthHeader(r); err != nil {
+		utils.JSONError(w, err.Error(), http.StatusUnauthorized)
+		return
+	} else if token != "" {
+		request.Token = token
+	}
+
+	if request.Token == "" {
+		utils.JSONError(w, "Token must not be empty", http.StatusBadRequest)
+		return
+	}
+
+	if request.Password == "" {
+		utils.JSONError(w, "Password must not be empty", http.StatusBadRequest)
+		return
+	}
+
+	// Verify token
+	token, err := jwt.Parse(request.Token, func(token *jwt.Token) (interface{}, error) { return t.JWTSecretGetter() })
+	if err != nil {
+		log.Error(err)
+		utils.JSONError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if t.JWTSigningMethod.Alg() != token.Header["alg"] {
+		log.Errorf("Expected %s signing method but token specified %s", t.JWTSigningMethod.Alg(), token.Header["alg"])
+		utils.JSONError(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		return
+	}
+
+	if !token.Valid {
+		log.Errorln("Invalid token")
+		utils.JSONError(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		return
+	}
+
+	// Verify audience
+	claims := token.Claims.(jwt.MapClaims)
+	if !claims.VerifyAudience(t.ResetURL(), true) {
+		utils.JSONError(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		return
+	}
+
+	// Get issue time
+	iat, ok := claims["iat"].(float64)
+	if !ok {
+		utils.JSONError(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
+
+	// Get user id
+	sub, ok := claims["sub"].(string)
+	if !ok {
+		utils.JSONError(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
+
+	id, err := uuid.FromString(sub)
+	if err != nil {
+		utils.JSONError(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
+
+	hash, err := bcrypt.GenerateFromPassword([]byte(request.Password), bcrypt.DefaultCost)
+	if err != nil {
+		log.Error(err)
+		utils.JSONError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	err = t.Storage.UpdatePasswordHash(t.context(r.Context()), id, hash, time.Unix(int64(iat), 0))
+	if err != nil {
+		log.Error(err)
+		utils.JSONError(w, err.Error(), errorHTTPStatus(err))
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }
