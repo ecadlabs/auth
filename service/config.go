@@ -2,10 +2,18 @@ package service
 
 import (
 	"encoding/json"
+	"git.ecadlabs.com/ecad/auth/notification"
 	"io/ioutil"
 )
 
 const defaultNamespace = "com.ecadlabs.auth"
+
+type EmailConfig struct {
+	// TODO
+	notification.SMTP
+	FromAddress string `json:"from_address"`
+	FromName    string `json:"from_name"`
+}
 
 type Config struct {
 	BaseURL            string        `json:"base_url"`
@@ -23,6 +31,7 @@ type Config struct {
 	Address            string        `json:"address"`
 	HealthAddress      string        `json:"health_address"`
 	DBTimeout          int           `json:"db_timeout"`
+	Email              EmailConfig   `json:"email"`
 }
 
 func (c *Config) GetBaseURLFunc() func() string {

@@ -225,11 +225,11 @@ func (u *Users) NewUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err = u.Notifier.NewUser(&notification.Data{
-		Self:   self,
-		User:   ret,
-		Token:  token,
-		MaxAge: u.ResetTokenMaxAge,
+	if err = u.Notifier.NewUser(r.Context(), &notification.ResetData{
+		CurrentUser: self,
+		TargetUser:  ret,
+		Token:       token,
+		TokenMaxAge: u.ResetTokenMaxAge,
 	}); err != nil {
 		log.Error(err)
 	}
@@ -494,10 +494,10 @@ func (u *Users) SendResetRequest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err = u.Notifier.PasswordReset(&notification.Data{
-		User:   user,
-		Token:  token,
-		MaxAge: u.ResetTokenMaxAge,
+	if err = u.Notifier.PasswordReset(r.Context(), &notification.ResetData{
+		TargetUser:  user,
+		Token:       token,
+		TokenMaxAge: u.ResetTokenMaxAge,
 	}); err != nil {
 		log.Error(err)
 		return

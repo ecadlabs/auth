@@ -1,10 +1,6 @@
 package service
 
 import (
-	"net/http"
-	"net/url"
-	"time"
-
 	"database/sql"
 	"git.ecadlabs.com/ecad/auth/handlers"
 	"git.ecadlabs.com/ecad/auth/logger"
@@ -18,7 +14,11 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sirupsen/logrus"
+	"net/http"
+	"net/mail"
+	"net/url"
 	"strconv"
+	"time"
 )
 
 const (
@@ -67,6 +67,11 @@ func (s *Service) APIHandler() http.Handler {
 		DB: s.DB,
 	})
 
+	notifier := notification.NewEmailNotifier(&mail.Address{
+		Name:    s.config.Email.FromName,
+		Address: s.config.Email.FromAddress,
+	}, &s.config.Email.SMTP)
+
 	usersHandler := handlers.Users{
 		Storage: s.storage,
 		Timeout: time.Duration(s.config.DBTimeout) * time.Second,
@@ -84,9 +89,9 @@ func (s *Service) APIHandler() http.Handler {
 
 		SessionMaxAge:    time.Duration(s.config.SessionMaxAge) * time.Second,
 		ResetTokenMaxAge: time.Duration(s.config.ResetTokenMaxAge) * time.Second,
-		Notifier:         notification.Log{},
 
 		AuxLogger: dbLogger,
+		Notifier:  notifier,
 	}
 
 	jwtOptions := jwtmiddleware.Options{
