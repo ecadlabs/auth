@@ -7,8 +7,6 @@ import (
 
 	"git.ecadlabs.com/ecad/auth/utils"
 	log "github.com/sirupsen/logrus"
-
-	log "github.com/sirupsen/logrus"
 )
 
 type Pinger interface {
