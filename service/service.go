@@ -85,6 +85,8 @@ func (s *Service) APIHandler() http.Handler {
 		SessionMaxAge:    time.Duration(s.config.SessionMaxAge) * time.Second,
 		ResetTokenMaxAge: time.Duration(s.config.ResetTokenMaxAge) * time.Second,
 		Notifier:         notification.Log{},
+
+		AuxLogger: dbLogger,
 	}
 
 	jwtOptions := jwtmiddleware.Options{
@@ -110,7 +112,8 @@ func (s *Service) APIHandler() http.Handler {
 	m.Use((&middleware.Recover{}).Handler)
 
 	// Login API
-	m.Methods("GET", "POST").Path("/password_reset").HandlerFunc(usersHandler.ResetPassword)
+	m.Methods("POST").Path("/password_reset").HandlerFunc(usersHandler.ResetPassword)
+	m.Methods("GET", "POST").Path("/request_password_reset").HandlerFunc(usersHandler.SendResetRequest)
 	m.Methods("GET", "POST").Path("/login").HandlerFunc(usersHandler.Login)
 	m.Methods("GET").Path("/refresh").Handler(jwtMiddleware.Handler(aud.Handler(http.HandlerFunc(usersHandler.Refresh))))
 

@@ -378,7 +378,7 @@ func (s *Storage) DeleteUser(ctx context.Context, id uuid.UUID) (err error) {
 	return nil
 }
 
-func (s *Storage) UpdatePasswordHash(ctx context.Context, id uuid.UUID, hash []byte, expectedGen int) (err error) {
+func (s *Storage) UpdatePasswordWithGen(ctx context.Context, id uuid.UUID, hash []byte, expectedGen int) (err error) {
 	tx, err := s.DB.Beginx()
 	if err != nil {
 		return

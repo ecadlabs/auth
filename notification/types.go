@@ -15,6 +15,7 @@ type Data struct {
 
 type Notifier interface {
 	NewUser(*Data) error
+	PasswordReset(*Data) error
 }
 
 // For debug purpose
@@ -25,6 +26,16 @@ func (l Log) NewUser(d *Data) error {
 		"id":    d.User.ID,
 		"token": d.Token,
 	}).Println("Reset token")
+
+	return nil
+}
+
+func (l Log) PasswordReset(d *Data) error {
+	log.WithFields(log.Fields{
+		"id":    d.User.ID,
+		"email": d.User.Email,
+		"token": d.Token,
+	}).Println("Reset token requested")
 
 	return nil
 }

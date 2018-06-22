@@ -8,11 +8,12 @@ import (
 	"git.ecadlabs.com/ecad/auth/query"
 	"git.ecadlabs.com/ecad/auth/users"
 	"git.ecadlabs.com/ecad/auth/utils"
+	"github.com/auth0/go-jwt-middleware"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/mux"
-	"github.com/gorilla/schema"
 	"github.com/satori/go.uuid"
 	log "github.com/sirupsen/logrus"
+	"golang.org/x/crypto/bcrypt"
 	"net/http"
 	"net/url"
 	"strings"
@@ -23,8 +24,6 @@ const (
 	UserContextKey = "user"
 	DefaultLimit   = 20
 )
-
-var schemaDecoder = schema.NewDecoder()
 
 type Users struct {
 	Storage *users.Storage
@@ -159,16 +158,16 @@ func (u *Users) GetUsers(w http.ResponseWriter, r *http.Request) {
 	utils.JSONResponse(w, http.StatusOK, &res)
 }
 
-func (u *Users) resetToken(id uuid.UUID, gen int) (string, error) {
+func (u *Users) resetToken(user *users.User) (string, error) {
 	now := time.Now()
 
 	claims := jwt.MapClaims{
-		"sub": id,
+		"sub": user.ID,
 		"exp": now.Add(u.ResetTokenMaxAge).Unix(),
 		"iat": now.Unix(),
 		"iss": u.BaseURL(),
 		"aud": u.ResetURL(),
-		utils.NSClaim(u.Namespace, "gen"): gen,
+		utils.NSClaim(u.Namespace, "gen"): user.PasswordGen,
 	}
 
 	token := jwt.NewWithClaims(u.JWTSigningMethod, claims)
@@ -186,21 +185,10 @@ func (u *Users) NewUser(w http.ResponseWriter, r *http.Request) {
 	self := r.Context().Value(UserContextKey).(*users.User)
 
 	var user users.User
-
-	if strings.Contains(r.Header.Get("Content-Type"), "application/json") {
-		if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
-			log.Error(err)
-			utils.JSONError(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-	} else {
-		r.ParseForm()
-
-		if err := schemaDecoder.Decode(&user, r.PostForm); err != nil {
-			log.Error(err)
-			utils.JSONError(w, err.Error(), http.StatusBadRequest)
-			return
-		}
+	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
+		log.Error(err)
+		utils.JSONError(w, err.Error(), http.StatusBadRequest)
+		return
 	}
 
 	// Lazy email syntax verification
@@ -225,19 +213,12 @@ func (u *Users) NewUser(w http.ResponseWriter, r *http.Request) {
 	ret, err := u.Storage.NewUser(u.context(r), &user)
 	if err != nil {
 		log.Error(err)
-
-		var code int
-		if err == users.ErrEmail {
-			code = http.StatusConflict
-		} else {
-			code = http.StatusInternalServerError
-		}
-		utils.JSONError(w, err.Error(), code)
+		utils.JSONError(w, err.Error(), errorHTTPStatus(err))
 		return
 	}
 
 	// Create reset token
-	token, err := u.resetToken(ret.ID, ret.PasswordGen)
+	token, err := u.resetToken(ret)
 	if err != nil {
 		log.Error(err)
 		utils.JSONError(w, err.Error(), http.StatusInternalServerError)
@@ -251,8 +232,6 @@ func (u *Users) NewUser(w http.ResponseWriter, r *http.Request) {
 		MaxAge: u.ResetTokenMaxAge,
 	}); err != nil {
 		log.Error(err)
-		utils.JSONError(w, err.Error(), http.StatusInternalServerError)
-		return
 	}
 
 	// Log
@@ -282,7 +261,6 @@ func (u *Users) PatchUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var p jsonpatch.Patch
-
 	if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
 		log.Error(err)
 		utils.JSONError(w, err.Error(), http.StatusBadRequest)
@@ -378,4 +356,157 @@ func (u *Users) DeleteUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func (u *Users) ResetPassword(w http.ResponseWriter, r *http.Request) {
+	var request struct {
+		Token    string `json:"token"`
+		Password string `json:"password"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		log.Error(err)
+		utils.JSONError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Allow authorized requests too
+	if token, err := jwtmiddleware.FromAuthHeader(r); err != nil {
+		utils.JSONError(w, err.Error(), http.StatusUnauthorized)
+		return
+	} else if token != "" {
+		request.Token = token
+	}
+
+	if request.Token == "" {
+		utils.JSONError(w, "Token must not be empty", http.StatusBadRequest)
+		return
+	}
+
+	if request.Password == "" {
+		utils.JSONError(w, "Password must not be empty", http.StatusBadRequest)
+		return
+	}
+
+	// Verify token
+	token, err := jwt.Parse(request.Token, func(token *jwt.Token) (interface{}, error) { return u.JWTSecretGetter() })
+	if err != nil {
+		log.Error(err)
+		utils.JSONError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if u.JWTSigningMethod.Alg() != token.Header["alg"] {
+		log.Errorf("Expected %s signing method but token specified %s", u.JWTSigningMethod.Alg(), token.Header["alg"])
+		utils.JSONError(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		return
+	}
+
+	if !token.Valid {
+		log.Errorln("Invalid token")
+		utils.JSONError(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		return
+	}
+
+	// Verify audience
+	claims := token.Claims.(jwt.MapClaims)
+	if !claims.VerifyAudience(u.ResetURL(), true) {
+		utils.JSONError(w, "Not a session token", http.StatusUnauthorized)
+		return
+	}
+
+	// Get password generation
+	gen, ok := claims[utils.NSClaim(u.Namespace, "gen")].(float64)
+	if !ok {
+		utils.JSONError(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
+
+	// Get user id
+	sub, ok := claims["sub"].(string)
+	if !ok {
+		utils.JSONError(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
+
+	id, err := uuid.FromString(sub)
+	if err != nil {
+		utils.JSONError(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
+
+	hash, err := bcrypt.GenerateFromPassword([]byte(request.Password), bcrypt.DefaultCost)
+	if err != nil {
+		log.Error(err)
+		utils.JSONError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	err = u.Storage.UpdatePasswordWithGen(u.context(r), id, hash, int(gen))
+	if err != nil {
+		log.Error(err)
+		utils.JSONError(w, err.Error(), errorHTTPStatus(err))
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+
+	// Log
+	if u.AuxLogger != nil {
+		u.AuxLogger.WithFields(logFields(nil, EvReset, uuid.Nil, id)).Printf("Password for account %v reset", id)
+	}
+}
+
+func (u *Users) SendResetRequest(w http.ResponseWriter, r *http.Request) {
+	var request struct {
+		Email string `json:"email"`
+	}
+
+	if r.Method == "POST" {
+		if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+			log.Error(err)
+			utils.JSONError(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+	} else {
+		// Allow GET requests for testing purposes
+		request.Email = r.FormValue("email")
+	}
+
+	if request.Email == "" {
+		utils.JSONError(w, "Email must not be empty", http.StatusBadRequest)
+		return
+	}
+
+	// Don't return anything
+	defer w.WriteHeader(http.StatusNoContent)
+
+	user, err := u.Storage.GetUserByEmail(u.context(r), request.Email)
+	if err != nil {
+		log.Error(err)
+		return
+	}
+
+	// Create reset token
+	token, err := u.resetToken(user)
+	if err != nil {
+		log.Error(err)
+		return
+	}
+
+	if err = u.Notifier.PasswordReset(&notification.Data{
+		User:   user,
+		Token:  token,
+		MaxAge: u.ResetTokenMaxAge,
+	}); err != nil {
+		log.Error(err)
+		return
+	}
+
+	// Log
+	if u.AuxLogger != nil {
+		u.AuxLogger.WithFields(logFields(map[string]interface{}{
+			"email": user.Email,
+		}, EvResetRequest, uuid.Nil, user.ID)).Printf("User %v requested password reset", user.ID)
+	}
 }

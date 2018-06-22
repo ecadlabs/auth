@@ -7,12 +7,13 @@ import (
 )
 
 const (
-	EvCreate     = "create"
-	EvUpdate     = "update"
-	EvAddRole    = "add_role"
-	EvRemoveRole = "remove_role"
-	EvDelete     = "delete"
-	EvReset      = "reset"
+	EvCreate       = "create"
+	EvUpdate       = "update"
+	EvAddRole      = "add_role"
+	EvRemoveRole   = "remove_role"
+	EvDelete       = "delete"
+	EvReset        = "reset"
+	EvResetRequest = "reset_request"
 )
 
 func logFields(data map[string]interface{}, ev string, self, id uuid.UUID) logrus.Fields {
