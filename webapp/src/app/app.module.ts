@@ -14,6 +14,8 @@ import { LoginComponent } from './login/login.component';
 import { ResetPasswordComponent } from './reset-password/reset-password.component';
 import { ResetPasswordEmailComponent } from './reset-password-email/reset-password-email.component';
 import { ProtectedComponent } from './protected/protected.component';
+import { EcadAngularAuthAdminComponentsModule } from 'projects/ecad-angular-auth/src/lib/ecad-angular-auth-admin-components/ecad-angular-auth-admin-components.module';
+import { EcadAngularAuthAdminModule } from 'projects/ecad-angular-auth/src/lib/ecad-angular-auth-admin/ecad-angular-auth-admin.module';
 
 
 
@@ -35,6 +37,8 @@ import { ProtectedComponent } from './protected/protected.component';
       loginPageUrl: '',
     }),
     EcadAngularAuthComponentsModule,
+    EcadAngularAuthAdminComponentsModule,
+    EcadAngularAuthAdminModule,
     BrowserModule,
     BrowserAnimationsModule,
     RouterModule.forRoot([
