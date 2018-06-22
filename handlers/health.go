@@ -5,6 +5,9 @@ import (
 	"net/http"
 	"time"
 
+	"git.ecadlabs.com/ecad/auth/utils"
+	log "github.com/sirupsen/logrus"
+
 	log "github.com/sirupsen/logrus"
 )
 
@@ -40,5 +43,5 @@ func (h *HealthMonitor) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		code = http.StatusOK
 	}
 
-	JSONResponse(w, code, &response)
+	utils.JSONResponse(w, code, &response)
 }

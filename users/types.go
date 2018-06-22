@@ -2,6 +2,7 @@ package users
 
 import (
 	"errors"
+	"git.ecadlabs.com/ecad/auth/roles"
 	"github.com/satori/go.uuid"
 	"net/http"
 	"strings"
@@ -14,10 +15,11 @@ type Error struct {
 }
 
 var (
-	ErrNotFound   = Error{errors.New("User not found"), http.StatusNotFound}
-	ErrEmail      = Error{errors.New("Email is in use"), http.StatusConflict}
-	ErrPatchValue = Error{errors.New("Patch value is missed"), http.StatusBadRequest}
-	ErrRoleExists = Error{errors.New("Role exists"), http.StatusConflict}
+	ErrNotFound     = &Error{errors.New("User not found"), http.StatusNotFound}
+	ErrEmail        = &Error{errors.New("Email is in use"), http.StatusConflict}
+	ErrPatchValue   = &Error{errors.New("Patch value is missed"), http.StatusBadRequest}
+	ErrRoleExists   = &Error{errors.New("Role exists"), http.StatusConflict}
+	ErrTokenExpired = &Error{errors.New("Token is expired"), http.StatusBadRequest}
 )
 
 type SortOrder int
@@ -39,14 +41,14 @@ func (r Roles) HasPrefix(prefix string) bool {
 	return false
 }
 
-func (r Roles) Prefixed(prefix string) Roles {
-	ret := make(Roles)
+func (r Roles) Get() roles.Roles {
+	s := make([]string, len(r))
+	var i int
 	for role := range r {
-		if strings.HasPrefix(role, prefix) {
-			ret[role] = struct{}{}
-		}
+		s[i] = role
+		i++
 	}
-	return ret
+	return roles.GetKnownRoles(s)
 }
 
 func (r Roles) Has(role string) bool {
@@ -69,12 +71,12 @@ type User struct {
 	ID            uuid.UUID `json:"id" schema:"id"`
 	Email         string    `json:"email" schema:"email"`
 	PasswordHash  []byte    `json:"-" schema:"-"`
-	Password      string    `json:"password,omitempty" schema:"password"` // Create user request
 	Name          string    `json:"name,omitempty" schema:"name"`
 	Added         time.Time `json:"added" schema:"added"`
 	Modified      time.Time `json:"modified" schema:"modified"`
 	EmailVerified bool      `json:"email_verified" schema:"email_verified"`
 	Roles         Roles     `json:"roles,omitempty" schema:"roles"`
+	PasswordGen   int       `json:"-"`
 }
 
 const (

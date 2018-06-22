@@ -1,0 +1,562 @@
+openapi: 3.0.0
+info:
+  description: JWT authentication and users management service
+  version: 1.0.0
+  title: Auth and Users Service
+  contact:
+    url: 'https://git.ecadlabs.com/ecad/auth'
+    email: e.asphyx@gmail.com
+tags:
+  - name: auth
+    description: Authentication and JWT token management
+  - name: users
+    description: Users operations
+paths:
+  /login:
+    summary: Authenticate client
+    post:
+      tags:
+        - auth
+      summary: Authenticate client
+      operationId: postLogin
+      description: Authenticate client and return JWT token
+      requestBody:
+        description: User's credentials
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - password
+              properties:
+                name:
+                  type: string
+                password:
+                  type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Token'
+        default:
+          $ref: '#/components/responses/Error'
+    get:
+      tags:
+        - auth
+      summary: Authenticate client
+      description: Authenticate client using Basic scheme and return JWT token
+      operationId: getLogin
+      responses:
+        '200':
+          $ref: '#/components/responses/Token'
+        default:
+          $ref: '#/components/responses/Error'
+      security:
+        - basicAuth: []
+  /refresh:
+    get:
+      tags:
+        - auth
+      summary: Refresh JWT token
+      operationId: refrestToken
+      responses:
+        '200':
+          $ref: '#/components/responses/Token'
+        default:
+          $ref: '#/components/responses/Error'
+      security:
+        - jwtAuth: []
+  /request_password_reset:
+    get:
+      tags:
+        - users
+      summary: Request password reset
+      operationId: requestReset
+      parameters:
+        - in: query
+          name: email
+          required: true
+          description: User's email address
+          schema:
+            type: string
+            format: email
+      responses:
+        '204':
+          description: Empty response
+        default:
+          $ref: '#/components/responses/Error'
+    post:
+      tags:
+        - users
+      summary: Request password reset
+      operationId: requestResetPost
+      requestBody:
+        description: User's email
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+              properties:
+                email:
+                  type: string
+      responses:
+        '204':
+          description: Empty response
+        default:
+          $ref: '#/components/responses/Error'
+  /password_reset:
+    post:
+      tags:
+        - users
+      summary: Reset password
+      operationId: passwordReset
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - token
+                - password
+              properties:
+                token:
+                  type: string
+                password:
+                  type: string
+      responses:
+        '204':
+          description: Empty response
+        default:
+          $ref: '#/components/responses/Error'
+  /users/:
+    post:
+      tags:
+        - users
+      summary: Create new user
+      operationId: createUser
+      requestBody:
+        description: User info
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+              properties:
+                email:
+                  type: string
+                  format: email
+                name:
+                  type: string
+                roles:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '201':
+          description: User response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          headers:
+            Location:
+              description: New user location.
+              schema:
+                type: string
+                format: uri
+        default:
+          $ref: '#/components/responses/Error'
+    get:
+      tags:
+        - users
+      summary: List users
+      description: List users with filtering
+      operationId: getUsers
+      parameters:
+        - $ref: '#/components/parameters/SortBy'
+        - $ref: '#/components/parameters/Order'
+        - $ref: '#/components/parameters/Last'
+        - $ref: '#/components/parameters/LastID'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Count'
+        - in: query
+          name: id
+          description: Query by unique user ID
+          schema:
+            $ref: '#/components/schemas/Predicate'
+          style: deepObject
+          explode: true
+        - in: query
+          name: email
+          description: Query on users email address
+          schema:
+            $ref: '#/components/schemas/Predicate'
+          style: deepObject
+          explode: true
+        - in: query
+          name: name
+          description: Query on users natural name
+          schema:
+            $ref: '#/components/schemas/Predicate'
+          style: deepObject
+          explode: true
+        - in: query
+          name: added
+          description: Query on time of user ceration
+          schema:
+            $ref: '#/components/schemas/Predicate'
+          style: deepObject
+          explode: true
+        - in: query
+          name: modified
+          description: Query on time of last modifcation
+          schema:
+            $ref: '#/components/schemas/Predicate'
+          style: deepObject
+          explode: true
+        - in: query
+          name: roles
+          description: Query based on roles assigned to user
+          schema:
+            $ref: '#/components/schemas/Predicate'
+          style: deepObject
+          explode: true
+        - in: query
+          name: email_verified
+          description: Query on email verifiation status of user
+          schema:
+            $ref: '#/components/schemas/Predicate'
+          style: deepObject
+          explode: true
+      responses:
+        '200':
+          description: List of Users
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Paginated'
+                  - type: object
+                    required:
+                      - value
+                    properties:
+                      value:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/User'
+        '204':
+          description: Empty response
+        default:
+          $ref: '#/components/responses/Error'
+      security:
+        - jwtAuth: []
+  '/users/{id}':
+    get:
+      tags:
+        - users
+      summary: Get user info
+      operationId: getUser
+      parameters:
+        - $ref: '#/components/parameters/ID'
+      responses:
+        '200':
+          $ref: '#/components/responses/User'
+        default:
+          $ref: '#/components/responses/Error'
+      security:
+        - jwtAuth: []
+    patch:
+      tags:
+        - users
+      summary: Modify user's properties
+      description: Modify user's properties using JSON Patch encoding
+      operationId: patchUsers
+      parameters:
+        - $ref: '#/components/parameters/ID'
+      requestBody:
+        description: User's properties change list
+        required: true
+        content:
+          application/json-patch+json:
+            schema:
+              $ref: '#/components/schemas/JSONPatch'
+      responses:
+        '200':
+          $ref: '#/components/responses/User'
+        default:
+          $ref: '#/components/responses/Error'
+      security:
+        - jwtAuth: []
+    delete:
+      tags:
+        - users
+      summary: Delete user
+      operationId: deleteUser
+      parameters:
+        - $ref: '#/components/parameters/ID'
+      responses:
+        '204':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+      security:
+        - jwtAuth: []
+  /version:
+    get:
+      tags:
+        - operational
+      summary: Version info
+      operationId: getVersion
+      responses:
+        '200':
+          description: Version info
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - version
+                properties:
+                  version:
+                    type: string
+  /metrics:
+    get:
+      tags:
+        - operational
+      summary: Prometheus metrics
+      operationId: getMetrics
+      responses:
+        '200':
+          description: Prometheus metrics
+          content:
+            text/plain:
+              schema:
+                type: string
+            application/vnd.google.protobuf; proto=io.prometheus.client.MetricFamily:
+              schema:
+                type: string
+                format: binary
+components:
+  schemas:
+    Token:
+      type: object
+      required:
+        - token
+      properties:
+        token:
+          type: string
+        refresh:
+          type: string
+          format: uri
+    Error:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+    Paginated:
+      type: object
+      required:
+        - next
+      properties:
+        next:
+          type: string
+          format: uri
+        total_count:
+          type: integer
+    User:
+      type: object
+      required:
+        - id
+        - email
+        - added
+        - modified
+        - email_verified
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+        added:
+          type: string
+          format: date-time
+        modified:
+          type: string
+          format: date-time
+        email_verified:
+          type: boolean
+        roles:
+          type: array
+          nullable: true
+          items:
+            type: string
+    Predicate:
+      type: object
+      properties:
+        eq:
+          type: string
+          description: Equal
+        ne:
+          type: string
+          description: Not equal
+        lt:
+          type: string
+          description: Less than
+        gt:
+          type: string
+          description: Greater than
+        le:
+          type: string
+          description: Less or equal
+        ge:
+          type: string
+          description: Greater or equal
+        re:
+          type: string
+          description: POSIX Regex
+        l:
+          type: string
+          description: SQL LIKE
+        p:
+          type: string
+          description: Has prefix
+        s:
+          type: string
+          description: Has suffix
+        sub:
+          type: string
+          description: Has substring
+        has:
+          type: string
+          description: Collection contains value
+        '!eq':
+          type: string
+        '!ne':
+          type: string
+        '!lt':
+          type: string
+        '!gt':
+          type: string
+        '!le':
+          type: string
+        '!ge':
+          type: string
+        '!re':
+          type: string
+        '!l':
+          type: string
+        '!p':
+          type: string
+        '!s':
+          type: string
+        '!sub':
+          type: string
+        '!has':
+          type: string
+    JSONPatch:
+      type: array
+      items:
+        type: object
+        required:
+          - op
+          - path
+        properties:
+          op:
+            type: string
+            enum:
+              - replace
+              - add
+              - remove
+          path:
+            type: string
+          value: {}
+  responses:
+    Token:
+      description: Token response
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Token'
+    Error:
+      description: Error response
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    User:
+      description: User response
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/User'
+  parameters:
+    ID:
+      in: path
+      name: id
+      required: true
+      description: User ID
+      schema:
+        type: string
+        format: uuid
+    SortBy:
+      in: query
+      name: sortBy
+      description: Sort by field
+      schema:
+        type: string
+    Order:
+      in: query
+      name: order
+      description: Sort order
+      schema:
+        type: string
+        enum:
+          - asc
+          - desc
+        default: asc
+    Last:
+      in: query
+      name: last
+      description: Previews page last item's sorting field value
+      schema:
+        type: string
+    LastID:
+      in: query
+      name: lastId
+      description: Previews page last item's UID
+      schema:
+        type: string
+        format: uuid
+    Limit:
+      in: query
+      name: limit
+      description: Page limit
+      schema:
+        type: integer
+        default: 20
+    Count:
+      in: query
+      name: count
+      description: Return total count
+      schema:
+        type: boolean
+        default: false
+  securitySchemes:
+    jwtAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    basicAuth:
+      type: http
+      scheme: basic

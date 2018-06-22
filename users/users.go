@@ -8,6 +8,7 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
 	"github.com/satori/go.uuid"
+	log "github.com/sirupsen/logrus"
 	"net/http"
 	"strings"
 	"time"
@@ -17,7 +18,8 @@ type userModel struct {
 	ID            uuid.UUID      `db:"id"`
 	Email         string         `db:"email"`
 	PasswordHash  []byte         `db:"password_hash"`
-	Name          sql.NullString `db:"name"`
+	PasswordGen   int            `db:"password_gen"`
+	Name          string         `db:"name"`
 	Added         time.Time      `db:"added"`
 	Modified      time.Time      `db:"modified"`
 	EmailVerified bool           `db:"email_verified"`
@@ -30,11 +32,12 @@ func (u *userModel) toUser() *User {
 		ID:            u.ID,
 		Email:         u.Email,
 		PasswordHash:  u.PasswordHash,
-		Name:          u.Name.String,
+		Name:          u.Name,
 		Added:         u.Added,
 		Modified:      u.Modified,
 		Roles:         make(map[string]interface{}, len(u.Roles)),
 		EmailVerified: u.EmailVerified,
+		PasswordGen:   u.PasswordGen,
 	}
 
 	for _, r := range u.Roles {
@@ -152,31 +155,17 @@ func isUniqueViolation(err error, constraint string) bool {
 	return ok && e.Code.Name() == "unique_violation" && e.Constraint == constraint
 }
 
-func (s *Storage) NewUser(ctx context.Context, user *User) (res *User, err error) {
-	// TODO Check allowed roles
+func NewUserInt(ctx context.Context, tx *sqlx.Tx, user *User) (res *User, err error) {
 	model := userModel{
-		ID:           uuid.NewV4(),
-		Email:        user.Email,
-		PasswordHash: user.PasswordHash,
-		Name:         sql.NullString{String: user.Name, Valid: user.Name != ""},
+		ID:            uuid.NewV4(),
+		Email:         user.Email,
+		PasswordHash:  user.PasswordHash,
+		Name:          user.Name,
+		EmailVerified: user.EmailVerified,
 	}
-
-	tx, err := s.DB.Beginx()
-	if err != nil {
-		return
-	}
-
-	defer func() {
-		if err != nil {
-			tx.Rollback()
-			return
-		}
-
-		err = tx.Commit()
-	}()
 
 	// Create user
-	rows, err := sqlx.NamedQueryContext(ctx, tx, "INSERT INTO users (id, email, password_hash, name) VALUES (:id, :email, :password_hash, :name) RETURNING added, modified, email_verified", &model)
+	rows, err := sqlx.NamedQueryContext(ctx, tx, "INSERT INTO users (id, email, password_hash, name, email_verified) VALUES (:id, :email, :password_hash, :name, :email_verified) RETURNING added, modified, password_gen", &model)
 	if err != nil {
 		if isUniqueViolation(err, "users_email_key") {
 			err = ErrEmail
@@ -217,6 +206,25 @@ func (s *Storage) NewUser(ctx context.Context, user *User) (res *User, err error
 	}
 
 	_, err = tx.ExecContext(ctx, "INSERT INTO roles (user_id, role) VALUES "+strings.Join(valuesExprs, ", "), args...)
+	return
+}
+
+func (s *Storage) NewUser(ctx context.Context, user *User) (res *User, err error) {
+	tx, err := s.DB.Beginx()
+	if err != nil {
+		return
+	}
+
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+			return
+		}
+
+		err = tx.Commit()
+	}()
+
+	res, err = NewUserInt(ctx, tx, user)
 	return
 }
 
@@ -365,6 +373,51 @@ func (s *Storage) DeleteUser(ctx context.Context, id uuid.UUID) (err error) {
 	_, err = tx.ExecContext(ctx, "DELETE FROM roles WHERE user_id = $1", id)
 	if err != nil {
 		return err
+	}
+
+	return nil
+}
+
+func (s *Storage) UpdatePasswordWithGen(ctx context.Context, id uuid.UUID, hash []byte, expectedGen int) (err error) {
+	tx, err := s.DB.Beginx()
+	if err != nil {
+		return
+	}
+
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+			return
+		}
+
+		err = tx.Commit()
+	}()
+
+	var gen int
+	if err := tx.GetContext(ctx, &gen, "SELECT password_gen FROM users WHERE id = $1", id); err != nil {
+		if err == sql.ErrNoRows {
+			err = ErrNotFound
+		}
+		return err
+	}
+
+	if gen != expectedGen {
+		log.WithFields(log.Fields{"token": expectedGen, "db": gen}).Println("Reset token expired")
+		return ErrTokenExpired
+	}
+
+	res, err := tx.ExecContext(ctx, "UPDATE users SET password_hash = $1, email_verified = TRUE, modified = DEFAULT, password_gen = password_gen + 1 WHERE id = $2 AND password_gen = $3", hash, id, gen)
+	if err != nil {
+		return err
+	}
+
+	v, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if v == 0 {
+		return ErrNotFound // Unlikely
 	}
 
 	return nil

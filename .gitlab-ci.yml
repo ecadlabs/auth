@@ -1,20 +1,15 @@
 variables:
   DOCKER_REGISTRY: https://gcr.io
   DOCKER_REGISTRY_URL: gcr.io/ecad-auth
+  SERVICE_ACCOUNT: /etc/deploy/service_account
+  GCP_ZONE: northamerica-northeast1-b
+  GCP_PROJECT: ecad-infrastructure
+  K8S_CLUSTER_NAME: ecad-montreal
 
 stages:
-  - build
   - test
-
-docker-build-auth:
-  stage: build
-  image: docker
-  services:
-    - docker:dind
-  script:
-    - echo ${GOOGLE_GCR_KEY} | docker login -u _json_key --password-stdin ${DOCKER_REGISTRY}
-    - docker build -t "${DOCKER_REGISTRY_URL}/postgres-auth:${CI_COMMIT_REF_NAME:0:8}-${CI_COMMIT_SHA:0:8}" .
-    - docker push "${DOCKER_REGISTRY_URL}/postgres-auth:${CI_COMMIT_REF_NAME:0:8}-${CI_COMMIT_SHA:0:8}"
+  - build
+  - deploy
 
 test-auth:
   stage: test
@@ -27,6 +22,21 @@ test-auth:
     - cd /go/src/git.ecadlabs.com/ecad/auth/intergationtesting
     - go test -db "postgres://postgres@postgres/postgres?connect_timeout=10&sslmode=disable"
 
+docker-build-auth:
+  stage: build
+  image: docker
+  services:
+    - docker:dind
+  script:
+    - echo ${GOOGLE_GCR_KEY} | docker login -u _json_key --password-stdin ${DOCKER_REGISTRY}
+    - >
+      docker build 
+      -t "${DOCKER_REGISTRY_URL}/auth:${CI_COMMIT_REF_NAME}" 
+      -t "${DOCKER_REGISTRY_URL}/auth:latest" 
+      .
+    - docker push "${DOCKER_REGISTRY_URL}/auth:${CI_COMMIT_REF_NAME}"
+    - docker push "${DOCKER_REGISTRY_URL}/auth:latest"
+
 build-auth-api-docs:
   stage: build
   image: docker
@@ -34,5 +44,54 @@ build-auth-api-docs:
     - docker:dind
   script:
     - echo ${GOOGLE_GCR_KEY} | docker login -u _json_key --password-stdin ${DOCKER_REGISTRY}
-    - docker build -t "${DOCKER_REGISTRY_URL}/auth_api_docs:${CI_COMMIT_REF_NAME:0:8}-${CI_COMMIT_SHA:0:8}" .
-    - docker push "${DOCKER_REGISTRY_URL}/auth_api_docs:${CI_COMMIT_REF_NAME:0:8}-${CI_COMMIT_SHA:0:8}"
+    - >
+      docker build 
+      -t "${DOCKER_REGISTRY_URL}/auth_api_docs:${CI_COMMIT_REF_NAME}" 
+      -t "${DOCKER_REGISTRY_URL}/auth_api_docs:latest" 
+      .
+    - docker push "${DOCKER_REGISTRY_URL}/auth_api_docs:${CI_COMMIT_REF_NAME}"
+    - docker push "${DOCKER_REGISTRY_URL}/auth_api_docs:latest"
+
+
+.deploy_tpl: &deploy_tpl
+  stage: deploy
+  image: google/cloud-sdk
+  before_script:
+    - mkdir -p /etc/deploy
+    - echo ${DEPLOY_KEY_PROD} > ${SERVICE_ACCOUNT}
+    - gcloud auth activate-service-account --key-file ${SERVICE_ACCOUNT}
+    - gcloud config set project ${GCP_PROJECT}
+    - >
+        gcloud container clusters get-credentials ${K8S_CLUSTER_NAME}
+        --zone ${GCP_ZONE} --project ${GCP_PROJECT}
+  script:
+    - kubectl get pods -n ${CI_ENVIRONMENT_NAME}
+    - echo ${CONTAINER_URL}:${CI_COMMIT_REF_NAME}
+    - >
+        kubectl set image deployment/auth
+        auth-image=${CONTAINER_URL}:${CI_COMMIT_REF_NAME}
+        --namespace=${CI_ENVIRONMENT_NAME}
+    - >
+        kubectl set image deployment/auth
+        auth-apidocs-image=${CONTAINER_URL}:${CI_COMMIT_REF_NAME}
+        --namespace=${CI_ENVIRONMENT_NAME}
+    - >
+        kubectl set image deployment/auth
+        auth-webapp-image=${CONTAINER_URL}:${CI_COMMIT_REF_NAME}
+        --namespace=${CI_ENVIRONMENT_NAME}
+    - kubectl get pods -n ${CI_ENVIRONMENT_NAME}
+  only:
+  - tags
+  when: manual
+
+deploy-staging:
+  <<: *deploy_tpl
+  environment:
+    name: auth-staging
+    url: https://auth-staging.ecadlabs.com
+
+deploy-prod:
+  <<: *deploy_tpl
+  environment:
+    name: auth-prod
+    url: https://auth.ecadlabs.com

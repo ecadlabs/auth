@@ -47,17 +47,13 @@ func assertNonAdminRole(args map[string]interface{}) bool {
 }
 
 var (
-	roleAnonymous = roles.NewRole(RoleAnonymous, map[string]roles.AssertFunc{
-		permissionCreate: assertNonAdminUser,
-	}, nil)
-
 	roleRegular = roles.NewRole(RoleRegular, map[string]roles.AssertFunc{
 		permissionGet:        assertSelf,
 		permissionDelete:     assertSelf,
 		permissionModify:     assertSelf,
 		permissionAddRole:    assertNonAdminRole,
 		permissionDeleteRole: assertNonAdminRole,
-	}, roleAnonymous)
+	}, nil)
 
 	roleAdmin = roles.NewRole(RoleAdmin, map[string]roles.AssertFunc{
 		permissionCreate:     nil,

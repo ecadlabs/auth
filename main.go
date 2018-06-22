@@ -4,20 +4,21 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/tls"
+	"database/sql"
 	"encoding/base64"
 	"flag"
 	"fmt"
-	"net/http"
-	"os"
-	"os/signal"
-	"syscall"
-
 	"git.ecadlabs.com/ecad/auth/migrations"
 	"git.ecadlabs.com/ecad/auth/service"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/golang-migrate/migrate"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 )
 
 const (
@@ -25,6 +26,34 @@ const (
 )
 
 var jwtSigningMethod = jwt.SigningMethodHS256
+
+func doMigrate(db *sql.DB) error {
+	m, err := migrations.NewDB(db)
+	if err != nil {
+		return err
+	}
+
+	ver, _, err := m.Version()
+	if err == nil {
+		log.WithField("version", ver).Println("Current DB Version")
+	} else if err != migrate.ErrNilVersion {
+		return err
+	}
+
+	if err := m.Up(); err == nil {
+		ver, _, err := m.Version()
+		if err != nil {
+			return err
+		}
+		log.WithField("version", ver).Println("Migrated successfully")
+	} else if err == migrate.ErrNoChange {
+		log.Println("No migrations")
+	} else {
+		return err
+	}
+
+	return nil
+}
 
 func main() {
 	var (
@@ -34,6 +63,7 @@ func main() {
 		genSecret   int
 		useBase64   bool
 		migrateOnly bool
+		bootstrap   bool
 	)
 
 	flag.StringVar(&genPwd, "bcrypt", "", "Generate password hash.")
@@ -41,13 +71,17 @@ func main() {
 	flag.BoolVar(&useBase64, "base64_secret", false, "Encode generated secret using base64.")
 	flag.StringVar(&configFile, "c", "", "Config file.")
 	flag.BoolVar(&migrateOnly, "migrate", false, "Migrate and exit immediately.")
+	flag.BoolVar(&bootstrap, "bootstrap", false, "Bootstrap DB.")
 
 	flag.StringVar(&config.BaseURL, "base", "http://localhost:8000", "Base URL.")
 	flag.StringVar(&config.Address, "http", ":8000", "HTTP service address.")
 	flag.StringVar(&config.HealthAddress, "health", ":8001", "Health service address.")
 	flag.StringVar(&config.JWTSecret, "secret", "", "JWT signing secret.")
-	flag.IntVar(&config.SessionMaxAge, "max_age", 259200, "Session max age, sec.")
+	flag.IntVar(&config.SessionMaxAge, "max_age", 60*60*72, "Session max age, sec.")
+	flag.IntVar(&config.ResetTokenMaxAge, "reset_token_max_age", 60*60*3, "Password reset token max age, sec.")
 	flag.StringVar(&config.PostgresURL, "db", "postgres://localhost/users?connect_timeout=10&sslmode=disable", "PostgreSQL server URL.")
+	flag.IntVar(&config.PostgresRetriesNum, "db_retries_num", 5, "Number of attempts to establish PostgreSQL connection")
+	flag.IntVar(&config.PostgresRetryDelay, "db_retry_delay", 10, "Delay between connection attempts attempts")
 	flag.IntVar(&config.DBTimeout, "timeout", 10, "DB timeout, sec.")
 	flag.BoolVar(&config.TLS, "tls", false, "Enable TLS.")
 	flag.StringVar(&config.TLSCert, "tlscert", "", "TLS certificate file.")
@@ -108,41 +142,22 @@ func main() {
 		}
 	}
 
-	m, err := migrations.New(config.PostgresURL)
+	// Service instance
+	svc, err := config.New()
 	if err != nil {
-		log.Fatal(err)
-	}
-
-	ver, _, err := m.Version()
-	if err != nil {
-		log.Fatal(err)
-	}
-	log.WithField("version", ver).Println("Current DB Version")
-
-	if err := m.Up(); err == nil {
-		ver, _, err := m.Version()
-		if err != nil {
-			log.Fatal(err)
-		}
-		log.WithField("version", ver).Println("Migrated successfully")
-	} else if err == migrate.ErrNoChange {
-		log.Println("No migrations")
-	} else {
 		log.Fatal(err)
 	}
 
 	if migrateOnly {
+		if err := doMigrate(svc.DB); err != nil {
+			log.Fatal(err)
+		}
+
 		os.Exit(0)
 	}
 
 	log.Println("Starting Auth service...")
 	log.Printf("Health service listening on %s", config.HealthAddress)
-	log.Printf("HTTP service listening on %s", config.Address)
-
-	svc, err := config.New()
-	if err != nil {
-		log.Fatal(err)
-	}
 
 	// Start servers
 	healthServer := &http.Server{
@@ -158,6 +173,43 @@ func main() {
 
 	defer healthServer.Shutdown(context.Background())
 
+	// Wait for connection
+	var i int
+	for {
+		err = svc.DB.Ping()
+
+		if err != nil {
+			log.Warningln(err)
+		}
+
+		if err == nil || i >= config.PostgresRetriesNum {
+			break
+		}
+
+		time.Sleep(time.Duration(config.PostgresRetryDelay) * time.Second)
+
+		i++
+	}
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if err := doMigrate(svc.DB); err != nil {
+		log.Fatal(err)
+	}
+
+	if bootstrap {
+		if err := svc.Bootstrap(); err != nil {
+			if err != service.ErrNoBootstrap {
+				log.Fatal(err)
+			}
+		} else {
+			log.Println("DB bootstrapped successfully")
+		}
+	}
+
+	log.Printf("HTTP service listening on %s", config.Address)
 	httpServer := &http.Server{
 		Addr:      config.Address,
 		Handler:   svc.APIHandler(),
