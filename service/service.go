@@ -1,22 +1,24 @@
 package service
 
 import (
-	"net/http"
-	"net/url"
-	"time"
-
 	"database/sql"
 	"git.ecadlabs.com/ecad/auth/handlers"
 	"git.ecadlabs.com/ecad/auth/logger"
 	"git.ecadlabs.com/ecad/auth/middleware"
+	"git.ecadlabs.com/ecad/auth/notification"
 	"git.ecadlabs.com/ecad/auth/users"
+	"git.ecadlabs.com/ecad/auth/utils"
 	"github.com/auth0/go-jwt-middleware"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/mux"
 	"github.com/jmoiron/sqlx"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sirupsen/logrus"
+	"net/http"
+	"net/mail"
+	"net/url"
 	"strconv"
+	"time"
 )
 
 const (
@@ -60,28 +62,36 @@ func (c *Config) New() (*Service, error) {
 func (s *Service) APIHandler() http.Handler {
 	baseURLFunc := s.config.GetBaseURLFunc()
 
-	tokenHandler := handlers.TokenHandler{
-		Storage:       s.storage,
-		Timeout:       time.Duration(s.config.DBTimeout) * time.Second,
-		SessionMaxAge: time.Duration(s.config.SessionMaxAge) * time.Second,
-		JWTSecretGetter: func() ([]byte, error) {
-			return []byte(s.config.JWTSecret), nil
-		},
-		JWTSigningMethod: JWTSigningMethod,
-		RefreshURL:       func() string { return baseURLFunc() + "/refresh" },
-		Namespace:        s.config.Namespace(),
-	}
-
 	dbLogger := logrus.New()
 	dbLogger.AddHook(&logger.Hook{
 		DB: s.DB,
 	})
 
+	notifier := notification.NewEmailNotifier(&mail.Address{
+		Name:    s.config.Email.FromName,
+		Address: s.config.Email.FromAddress,
+	}, &s.config.Email.SMTP)
+
 	usersHandler := handlers.Users{
-		Storage:   s.storage,
-		BaseURL:   func() string { return baseURLFunc() + "/users/" },
-		Timeout:   time.Duration(s.config.DBTimeout) * time.Second,
+		Storage: s.storage,
+		Timeout: time.Duration(s.config.DBTimeout) * time.Second,
+
+		JWTSecretGetter: func() ([]byte, error) {
+			return []byte(s.config.JWTSecret), nil
+		},
+		JWTSigningMethod: JWTSigningMethod,
+
+		BaseURL:     baseURLFunc,
+		UsersPath:   "/users/",
+		RefreshPath: "/refresh",
+		ResetPath:   "/password_reset",
+		Namespace:   s.config.Namespace(),
+
+		SessionMaxAge:    time.Duration(s.config.SessionMaxAge) * time.Second,
+		ResetTokenMaxAge: time.Duration(s.config.ResetTokenMaxAge) * time.Second,
+
 		AuxLogger: dbLogger,
+		Notifier:  notifier,
 	}
 
 	jwtOptions := jwtmiddleware.Options{
@@ -89,10 +99,16 @@ func (s *Service) APIHandler() http.Handler {
 		SigningMethod:       JWTSigningMethod,
 		UserProperty:        handlers.TokenContextKey,
 		ErrorHandler: func(w http.ResponseWriter, r *http.Request, err string) {
-			handlers.JSONError(w, err, http.StatusUnauthorized)
+			utils.JSONError(w, err, http.StatusUnauthorized)
 		},
 	}
 	jwtMiddleware := jwtmiddleware.New(jwtOptions)
+
+	// Check audience
+	aud := middleware.Audience{
+		Value:           baseURLFunc,
+		TokenContextKey: handlers.TokenContextKey,
+	}
 
 	m := mux.NewRouter()
 
@@ -101,11 +117,13 @@ func (s *Service) APIHandler() http.Handler {
 	m.Use((&middleware.Recover{}).Handler)
 
 	// Login API
-	m.Methods("GET", "POST").Path("/login").HandlerFunc(tokenHandler.Login)
-	m.Methods("GET").Path("/refresh").Handler(jwtMiddleware.Handler(http.HandlerFunc(tokenHandler.Refresh)))
+	m.Methods("POST").Path("/password_reset").HandlerFunc(usersHandler.ResetPassword)
+	m.Methods("GET", "POST").Path("/request_password_reset").HandlerFunc(usersHandler.SendResetRequest)
+	m.Methods("GET", "POST").Path("/login").HandlerFunc(usersHandler.Login)
+	m.Methods("GET").Path("/refresh").Handler(jwtMiddleware.Handler(aud.Handler(http.HandlerFunc(usersHandler.Refresh))))
 
 	// Users API
-	ud := middleware.UserData{
+	ud := middleware.TokenUserData{
 		Namespace:       s.config.Namespace(),
 		TokenContextKey: handlers.TokenContextKey,
 		UserContextKey:  handlers.UserContextKey,
@@ -115,6 +133,7 @@ func (s *Service) APIHandler() http.Handler {
 
 	umux := m.PathPrefix("/users").Subrouter()
 	umux.Use(jwtMiddleware.Handler)
+	umux.Use(aud.Handler)
 	umux.Use(ud.Handler)
 
 	umux.Methods("POST").Path("/").HandlerFunc(usersHandler.NewUser)
@@ -128,7 +147,7 @@ func (s *Service) APIHandler() http.Handler {
 	m.Methods("GET").Path("/metrics").Handler(promhttp.Handler())
 
 	m.NotFoundHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		handlers.JSONError(w, "Resource not found", http.StatusNotFound)
+		utils.JSONError(w, "Resource not found", http.StatusNotFound)
 	})
 
 	return m

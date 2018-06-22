@@ -18,7 +18,7 @@ paths:
       tags:
         - auth
       summary: Authenticate client
-      operationId: "postLogin"
+      operationId: postLogin
       description: Authenticate client and return JWT token
       requestBody:
         description: User's credentials
@@ -45,7 +45,7 @@ paths:
         - auth
       summary: Authenticate client
       description: Authenticate client using Basic scheme and return JWT token
-      operationId: "getLogin"
+      operationId: getLogin
       responses:
         '200':
           $ref: '#/components/responses/Token'
@@ -58,7 +58,7 @@ paths:
       tags:
         - auth
       summary: Refresh JWT token
-      operationId: "refrestToken"
+      operationId: refrestToken
       responses:
         '200':
           $ref: '#/components/responses/Token'
@@ -66,12 +66,78 @@ paths:
           $ref: '#/components/responses/Error'
       security:
         - jwtAuth: []
+  /request_password_reset:
+    get:
+      tags:
+        - users
+      summary: Request password reset
+      operationId: requestReset
+      parameters:
+        - in: query
+          name: email
+          required: true
+          description: User's email address
+          schema:
+            type: string
+            format: email
+      responses:
+        '204':
+          description: Empty response
+        default:
+          $ref: '#/components/responses/Error'
+    post:
+      tags:
+        - users
+      summary: Request password reset
+      operationId: requestResetPost
+      requestBody:
+        description: User's email
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+              properties:
+                email:
+                  type: string
+      responses:
+        '204':
+          description: Empty response
+        default:
+          $ref: '#/components/responses/Error'
+  /password_reset:
+    post:
+      tags:
+        - users
+      summary: Reset password
+      operationId: passwordReset
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - token
+                - password
+              properties:
+                token:
+                  type: string
+                password:
+                  type: string
+      responses:
+        '204':
+          description: Empty response
+        default:
+          $ref: '#/components/responses/Error'
   /users/:
     post:
       tags:
         - users
       summary: Create new user
-      operationId: "createUser"
+      operationId: createUser
       requestBody:
         description: User info
         required: true
@@ -81,16 +147,12 @@ paths:
               type: object
               required:
                 - email
-                - password
               properties:
                 email:
                   type: string
                   format: email
                 name:
                   type: string
-                password:
-                  type: string
-                  format: password
                 roles:
                   type: array
                   items:
@@ -115,7 +177,7 @@ paths:
         - users
       summary: List users
       description: List users with filtering
-      operationId: "getUsers"
+      operationId: getUsers
       parameters:
         - $ref: '#/components/parameters/SortBy'
         - $ref: '#/components/parameters/Order'
@@ -125,49 +187,49 @@ paths:
         - $ref: '#/components/parameters/Count'
         - in: query
           name: id
-          description: "Query by unique user ID"
+          description: Query by unique user ID
           schema:
             $ref: '#/components/schemas/Predicate'
           style: deepObject
           explode: true
         - in: query
           name: email
-          description: "Query on users email address"
+          description: Query on users email address
           schema:
             $ref: '#/components/schemas/Predicate'
           style: deepObject
           explode: true
         - in: query
           name: name
-          description: "Query on users natural name"
+          description: Query on users natural name
           schema:
             $ref: '#/components/schemas/Predicate'
           style: deepObject
           explode: true
         - in: query
           name: added
-          description: "Query on time of user ceration"
+          description: Query on time of user ceration
           schema:
             $ref: '#/components/schemas/Predicate'
           style: deepObject
           explode: true
         - in: query
           name: modified
-          description: "Query on time of last modifcation"
+          description: Query on time of last modifcation
           schema:
             $ref: '#/components/schemas/Predicate'
           style: deepObject
           explode: true
         - in: query
           name: roles
-          description: "Query based on roles assigned to user"
+          description: Query based on roles assigned to user
           schema:
             $ref: '#/components/schemas/Predicate'
           style: deepObject
           explode: true
         - in: query
           name: email_verified
-          description: "Query on email verifiation status of user"
+          description: Query on email verifiation status of user
           schema:
             $ref: '#/components/schemas/Predicate'
           style: deepObject
@@ -199,7 +261,7 @@ paths:
       tags:
         - users
       summary: Get user info
-      operationId: "getUser"
+      operationId: getUser
       parameters:
         - $ref: '#/components/parameters/ID'
       responses:
@@ -235,7 +297,7 @@ paths:
       tags:
         - users
       summary: Delete user
-      operationId: "deleteUser"
+      operationId: deleteUser
       parameters:
         - $ref: '#/components/parameters/ID'
       responses:
@@ -250,7 +312,7 @@ paths:
       tags:
         - operational
       summary: Version info
-      operationId: "getVersion"
+      operationId: getVersion
       responses:
         '200':
           description: Version info
@@ -268,7 +330,7 @@ paths:
       tags:
         - operational
       summary: Prometheus metrics
-      operationId: "getMetrics"
+      operationId: getMetrics
       responses:
         '200':
           description: Prometheus metrics

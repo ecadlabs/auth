@@ -10,6 +10,8 @@
 // data/4_not_null.up.sql
 // data/5_bootstrap.down.sql
 // data/5_bootstrap.up.sql
+// data/6_add_gen_column.down.sql
+// data/6_add_gen_column.up.sql
 // DO NOT EDIT!
 
 package migrations
@@ -252,7 +254,7 @@ func _5_bootstrapDownSql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "5_bootstrap.down.sql", size: 21, mode: os.FileMode(420), modTime: time.Unix(1529507408, 0)}
+	info := bindataFileInfo{name: "5_bootstrap.down.sql", size: 21, mode: os.FileMode(420), modTime: time.Unix(1529510053, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -272,7 +274,47 @@ func _5_bootstrapUpSql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "5_bootstrap.up.sql", size: 124, mode: os.FileMode(420), modTime: time.Unix(1529508077, 0)}
+	info := bindataFileInfo{name: "5_bootstrap.up.sql", size: 124, mode: os.FileMode(420), modTime: time.Unix(1529510053, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
+var __6_add_gen_columnDownSql = []byte("\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\x72\xf4\x09\x71\x0d\x52\x08\x71\x74\xf2\x71\x55\x28\x2d\x4e\x2d\x2a\x56\x70\x09\xf2\x0f\x50\x70\xf6\xf7\x09\xf5\xf5\x53\x28\x48\x2c\x2e\x2e\xcf\x2f\x4a\x89\x4f\x4f\xcd\xb3\x06\x04\x00\x00\xff\xff\xf7\x09\xd5\xe9\x2b\x00\x00\x00")
+
+func _6_add_gen_columnDownSqlBytes() ([]byte, error) {
+	return bindataRead(
+		__6_add_gen_columnDownSql,
+		"6_add_gen_column.down.sql",
+	)
+}
+
+func _6_add_gen_columnDownSql() (*asset, error) {
+	bytes, err := _6_add_gen_columnDownSqlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "6_add_gen_column.down.sql", size: 43, mode: os.FileMode(420), modTime: time.Unix(1529678146, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
+var __6_add_gen_columnUpSql = []byte("\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\x04\xc0\x31\x0a\x80\x30\x0c\x05\xd0\xab\xfc\x23\xb8\x3b\x45\x1b\x45\x88\x29\x94\x64\x16\xc1\xe2\xa6\xd2\x20\x5e\xdf\x47\x62\x5c\x60\x34\x08\xe3\x8d\xda\x02\x94\x12\xc6\x2c\xbe\x2a\x9e\x3d\xe2\xbb\xdb\xb1\x9d\xf5\xc2\xa2\xc6\x33\x17\x68\x36\xa8\x8b\x20\xf1\x44\x2e\x86\xae\xff\x03\x00\x00\xff\xff\x36\x26\x6d\xf2\x45\x00\x00\x00")
+
+func _6_add_gen_columnUpSqlBytes() ([]byte, error) {
+	return bindataRead(
+		__6_add_gen_columnUpSql,
+		"6_add_gen_column.up.sql",
+	)
+}
+
+func _6_add_gen_columnUpSql() (*asset, error) {
+	bytes, err := _6_add_gen_columnUpSqlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "6_add_gen_column.up.sql", size: 69, mode: os.FileMode(420), modTime: time.Unix(1529678108, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -339,6 +381,8 @@ var _bindata = map[string]func() (*asset, error){
 	"4_not_null.up.sql": _4_not_nullUpSql,
 	"5_bootstrap.down.sql": _5_bootstrapDownSql,
 	"5_bootstrap.up.sql": _5_bootstrapUpSql,
+	"6_add_gen_column.down.sql": _6_add_gen_columnDownSql,
+	"6_add_gen_column.up.sql": _6_add_gen_columnUpSql,
 }
 
 // AssetDir returns the file names below a certain
@@ -391,6 +435,8 @@ var _bintree = &bintree{nil, map[string]*bintree{
 	"4_not_null.up.sql": &bintree{_4_not_nullUpSql, map[string]*bintree{}},
 	"5_bootstrap.down.sql": &bintree{_5_bootstrapDownSql, map[string]*bintree{}},
 	"5_bootstrap.up.sql": &bintree{_5_bootstrapUpSql, map[string]*bintree{}},
+	"6_add_gen_column.down.sql": &bintree{_6_add_gen_columnDownSql, map[string]*bintree{}},
+	"6_add_gen_column.up.sql": &bintree{_6_add_gen_columnUpSql, map[string]*bintree{}},
 }}
 
 // RestoreAsset restores an asset under the given directory

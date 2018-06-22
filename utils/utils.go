@@ -1,8 +1,9 @@
-package handlers
+package utils
 
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 )
 
 func JSONError(w http.ResponseWriter, err string, code int) {
@@ -25,4 +26,12 @@ type Paginated struct {
 	Value      interface{} `json:"value"`
 	TotalCount *int        `json:"total_count,omitempty"`
 	Next       string      `json:"next,omitempty"`
+}
+
+func NSClaim(ns, sufix string) string {
+	if strings.HasPrefix(ns, "http://") || strings.HasPrefix(ns, "https://") {
+		return ns + "/" + sufix
+	}
+
+	return ns + "." + sufix
 }
