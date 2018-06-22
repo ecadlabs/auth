@@ -30,6 +30,10 @@ static_resources:
               routes:
               - match: { prefix: "/api/v1/login" }
                 route: { host_rewrite: auth, cluster: service_auth, prefix_rewrite: "/login"  }
+              - match: { prefix: "/api/v1/users" }
+                route: { host_rewrite: auth, cluster: service_auth, prefix_rewrite: "/users"  }
+              - match: { prefix: "/api/v1/password_reset" }
+                route: { host_rewrite: auth, cluster: service_auth, prefix_rewrite: "/password_reset"  }
               - match: { prefix: "/apidocs" }
                 route: { host_rewrite: apidocs, cluster: service_apidocs, prefix_rewrite: "/"  }
               - match: { prefix: "/" }
