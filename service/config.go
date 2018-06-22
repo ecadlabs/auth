@@ -16,6 +16,7 @@ type Config struct {
 	JWTSecret          string        `json:"jwt_secret"`
 	JWTSecretFile      string        `json:"jwt_secret_file"`
 	SessionMaxAge      int           `json:"session_max_age"`
+	ResetTokenMaxAge   int           `json:"reset_token_max_age"`
 	PostgresURL        string        `json:"db_url"`
 	PostgresRetriesNum int           `json:"db_retries_num"`
 	PostgresRetryDelay int           `json:"db_retry_delay"`

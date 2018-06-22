@@ -1,9 +1,7 @@
 package handlers
 
 import (
-	"context"
 	"encoding/json"
-	"git.ecadlabs.com/ecad/auth/users"
 	"git.ecadlabs.com/ecad/auth/utils"
 	"github.com/auth0/go-jwt-middleware"
 	"github.com/dgrijalva/jwt-go"
@@ -19,29 +17,9 @@ const (
 	TokenContextKey = "token"
 )
 
-type TokenHandler struct {
-	Storage          *users.Storage
-	Timeout          time.Duration
-	SessionMaxAge    time.Duration
-	JWTSecretGetter  func() ([]byte, error)
-	JWTSigningMethod jwt.SigningMethod
-	Namespace        string
-	BaseURL          func() string
-	RefreshURL       func() string
-	ResetURL         func() string
-}
-
-func (t *TokenHandler) context(parent context.Context) context.Context {
-	if t.Timeout != 0 {
-		ctx, _ := context.WithTimeout(parent, t.Timeout)
-		return ctx
-	}
-	return parent
-}
-
-func (t *TokenHandler) writeTokenWithClaims(w http.ResponseWriter, claims jwt.Claims) {
-	token := jwt.NewWithClaims(t.JWTSigningMethod, claims)
-	secret, err := t.JWTSecretGetter()
+func (u *Users) writeTokenWithClaims(w http.ResponseWriter, claims jwt.Claims) {
+	token := jwt.NewWithClaims(u.JWTSigningMethod, claims)
+	secret, err := u.JWTSecretGetter()
 	if err != nil {
 		utils.JSONError(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -58,7 +36,7 @@ func (t *TokenHandler) writeTokenWithClaims(w http.ResponseWriter, claims jwt.Cl
 		RefreshURL string `json:"refresh,omitempty"`
 	}{
 		Token:      tokenString,
-		RefreshURL: t.RefreshURL(),
+		RefreshURL: u.RefreshURL(),
 	}
 
 	w.Header().Set("Access-Control-Allow-Origin", "*")
@@ -67,7 +45,7 @@ func (t *TokenHandler) writeTokenWithClaims(w http.ResponseWriter, claims jwt.Cl
 }
 
 // Login is a login endpoint handler
-func (t *TokenHandler) Login(w http.ResponseWriter, r *http.Request) {
+func (u *Users) Login(w http.ResponseWriter, r *http.Request) {
 	var request struct {
 		Name     string `json:"name"`
 		Password string `json:"password"`
@@ -88,7 +66,7 @@ func (t *TokenHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := t.Storage.GetUserByEmail(t.context(r.Context()), request.Name)
+	user, err := u.Storage.GetUserByEmail(u.context(r), request.Name)
 	if err != nil {
 		log.Error(err)
 		utils.JSONError(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
@@ -117,35 +95,35 @@ func (t *TokenHandler) Login(w http.ResponseWriter, r *http.Request) {
 		roles = append(roles, r)
 	}
 
-	ns := t.Namespace
+	ns := u.Namespace
 	now := time.Now()
 
 	claims := jwt.MapClaims{
 		"sub": user.ID,
-		"exp": now.Add(t.SessionMaxAge).Unix(),
+		"exp": now.Add(u.SessionMaxAge).Unix(),
 		"iat": now.Unix(),
-		"iss": t.BaseURL(),
-		"aud": t.BaseURL(),
+		"iss": u.BaseURL(),
+		"aud": u.BaseURL(),
 		utils.NSClaim(ns, "email"): user.Email,
 		utils.NSClaim(ns, "name"):  user.Name,
 		utils.NSClaim(ns, "roles"): roles,
 	}
 
-	t.writeTokenWithClaims(w, claims)
+	u.writeTokenWithClaims(w, claims)
 }
 
-func (t *TokenHandler) Refresh(w http.ResponseWriter, req *http.Request) {
+func (u *Users) Refresh(w http.ResponseWriter, req *http.Request) {
 	claims := req.Context().Value(TokenContextKey).(*jwt.Token).Claims.(jwt.MapClaims)
 
 	// Update timestamp only
 	now := time.Now()
-	claims["exp"] = now.Add(t.SessionMaxAge).Unix()
+	claims["exp"] = now.Add(u.SessionMaxAge).Unix()
 	claims["iat"] = now.Unix()
 
-	t.writeTokenWithClaims(w, claims)
+	u.writeTokenWithClaims(w, claims)
 }
 
-func (t *TokenHandler) ResetPassword(w http.ResponseWriter, r *http.Request) {
+func (u *Users) ResetPassword(w http.ResponseWriter, r *http.Request) {
 	var request struct {
 		Token    string `json:"token" schema:"token"`
 		Password string `json:"password" schema:"password"`
@@ -187,15 +165,15 @@ func (t *TokenHandler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Verify token
-	token, err := jwt.Parse(request.Token, func(token *jwt.Token) (interface{}, error) { return t.JWTSecretGetter() })
+	token, err := jwt.Parse(request.Token, func(token *jwt.Token) (interface{}, error) { return u.JWTSecretGetter() })
 	if err != nil {
 		log.Error(err)
 		utils.JSONError(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	if t.JWTSigningMethod.Alg() != token.Header["alg"] {
-		log.Errorf("Expected %s signing method but token specified %s", t.JWTSigningMethod.Alg(), token.Header["alg"])
+	if u.JWTSigningMethod.Alg() != token.Header["alg"] {
+		log.Errorf("Expected %s signing method but token specified %s", u.JWTSigningMethod.Alg(), token.Header["alg"])
 		utils.JSONError(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 		return
 	}
@@ -208,13 +186,13 @@ func (t *TokenHandler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 
 	// Verify audience
 	claims := token.Claims.(jwt.MapClaims)
-	if !claims.VerifyAudience(t.ResetURL(), true) {
-		utils.JSONError(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+	if !claims.VerifyAudience(u.ResetURL(), true) {
+		utils.JSONError(w, "Not a session token", http.StatusUnauthorized)
 		return
 	}
 
-	// Get issue time
-	iat, ok := claims["iat"].(float64)
+	// Get password generation
+	gen, ok := claims[utils.NSClaim(u.Namespace, "gen")].(float64)
 	if !ok {
 		utils.JSONError(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 		return
@@ -240,7 +218,7 @@ func (t *TokenHandler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = t.Storage.UpdatePasswordHash(t.context(r.Context()), id, hash, time.Unix(int64(iat), 0))
+	err = u.Storage.UpdatePasswordHash(u.context(r), id, hash, int(gen))
 	if err != nil {
 		log.Error(err)
 		utils.JSONError(w, err.Error(), errorHTTPStatus(err))
@@ -248,4 +226,9 @@ func (t *TokenHandler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+
+	// Log
+	if u.AuxLogger != nil {
+		u.AuxLogger.WithFields(logFields(nil, EvReset, uuid.Nil, id)).Printf("Password for account %v reset", id)
+	}
 }

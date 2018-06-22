@@ -4,9 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"git.ecadlabs.com/ecad/auth/jsonpatch"
+	"git.ecadlabs.com/ecad/auth/notification"
 	"git.ecadlabs.com/ecad/auth/query"
 	"git.ecadlabs.com/ecad/auth/users"
 	"git.ecadlabs.com/ecad/auth/utils"
+	"github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/schema"
 	"github.com/satori/go.uuid"
@@ -25,10 +27,35 @@ const (
 var schemaDecoder = schema.NewDecoder()
 
 type Users struct {
-	BaseURL   func() string
-	Storage   *users.Storage
-	Timeout   time.Duration
+	Storage *users.Storage
+	Timeout time.Duration
+
+	SessionMaxAge    time.Duration
+	JWTSecretGetter  func() ([]byte, error)
+	JWTSigningMethod jwt.SigningMethod
+
+	BaseURL     func() string
+	UsersPath   string
+	RefreshPath string
+	ResetPath   string
+	Namespace   string
+
+	Notifier         notification.Notifier
+	ResetTokenMaxAge time.Duration
+
 	AuxLogger *log.Logger
+}
+
+func (u *Users) UsersURL() string {
+	return u.BaseURL() + u.UsersPath
+}
+
+func (u *Users) RefreshURL() string {
+	return u.BaseURL() + u.RefreshPath
+}
+
+func (u *Users) ResetURL() string {
+	return u.BaseURL() + u.ResetPath
 }
 
 func (u *Users) context(r *http.Request) context.Context {
@@ -118,7 +145,7 @@ func (u *Users) GetUsers(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if nextQuery != nil {
-		nextUrl, err := url.Parse(u.BaseURL())
+		nextUrl, err := url.Parse(u.UsersURL())
 		if err != nil {
 			log.Error(err)
 			utils.JSONError(w, err.Error(), http.StatusInternalServerError)
@@ -130,6 +157,28 @@ func (u *Users) GetUsers(w http.ResponseWriter, r *http.Request) {
 	}
 
 	utils.JSONResponse(w, http.StatusOK, &res)
+}
+
+func (u *Users) resetToken(id uuid.UUID, gen int) (string, error) {
+	now := time.Now()
+
+	claims := jwt.MapClaims{
+		"sub": id,
+		"exp": now.Add(u.ResetTokenMaxAge).Unix(),
+		"iat": now.Unix(),
+		"iss": u.BaseURL(),
+		"aud": u.ResetURL(),
+		utils.NSClaim(u.Namespace, "gen"): gen,
+	}
+
+	token := jwt.NewWithClaims(u.JWTSigningMethod, claims)
+
+	secret, err := u.JWTSecretGetter()
+	if err != nil {
+		return "", err
+	}
+
+	return token.SignedString(secret)
 }
 
 func (u *Users) NewUser(w http.ResponseWriter, r *http.Request) {
@@ -161,6 +210,7 @@ func (u *Users) NewUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	user.EmailVerified = false
+	user.PasswordHash = nil
 
 	if !user.Roles.HasPrefix(RolePrefix) {
 		user.Roles.Add(RoleRegular)
@@ -186,6 +236,25 @@ func (u *Users) NewUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Create reset token
+	token, err := u.resetToken(ret.ID, ret.PasswordGen)
+	if err != nil {
+		log.Error(err)
+		utils.JSONError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if err = u.Notifier.NewUser(&notification.Data{
+		Self:   self,
+		User:   ret,
+		Token:  token,
+		MaxAge: u.ResetTokenMaxAge,
+	}); err != nil {
+		log.Error(err)
+		utils.JSONError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	// Log
 	if u.AuxLogger != nil {
 		u.AuxLogger.WithFields(logFields(map[string]interface{}{
@@ -197,7 +266,7 @@ func (u *Users) NewUser(w http.ResponseWriter, r *http.Request) {
 		}, EvCreate, self.ID, ret.ID)).Printf("User %v created account %v", self.ID, ret.ID)
 	}
 
-	w.Header().Set("Location", u.BaseURL()+ret.ID.String())
+	w.Header().Set("Location", u.UsersURL()+ret.ID.String())
 	utils.JSONResponse(w, http.StatusCreated, ret)
 }
 

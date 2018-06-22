@@ -12,6 +12,7 @@ const (
 	EvAddRole    = "add_role"
 	EvRemoveRole = "remove_role"
 	EvDelete     = "delete"
+	EvReset      = "reset"
 )
 
 func logFields(data map[string]interface{}, ev string, self, id uuid.UUID) logrus.Fields {

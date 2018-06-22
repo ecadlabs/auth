@@ -8,6 +8,7 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
 	"github.com/satori/go.uuid"
+	log "github.com/sirupsen/logrus"
 	"net/http"
 	"strings"
 	"time"
@@ -17,6 +18,7 @@ type userModel struct {
 	ID            uuid.UUID      `db:"id"`
 	Email         string         `db:"email"`
 	PasswordHash  []byte         `db:"password_hash"`
+	PasswordGen   int            `db:"password_gen"`
 	Name          string         `db:"name"`
 	Added         time.Time      `db:"added"`
 	Modified      time.Time      `db:"modified"`
@@ -35,6 +37,7 @@ func (u *userModel) toUser() *User {
 		Modified:      u.Modified,
 		Roles:         make(map[string]interface{}, len(u.Roles)),
 		EmailVerified: u.EmailVerified,
+		PasswordGen:   u.PasswordGen,
 	}
 
 	for _, r := range u.Roles {
@@ -162,7 +165,7 @@ func NewUserInt(ctx context.Context, tx *sqlx.Tx, user *User) (res *User, err er
 	}
 
 	// Create user
-	rows, err := sqlx.NamedQueryContext(ctx, tx, "INSERT INTO users (id, email, password_hash, name, email_verified) VALUES (:id, :email, :password_hash, :name, :email_verified) RETURNING added, modified", &model)
+	rows, err := sqlx.NamedQueryContext(ctx, tx, "INSERT INTO users (id, email, password_hash, name, email_verified) VALUES (:id, :email, :password_hash, :name, :email_verified) RETURNING added, modified, password_gen", &model)
 	if err != nil {
 		if isUniqueViolation(err, "users_email_key") {
 			err = ErrEmail
@@ -375,7 +378,7 @@ func (s *Storage) DeleteUser(ctx context.Context, id uuid.UUID) (err error) {
 	return nil
 }
 
-func (s *Storage) UpdatePasswordHash(ctx context.Context, id uuid.UUID, hash []byte, expectedTs time.Time) (err error) {
+func (s *Storage) UpdatePasswordHash(ctx context.Context, id uuid.UUID, hash []byte, expectedGen int) (err error) {
 	tx, err := s.DB.Beginx()
 	if err != nil {
 		return
@@ -390,19 +393,20 @@ func (s *Storage) UpdatePasswordHash(ctx context.Context, id uuid.UUID, hash []b
 		err = tx.Commit()
 	}()
 
-	var ts time.Time
-	if err := tx.GetContext(ctx, &ts, "SELECT modified FROM users WHERE id = $1", id); err != nil {
+	var gen int
+	if err := tx.GetContext(ctx, &gen, "SELECT password_gen FROM users WHERE id = $1", id); err != nil {
 		if err == sql.ErrNoRows {
 			err = ErrNotFound
 		}
 		return err
 	}
 
-	if ts.After(expectedTs) {
+	if gen != expectedGen {
+		log.WithFields(log.Fields{"token": expectedGen, "db": gen}).Println("Reset token expired")
 		return ErrTokenExpired
 	}
 
-	res, err := tx.ExecContext(ctx, "UPDATE users SET password_hash = $1, email_verified = TRUE, modified = DEFAULT WHERE id = $2 AND modified = $3", hash, id, ts)
+	res, err := tx.ExecContext(ctx, "UPDATE users SET password_hash = $1, email_verified = TRUE, modified = DEFAULT, password_gen = password_gen + 1 WHERE id = $2 AND password_gen = $3", hash, id, gen)
 	if err != nil {
 		return err
 	}

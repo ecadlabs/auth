@@ -15,11 +15,11 @@ type Error struct {
 }
 
 var (
-	ErrNotFound     = Error{errors.New("User not found"), http.StatusNotFound}
-	ErrEmail        = Error{errors.New("Email is in use"), http.StatusConflict}
-	ErrPatchValue   = Error{errors.New("Patch value is missed"), http.StatusBadRequest}
-	ErrRoleExists   = Error{errors.New("Role exists"), http.StatusConflict}
-	ErrTokenExpired = Error{errors.New("Token expired"), http.StatusBadRequest}
+	ErrNotFound     = &Error{errors.New("User not found"), http.StatusNotFound}
+	ErrEmail        = &Error{errors.New("Email is in use"), http.StatusConflict}
+	ErrPatchValue   = &Error{errors.New("Patch value is missed"), http.StatusBadRequest}
+	ErrRoleExists   = &Error{errors.New("Role exists"), http.StatusConflict}
+	ErrTokenExpired = &Error{errors.New("Token is expired"), http.StatusBadRequest}
 )
 
 type SortOrder int
@@ -76,6 +76,7 @@ type User struct {
 	Modified      time.Time `json:"modified" schema:"modified"`
 	EmailVerified bool      `json:"email_verified" schema:"email_verified"`
 	Roles         Roles     `json:"roles,omitempty" schema:"roles"`
+	PasswordGen   int       `json:"-"`
 }
 
 const (

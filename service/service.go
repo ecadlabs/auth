@@ -9,6 +9,7 @@ import (
 	"git.ecadlabs.com/ecad/auth/handlers"
 	"git.ecadlabs.com/ecad/auth/logger"
 	"git.ecadlabs.com/ecad/auth/middleware"
+	"git.ecadlabs.com/ecad/auth/notification"
 	"git.ecadlabs.com/ecad/auth/users"
 	"git.ecadlabs.com/ecad/auth/utils"
 	"github.com/auth0/go-jwt-middleware"
@@ -61,30 +62,29 @@ func (c *Config) New() (*Service, error) {
 func (s *Service) APIHandler() http.Handler {
 	baseURLFunc := s.config.GetBaseURLFunc()
 
-	tokenHandler := handlers.TokenHandler{
-		Storage:       s.storage,
-		Timeout:       time.Duration(s.config.DBTimeout) * time.Second,
-		SessionMaxAge: time.Duration(s.config.SessionMaxAge) * time.Second,
-		JWTSecretGetter: func() ([]byte, error) {
-			return []byte(s.config.JWTSecret), nil
-		},
-		JWTSigningMethod: JWTSigningMethod,
-		BaseURL:          baseURLFunc,
-		RefreshURL:       func() string { return baseURLFunc() + "/refresh" },
-		ResetURL:         func() string { return baseURLFunc() + "/password_reset" },
-		Namespace:        s.config.Namespace(),
-	}
-
 	dbLogger := logrus.New()
 	dbLogger.AddHook(&logger.Hook{
 		DB: s.DB,
 	})
 
 	usersHandler := handlers.Users{
-		Storage:   s.storage,
-		BaseURL:   func() string { return baseURLFunc() + "/users/" },
-		Timeout:   time.Duration(s.config.DBTimeout) * time.Second,
-		AuxLogger: dbLogger,
+		Storage: s.storage,
+		Timeout: time.Duration(s.config.DBTimeout) * time.Second,
+
+		JWTSecretGetter: func() ([]byte, error) {
+			return []byte(s.config.JWTSecret), nil
+		},
+		JWTSigningMethod: JWTSigningMethod,
+
+		BaseURL:     baseURLFunc,
+		UsersPath:   "/users/",
+		RefreshPath: "/refresh",
+		ResetPath:   "/password_reset",
+		Namespace:   s.config.Namespace(),
+
+		SessionMaxAge:    time.Duration(s.config.SessionMaxAge) * time.Second,
+		ResetTokenMaxAge: time.Duration(s.config.ResetTokenMaxAge) * time.Second,
+		Notifier:         notification.Log{},
 	}
 
 	jwtOptions := jwtmiddleware.Options{
@@ -110,8 +110,9 @@ func (s *Service) APIHandler() http.Handler {
 	m.Use((&middleware.Recover{}).Handler)
 
 	// Login API
-	m.Methods("GET", "POST").Path("/login").HandlerFunc(tokenHandler.Login)
-	m.Methods("GET").Path("/refresh").Handler(jwtMiddleware.Handler(aud.Handler(http.HandlerFunc(tokenHandler.Refresh))))
+	m.Methods("GET", "POST").Path("/password_reset").HandlerFunc(usersHandler.ResetPassword)
+	m.Methods("GET", "POST").Path("/login").HandlerFunc(usersHandler.Login)
+	m.Methods("GET").Path("/refresh").Handler(jwtMiddleware.Handler(aud.Handler(http.HandlerFunc(usersHandler.Refresh))))
 
 	// Users API
 	ud := middleware.TokenUserData{
