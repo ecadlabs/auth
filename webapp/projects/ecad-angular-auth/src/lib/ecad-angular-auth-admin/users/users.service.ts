@@ -55,7 +55,7 @@ export class UsersService {
     .filter(key => allowedKeyForReplace.includes(key))
     .reduce((prev, key) => {
       return [...prev, {
-        op: 'replace2',
+        op: 'replace',
         path: `/${key}`,
         value: payload[key]
       }];
