@@ -36,7 +36,7 @@ export class ResourcesService<T, U> {
     return this.httpClient.post<T>(`${resourceUrl}`, payload);
   }
 
-  patch(resourceUrl: string, id: string, payload: PatchPayload<T>): Observable<T> {
+  patch(resourceUrl: string, id: string, payload: PatchPayload<T>[]): Observable<T> {
     return this.httpClient.patch<T>(`${resourceUrl}/${id}`, payload);
   }
 

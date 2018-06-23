@@ -1,3 +1,42 @@
-<p>
-  user-edit-form works!
-</p>
+<div class='user-form' [formGroup]='userForm'>
+  <h2 i18n class='mat-title'>Create new user</h2>
+  <br>
+  <p *ngIf="error.serverError" class="error-box" i18n>
+    An error occured, please try again later.
+  </p>
+  <p *ngIf="error.validationError" class="error-box" i18n>
+    Please fix all incorrect fields before saving.
+  </p>
+  <p *ngIf="error.alreadyExistsError" class="error-box" i18n>
+    <span>A user with the same email exists {{userForm.get('email').value}}</span>
+  </p>
+  <mat-form-field>
+    <input matInput formControlName='email' type='text' placeholder='Email' />
+    <mat-error *ngIf="userForm.get('email')!.hasError('pattern')" i18n>
+      Please enter a valid email
+    </mat-error>
+    <mat-error *ngIf="userForm.get('email')!.hasError('required')" i18n>
+      Please enter a valid email
+    </mat-error>
+  </mat-form-field>
+  <mat-form-field *ngIf='!dialogData'>
+    <input matInput formControlName='password' type='password' placeholder='Password' />
+    <mat-error *ngIf="userForm.get('password')!.hasError('required')" i18n>
+      Please enter a password
+    </mat-error>
+  </mat-form-field>
+  <mat-form-field>
+    <input matInput formControlName='name' type='text' placeholder='Name' />
+  </mat-form-field>
+  <mat-form-field>
+    <mat-select formControlName='roles' placeholder="Roles" multiple>
+      <mat-option *ngFor='let role of roles' [value]="role.value">{{role.displayValue}}</mat-option>
+    </mat-select>
+    <mat-error *ngIf="userForm.get('roles')!.hasError('minSelection')" i18n>
+      Please select at least one role
+    </mat-error>
+  </mat-form-field>
+  <div>
+    <button [disabled]='!userForm.valid' mat-raised-button (click)='submit()'>Submit</button>
+  </div>
+</div>

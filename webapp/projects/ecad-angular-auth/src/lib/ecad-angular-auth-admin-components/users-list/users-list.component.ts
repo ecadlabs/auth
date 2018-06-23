@@ -1,9 +1,11 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { Component, OnInit, ViewChild, Inject } from '@angular/core';
 import { FilteredDatasource } from '../filteredDatasource';
 import { User, UsersService } from '../../ecad-angular-auth-admin/users/users.service';
 import { Subject } from 'rxjs';
 import { MatSort, MatDialog } from '@angular/material';
 import { UserEditFormComponent } from '../user-edit-form/user-edit-form.component';
+import { IPasswordReset } from '../../interfaces';
+import { PasswordReset } from '../../tokens';
 
 @Component({
   selector: 'auth-users-list',
@@ -19,15 +21,21 @@ export class UsersListComponent implements OnInit {
 
   displayedColumns = [
     'email',
+    'name',
     'added',
     'modified',
     'email_verified',
-    'roles'
+    'roles',
+    'edit',
+    'delete',
+    'reset-password'
   ];
 
   constructor(
     private userService: UsersService,
-    private dialog: MatDialog
+    private dialog: MatDialog,
+    @Inject(PasswordReset)
+    private passwordReset: IPasswordReset
   ) { }
 
   getRoles(user: User) {
@@ -53,11 +61,36 @@ export class UsersListComponent implements OnInit {
     );
   }
 
+  getDisplayRoles(user: User) {
+    return this.userService.getRoles()
+    .filter(({value}) => Object.keys(user.roles).includes(value))
+    .map(({displayValue}) => displayValue);
+  }
+
+  async resetPassword(user: User) {
+    await this.passwordReset.sendResetEmail(user.email).toPromise();
+  }
+
   updateUser(user: User) {
-    this.dialog.open(UserEditFormComponent, {data: user});
+    this.dialog.open(UserEditFormComponent, {data: user})
+    .afterClosed()
+    .subscribe(() => {
+      this.dataSource.refresh();
+    });
   }
 
   addUser() {
-    this.dialog.open(UserEditFormComponent);
+    this.dialog.open(UserEditFormComponent)
+    .afterClosed()
+    .subscribe(() => {
+      this.dataSource.refresh();
+    });
+  }
+
+  delete(user: User) {
+    this.userService.delete(user.id)
+    .subscribe(() => {
+      this.dataSource.refresh();
+    });
   }
 }
