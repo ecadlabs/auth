@@ -2,17 +2,16 @@ package service
 
 import (
 	"encoding/json"
-	"git.ecadlabs.com/ecad/auth/notification"
 	"io/ioutil"
 )
 
 const defaultNamespace = "com.ecadlabs.auth"
 
 type EmailConfig struct {
-	// TODO
-	notification.SMTP
-	FromAddress string `json:"from_address"`
-	FromName    string `json:"from_name"`
+	FromAddress string          `json:"from_address"`
+	FromName    string          `json:"from_name"`
+	Driver      string          `json:"driver"`
+	Config      json.RawMessage `json:"config"`
 }
 
 type Config struct {
