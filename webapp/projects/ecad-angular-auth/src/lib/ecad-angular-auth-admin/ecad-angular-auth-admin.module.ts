@@ -1,15 +1,7 @@
 import { NgModule, ModuleWithProviders } from '@angular/core';
 import { CommonModule } from '@angular/common';
-
-export const authAdminConfig = 'AUTH_ADMIN_CONFIG';
-
-export interface AuthAdminConfig {
-  roles: {
-    value: string;
-    displayValue: string;
-  }[];
-  apiEndpoint: string;
-}
+import { AuthAdminConfig } from './interfaces';
+import { authAdminConfig } from './tokens';
 
 @NgModule({
   imports: [

@@ -1,30 +1,7 @@
 import { Injectable, Inject } from '@angular/core';
-import { ResourcesService, PagedResult, FilterCondition } from './resources.service';
-import { authAdminConfig, AuthAdminConfig } from '../ecad-angular-auth-admin.module';
-
-export interface CreateUser {
-  email: string;
-  password: string;
-  name?: string;
-  roles?: {};
-}
-
-export interface UpdateUser {
-  id: string;
-  email?: string;
-  name?: string;
-  roles?: {};
-}
-
-export interface User {
-  id: string;
-  email: string;
-  name: string;
-  added: string;
-  modified: string;
-  email_verified: boolean;
-  roles: string[];
-}
+import { ResourcesService, PagedResult, FilterCondition } from '../../resource-util/resources.service';
+import { AuthAdminConfig, CreateUser, User, UpdateUser } from '../interfaces';
+import { authAdminConfig } from '../tokens';
 
 @Injectable({
   providedIn: 'root'

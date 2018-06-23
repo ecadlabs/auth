@@ -1,7 +1,7 @@
 import { Component, OnInit, Inject } from '@angular/core';
 import { Router } from '@angular/router';
-import { LoginService, PasswordReset } from '../../tokens';
-import { ILoginService, IPasswordReset } from '../../interfaces';
+import { LoginService, PasswordReset } from '../../ecad-angular-auth/tokens';
+import { ILoginService, IPasswordReset } from '../../ecad-angular-auth/interfaces';
 import { FormBuilder, Validators, FormGroup, AbstractControl } from '@angular/forms';
 
 export interface ResetPasswordFormConfig {

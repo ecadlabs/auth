@@ -1,11 +1,12 @@
 import { Component, OnInit, ViewChild, Inject } from '@angular/core';
-import { FilteredDatasource } from '../filteredDatasource';
-import { User, UsersService } from '../../ecad-angular-auth-admin/users/users.service';
+import { FilteredDatasource } from '../../filterable-datasource/filtered-datasource';
+import { UsersService } from '../../ecad-angular-auth-admin/users/users.service';
 import { Subject } from 'rxjs';
 import { MatSort, MatDialog } from '@angular/material';
 import { UserEditFormComponent } from '../user-edit-form/user-edit-form.component';
-import { IPasswordReset } from '../../interfaces';
-import { PasswordReset } from '../../tokens';
+import { IPasswordReset } from '../../ecad-angular-auth/interfaces';
+import { PasswordReset } from '../../ecad-angular-auth/tokens';
+import { User } from '../../ecad-angular-auth-admin/interfaces';
 
 @Component({
   selector: 'auth-users-list',

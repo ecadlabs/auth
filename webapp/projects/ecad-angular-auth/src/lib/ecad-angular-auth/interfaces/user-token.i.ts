@@ -1,4 +1,4 @@
-export interface User {
+export interface UserToken {
     exp: number;
     'http://localhost:8000/email': string;
     'http://localhost:8000/name': string;
