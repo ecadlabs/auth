@@ -8,7 +8,8 @@ import {
   MatInputModule,
   MatButtonModule,
   MatSelectModule,
-  MatIconModule
+  MatIconModule,
+  MatSnackBarModule
 } from '@angular/material';
 import { UsersListComponent } from './users-list/users-list.component';
 import { UserEditFormComponent } from './user-edit-form/user-edit-form.component';
@@ -26,7 +27,8 @@ import { ReactiveFormsModule } from '@angular/forms';
     ReactiveFormsModule,
     MatSelectModule,
     MatButtonModule,
-    MatIconModule
+    MatIconModule,
+    MatSnackBarModule,
   ],
   declarations: [UsersListComponent, UserEditFormComponent],
   entryComponents: [UserEditFormComponent],
