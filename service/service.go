@@ -29,9 +29,10 @@ const (
 var JWTSigningMethod = jwt.SigningMethodHS256
 
 type Service struct {
-	config  Config
-	storage *users.Storage
-	DB      *sql.DB
+	config   Config
+	storage  *users.Storage
+	notifier *notification.EmailNotifier
+	DB       *sql.DB
 }
 
 func (c *Config) New() (*Service, error) {
@@ -52,10 +53,19 @@ func (c *Config) New() (*Service, error) {
 		return nil, err
 	}
 
+	notifier, err := notification.NewEmailNotifier(&mail.Address{
+		Name:    c.Email.FromName,
+		Address: c.Email.FromAddress,
+	}, c.Email.Driver, c.Email.Config)
+	if err != nil {
+		return nil, err
+	}
+
 	return &Service{
-		config:  *c,
-		storage: &users.Storage{DB: sqlx.NewDb(db, "postgres")},
-		DB:      db,
+		config:   *c,
+		storage:  &users.Storage{DB: sqlx.NewDb(db, "postgres")},
+		DB:       db,
+		notifier: notifier,
 	}, nil
 }
 
@@ -66,11 +76,6 @@ func (s *Service) APIHandler() http.Handler {
 	dbLogger.AddHook(&logger.Hook{
 		DB: s.DB,
 	})
-
-	notifier := notification.NewEmailNotifier(&mail.Address{
-		Name:    s.config.Email.FromName,
-		Address: s.config.Email.FromAddress,
-	}, &s.config.Email.SMTP)
 
 	usersHandler := handlers.Users{
 		Storage: s.storage,
@@ -91,7 +96,7 @@ func (s *Service) APIHandler() http.Handler {
 		ResetTokenMaxAge: time.Duration(s.config.ResetTokenMaxAge) * time.Second,
 
 		AuxLogger: dbLogger,
-		Notifier:  notifier,
+		Notifier:  s.notifier,
 	}
 
 	jwtOptions := jwtmiddleware.Options{

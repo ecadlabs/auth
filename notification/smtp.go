@@ -2,23 +2,24 @@ package notification
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"net"
 	"net/smtp"
 )
 
-type SMTP struct {
+type SMTPDriver struct {
 	Address  string `json:"address"`
 	Username string `json:"user"`
 	Password string `json:"password"`
 }
 
-func (s *SMTP) host() string {
+func (s *SMTPDriver) host() string {
 	h, _, _ := net.SplitHostPort(s.Address)
 	return h
 }
 
-func (s *SMTP) SendMessage(msg *Message) error {
+func (s *SMTPDriver) SendMessage(msg *Message) error {
 	var auth smtp.Auth
 
 	if s.Username != "" && s.Password != "" {
@@ -40,4 +41,15 @@ func (s *SMTP) SendMessage(msg *Message) error {
 		body.Bytes())
 }
 
-var _ MessageSender = &SMTP{}
+func newSMTPDriver(data json.RawMessage) (MailDriver, error) {
+	var d SMTPDriver
+	if err := json.Unmarshal(data, &d); err != nil {
+		return nil, err
+	}
+
+	return &d, nil
+}
+
+func init() {
+	RegisterDriver("smtp", newSMTPDriver)
+}
