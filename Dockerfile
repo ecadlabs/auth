@@ -7,6 +7,7 @@ RUN CGO_ENABLED=0 go build -o auth
 # final stage
 FROM alpine
 WORKDIR /app
+RUN apk --no-cache add ca-certificates
 COPY --from=build-env /go/src/git.ecadlabs.com/ecad/auth /app/
 
 RUN mkdir /data
