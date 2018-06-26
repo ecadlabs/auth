@@ -453,7 +453,7 @@ func (u *Users) ResetPassword(w http.ResponseWriter, r *http.Request) {
 
 	// Log
 	if u.AuxLogger != nil {
-		u.AuxLogger.WithFields(logFields(nil, EvReset, uuid.Nil, id)).Printf("Password for account %v reset", id)
+		u.AuxLogger.WithFields(logFields(nil, EvReset, id, id)).Printf("Password for account %v reset", id)
 	}
 }
 
@@ -507,6 +507,6 @@ func (u *Users) SendResetRequest(w http.ResponseWriter, r *http.Request) {
 	if u.AuxLogger != nil {
 		u.AuxLogger.WithFields(logFields(map[string]interface{}{
 			"email": user.Email,
-		}, EvResetRequest, uuid.Nil, user.ID)).Printf("User %v requested password reset", user.ID)
+		}, EvResetRequest, user.ID, user.ID)).Printf("User %v requested password reset", user.ID)
 	}
 }
