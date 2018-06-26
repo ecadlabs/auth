@@ -2,7 +2,9 @@ package handlers
 
 import (
 	"encoding/json"
+	"net"
 	"net/http"
+	"strings"
 	"time"
 
 	"git.ecadlabs.com/ecad/auth/utils"
@@ -15,18 +17,49 @@ const (
 	TokenContextKey = "token"
 )
 
-func (u *Users) writeTokenWithClaims(w http.ResponseWriter, claims jwt.Claims) {
+func xff(r *http.Request) string {
+	if fh := r.Header.Get("Forwarded"); fh != "" {
+		chunks := strings.Split(fh, ",")
+
+		for _, c := range chunks {
+			opts := strings.Split(strings.TrimSpace(c), ";")
+
+			for _, o := range opts {
+				v := strings.SplitN(strings.TrimSpace(o), "=", 2)
+				if len(v) == 2 && v[0] == "for" && v[1] != "" {
+					return v[1]
+				}
+			}
+		}
+	}
+
+	if xfh := r.Header.Get("X-Forwarded-For"); xfh != "" {
+		chunks := strings.Split(xfh, ",")
+		for _, c := range chunks {
+			if c = strings.TrimSpace(c); c != "" {
+				return c
+			}
+		}
+	}
+
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err == nil {
+		return host
+	}
+
+	return r.RemoteAddr
+}
+
+func (u *Users) writeTokenWithClaims(w http.ResponseWriter, claims jwt.Claims) error {
 	token := jwt.NewWithClaims(u.JWTSigningMethod, claims)
 	secret, err := u.JWTSecretGetter()
 	if err != nil {
-		utils.JSONError(w, err.Error(), http.StatusInternalServerError)
-		return
+		return err
 	}
 
 	tokenString, err := token.SignedString(secret)
 	if err != nil {
-		utils.JSONError(w, err.Error(), http.StatusInternalServerError)
-		return
+		return err
 	}
 
 	response := struct {
@@ -40,6 +73,8 @@ func (u *Users) writeTokenWithClaims(w http.ResponseWriter, claims jwt.Claims) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
 	utils.JSONResponse(w, http.StatusOK, &response)
+
+	return nil
 }
 
 // Login is a login endpoint handler
@@ -107,7 +142,18 @@ func (u *Users) Login(w http.ResponseWriter, r *http.Request) {
 		utils.NSClaim(ns, "roles"): roles,
 	}
 
-	u.writeTokenWithClaims(w, claims)
+	if err := u.writeTokenWithClaims(w, claims); err != nil {
+		utils.JSONError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Log
+	if u.AuxLogger != nil {
+		u.AuxLogger.WithFields(logFields(log.Fields{
+			"address": xff(r),
+			"email":   user.Email,
+		}, EvLogin, user.ID, user.ID)).Printf("User %v logged in", user.ID)
+	}
 }
 
 func (u *Users) Refresh(w http.ResponseWriter, req *http.Request) {

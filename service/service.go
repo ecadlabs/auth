@@ -31,7 +31,7 @@ var JWTSigningMethod = jwt.SigningMethodHS256
 type Service struct {
 	config   Config
 	storage  *users.Storage
-	notifier *notification.EmailNotifier
+	notifier notification.Notifier
 	DB       *sql.DB
 }
 
@@ -53,12 +53,17 @@ func (c *Config) New() (*Service, error) {
 		return nil, err
 	}
 
-	notifier, err := notification.NewEmailNotifier(&mail.Address{
-		Name:    c.Email.FromName,
-		Address: c.Email.FromAddress,
-	}, c.Email.Driver, c.Email.Config)
-	if err != nil {
-		return nil, err
+	var notifier notification.Notifier
+	if c.Notifier != nil {
+		notifier = c.Notifier
+	} else {
+		notifier, err = notification.NewEmailNotifier(&mail.Address{
+			Name:    c.Email.FromName,
+			Address: c.Email.FromAddress,
+		}, c.Email.Driver, c.Email.Config)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return &Service{
