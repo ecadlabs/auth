@@ -279,12 +279,13 @@ func TestService(t *testing.T) {
 	var srv *httptest.Server
 
 	config := service.Config{
-		BaseURLFunc:   func() string { return srv.URL },
-		JWTSecret:     testJWTSecret,
-		SessionMaxAge: 259200,
-		PostgresURL:   *dbURL,
-		DBTimeout:     10,
-		Notifier:      testNotifier(tokenCh),
+		BaseURLFunc:      func() string { return srv.URL },
+		JWTSecret:        testJWTSecret,
+		SessionMaxAge:    259200,
+		ResetTokenMaxAge: 259200,
+		PostgresURL:      *dbURL,
+		DBTimeout:        10,
+		Notifier:         testNotifier(tokenCh),
 	}
 
 	svc, err := config.New()
