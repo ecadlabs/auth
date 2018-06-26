@@ -6,6 +6,11 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
+	"testing"
+
 	"git.ecadlabs.com/ecad/auth/migrations"
 	"git.ecadlabs.com/ecad/auth/notification"
 	"git.ecadlabs.com/ecad/auth/service"
@@ -15,10 +20,6 @@ import (
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
 	"github.com/satori/go.uuid"
-	"net/http"
-	"net/http/httptest"
-	"net/url"
-	"testing"
 )
 
 const (

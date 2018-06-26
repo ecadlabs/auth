@@ -2,6 +2,12 @@ package service
 
 import (
 	"database/sql"
+	"net/http"
+	"net/mail"
+	"net/url"
+	"strconv"
+	"time"
+
 	"git.ecadlabs.com/ecad/auth/handlers"
 	"git.ecadlabs.com/ecad/auth/logger"
 	"git.ecadlabs.com/ecad/auth/middleware"
@@ -14,11 +20,6 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sirupsen/logrus"
-	"net/http"
-	"net/mail"
-	"net/url"
-	"strconv"
-	"time"
 )
 
 const (
@@ -60,7 +61,7 @@ func (c *Config) New() (*Service, error) {
 		notifier, err = notification.NewEmailNotifier(&mail.Address{
 			Name:    c.Email.FromName,
 			Address: c.Email.FromAddress,
-		}, c.Email.Driver, c.Email.Config)
+		}, &c.Email.TemplateData, c.Email.Driver, c.Email.Config)
 		if err != nil {
 			return nil, err
 		}
@@ -133,12 +134,10 @@ func (s *Service) APIHandler() http.Handler {
 	m.Methods("GET").Path("/refresh").Handler(jwtMiddleware.Handler(aud.Handler(http.HandlerFunc(usersHandler.Refresh))))
 
 	// Users API
-	ud := middleware.TokenUserData{
-		Namespace:       s.config.Namespace(),
+	ud := middleware.UserData{
 		TokenContextKey: handlers.TokenContextKey,
 		UserContextKey:  handlers.UserContextKey,
-		DefaultRole:     handlers.RoleAnonymous,
-		RolePrefix:      handlers.RolePrefix,
+		Storage:         s.storage,
 	}
 
 	umux := m.PathPrefix("/users").Subrouter()

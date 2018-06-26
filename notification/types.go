@@ -2,12 +2,13 @@ package notification
 
 import (
 	"context"
+	"time"
+
 	"git.ecadlabs.com/ecad/auth/users"
 	log "github.com/sirupsen/logrus"
-	"time"
 )
 
-type ResetData struct {
+type NotificationData struct {
 	CurrentUser *users.User
 	TargetUser  *users.User
 	Token       string
@@ -15,14 +16,14 @@ type ResetData struct {
 }
 
 type Notifier interface {
-	NewUser(context.Context, *ResetData) error
-	PasswordReset(context.Context, *ResetData) error
+	InviteUser(context.Context, *NotificationData) error
+	PasswordReset(context.Context, *NotificationData) error
 }
 
 // For debug purpose
 type Log struct{}
 
-func (l Log) NewUser(ctx context.Context, d *ResetData) error {
+func (l Log) InviteUser(ctx context.Context, d *NotificationData) error {
 	log.WithFields(log.Fields{
 		"id":    d.TargetUser.ID,
 		"token": d.Token,
@@ -31,7 +32,7 @@ func (l Log) NewUser(ctx context.Context, d *ResetData) error {
 	return nil
 }
 
-func (l Log) PasswordReset(ctx context.Context, d *ResetData) error {
+func (l Log) PasswordReset(ctx context.Context, d *NotificationData) error {
 	log.WithFields(log.Fields{
 		"id":    d.TargetUser.ID,
 		"email": d.TargetUser.Email,

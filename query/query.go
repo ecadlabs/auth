@@ -3,10 +3,11 @@ package query
 import (
 	"errors"
 	"fmt"
-	"github.com/lib/pq"
 	"net/url"
 	"strconv"
 	"strings"
+
+	"github.com/lib/pq"
 )
 
 const (

@@ -3,6 +3,11 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"net/http"
+	"net/url"
+	"strings"
+	"time"
+
 	"git.ecadlabs.com/ecad/auth/jsonpatch"
 	"git.ecadlabs.com/ecad/auth/notification"
 	"git.ecadlabs.com/ecad/auth/query"
@@ -14,10 +19,6 @@ import (
 	"github.com/satori/go.uuid"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
-	"net/http"
-	"net/url"
-	"strings"
-	"time"
 )
 
 const (
@@ -225,7 +226,7 @@ func (u *Users) NewUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err = u.Notifier.NewUser(r.Context(), &notification.ResetData{
+	if err = u.Notifier.InviteUser(r.Context(), &notification.NotificationData{
 		CurrentUser: self,
 		TargetUser:  ret,
 		Token:       token,
@@ -494,7 +495,8 @@ func (u *Users) SendResetRequest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err = u.Notifier.PasswordReset(r.Context(), &notification.ResetData{
+	if err = u.Notifier.PasswordReset(r.Context(), &notification.NotificationData{
+		CurrentUser: user,
 		TargetUser:  user,
 		Token:       token,
 		TokenMaxAge: u.ResetTokenMaxAge,

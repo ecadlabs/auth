@@ -2,11 +2,12 @@ package users
 
 import (
 	"errors"
-	"git.ecadlabs.com/ecad/auth/roles"
-	"github.com/satori/go.uuid"
 	"net/http"
 	"strings"
 	"time"
+
+	"git.ecadlabs.com/ecad/auth/roles"
+	"github.com/satori/go.uuid"
 )
 
 type Error struct {

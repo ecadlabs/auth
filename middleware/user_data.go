@@ -2,12 +2,13 @@ package middleware
 
 import (
 	"context"
+	"net/http"
+
 	"git.ecadlabs.com/ecad/auth/users"
 	"git.ecadlabs.com/ecad/auth/utils"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/satori/go.uuid"
 	log "github.com/sirupsen/logrus"
-	"net/http"
 )
 
 // Extracts user data from token itself (only ID and Roles are set)

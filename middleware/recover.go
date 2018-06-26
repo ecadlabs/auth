@@ -2,9 +2,10 @@ package middleware
 
 import (
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	"net/http"
 	"runtime/debug"
+
+	log "github.com/sirupsen/logrus"
 )
 
 type Recover struct {

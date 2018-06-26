@@ -7,6 +7,10 @@
 			"address": "smtp.gmail.com:587",
 			"user": "e.asphyx@gmail.com",
 			"password": ""			
+		},
+		"template": {
+			"reset_url_prefix": "https://auth.ecadlabs.com/reset-password?token=",
+			"app_name": "ECAD Portal"
 		}
 	}
 }
