@@ -3,6 +3,8 @@ package notification
 import (
 	"bytes"
 	"context"
+	"encoding/json"
+	"fmt"
 	log "github.com/sirupsen/logrus"
 	"net/mail"
 	"text/template"
@@ -15,33 +17,51 @@ type Message struct {
 	Body    []byte
 }
 
-type MessageSender interface {
+type MailDriver interface {
 	SendMessage(*Message) error
 }
 
 type EmailNotifier struct {
 	ch     chan *Message
-	sender MessageSender
+	driver MailDriver
 	from   *mail.Address
 }
 
-func NewEmailNotifier(from *mail.Address, backend MessageSender) *EmailNotifier {
+type DriverFunc func(json.RawMessage) (MailDriver, error)
+
+var driverRegistry = make(map[string]DriverFunc)
+
+func RegisterDriver(name string, f DriverFunc) {
+	driverRegistry[name] = f
+}
+
+func NewEmailNotifier(from *mail.Address, driver string, data json.RawMessage) (*EmailNotifier, error) {
+	driverFunc, ok := driverRegistry[driver]
+	if !ok {
+		return nil, fmt.Errorf("Unknown driver `%s'", driver)
+	}
+
+	drv, err := driverFunc(data)
+	if err != nil {
+		return nil, err
+	}
+
 	n := EmailNotifier{
 		ch:     make(chan *Message, 100),
-		sender: backend,
+		driver: drv,
 		from:   from,
 	}
 
 	// Send in background
 	go func() {
 		for msg := range n.ch {
-			if err := n.sender.SendMessage(msg); err != nil {
+			if err := n.driver.SendMessage(msg); err != nil {
 				log.Error(err)
 			}
 		}
 	}()
 
-	return &n
+	return &n, nil
 }
 
 // TODO

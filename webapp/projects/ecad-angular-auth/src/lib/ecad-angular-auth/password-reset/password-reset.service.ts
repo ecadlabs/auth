@@ -20,8 +20,8 @@ export class PasswordResetService implements IPasswordReset {
 
   }
 
-  resetPassword(resetToken: string, password: string): Observable<PasswordResetResult> {
-    return this.httpClient.post(this.config.passwordResetUrl, {resetToken, password}).pipe(
+  resetPassword(token: string, password: string): Observable<PasswordResetResult> {
+    return this.httpClient.post(this.config.passwordResetUrl, {token, password}).pipe(
       map(() => ({ success: true}))
     );
   }
@@ -29,7 +29,7 @@ export class PasswordResetService implements IPasswordReset {
   sendResetEmail(email: string): Observable<PasswordResetEmailResult> {
     return this.httpClient.post(this.config.sendResetEmailUrl, {email}).pipe(map(() => ({
       success: true
-    })))
+    })));
   }
 
 }

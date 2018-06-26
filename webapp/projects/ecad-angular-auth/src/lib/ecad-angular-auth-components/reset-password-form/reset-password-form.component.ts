@@ -1,8 +1,9 @@
 import { Component, OnInit, Inject } from '@angular/core';
 import { Router } from '@angular/router';
-import { LoginService, PasswordReset } from '../../tokens';
-import { ILoginService, IPasswordReset } from '../../interfaces';
+import { LoginService, PasswordReset } from '../../ecad-angular-auth/tokens';
+import { ILoginService, IPasswordReset } from '../../ecad-angular-auth/interfaces';
 import { FormBuilder, Validators, FormGroup, AbstractControl } from '@angular/forms';
+import { getParameterByName } from '../../utils';
 
 export interface ResetPasswordFormConfig {
   successUrlRedirect: string;
@@ -34,7 +35,7 @@ export class ResetPasswordFormComponent implements OnInit {
   }
 
   async onSubmit() {
-    await this.resetPassword.resetPassword('', this.resetPasswordForm.value.password).toPromise();
+    await this.resetPassword.resetPassword(getParameterByName('token'), this.resetPasswordForm.value.password).toPromise();
     await this.router.navigateByUrl(this.config.successUrlRedirect);
   }
 

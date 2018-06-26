@@ -1,9 +1,12 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
-import { FilteredDatasource } from '../filteredDatasource';
-import { User, UsersService } from '../../ecad-angular-auth-admin/users/users.service';
+import { Component, OnInit, ViewChild, Inject } from '@angular/core';
+import { FilteredDatasource } from '../../filterable-datasource/filtered-datasource';
+import { UsersService } from '../../ecad-angular-auth-admin/users/users.service';
 import { Subject } from 'rxjs';
-import { MatSort, MatDialog } from '@angular/material';
 import { UserEditFormComponent } from '../user-edit-form/user-edit-form.component';
+import { IPasswordReset } from '../../ecad-angular-auth/interfaces';
+import { PasswordReset } from '../../ecad-angular-auth/tokens';
+import { User } from '../../ecad-angular-auth-admin/interfaces';
+import { MatSort, MatDialog, MatSnackBar, DialogPosition } from '@angular/material';
 
 @Component({
   selector: 'auth-users-list',
@@ -19,15 +22,22 @@ export class UsersListComponent implements OnInit {
 
   displayedColumns = [
     'email',
+    'name',
     'added',
     'modified',
     'email_verified',
-    'roles'
+    'roles',
+    'edit',
+    'delete',
+    'reset-password'
   ];
 
   constructor(
     private userService: UsersService,
-    private dialog: MatDialog
+    private dialog: MatDialog,
+    @Inject(PasswordReset)
+    private passwordReset: IPasswordReset,
+    private snackBar: MatSnackBar
   ) { }
 
   getRoles(user: User) {
@@ -53,11 +63,36 @@ export class UsersListComponent implements OnInit {
     );
   }
 
+  getDisplayRoles(user: User) {
+    return this.userService.getRoles()
+    .filter(({value}) => Object.keys(user.roles).includes(value))
+    .map(({displayValue}) => displayValue);
+  }
+  async resetPassword(user: User) {
+    await this.passwordReset.sendResetEmail(user.email).toPromise();
+    this.snackBar.open('Reset password email sent', undefined, { duration: 2000, horizontalPosition: 'end'});
+  }
+
   updateUser(user: User) {
-    this.dialog.open(UserEditFormComponent, {data: user});
+    this.dialog.open(UserEditFormComponent, {data: user, width: '500px' })
+    .afterClosed()
+    .subscribe(() => {
+      this.dataSource.refresh();
+    });
   }
 
   addUser() {
-    this.dialog.open(UserEditFormComponent);
+    this.dialog.open(UserEditFormComponent, {width: '500px'})
+    .afterClosed()
+    .subscribe(() => {
+      this.dataSource.refresh();
+    });
+  }
+
+  delete(user: User) {
+    this.userService.delete(user.id)
+    .subscribe(() => {
+      this.dataSource.refresh();
+    });
   }
 }

@@ -15,14 +15,22 @@ services:
       - POSTGRES_PASSWORD=auth
       - POSTGRES_DB=auth
   auth:
+    entrypoint: /app/auth
+    command:
+      - -db
+      - "postgres://auth:auth@db/auth?connect_timeout=10&sslmode=disable"
+      - -base
+      - "http://localhost:8000/api/v1"
+      - -bootstrap
+      - -c
+      - /app/config.json
     build:
       context: .
-    entrypoint: /app/auth -secret foobar -db "postgres://auth:auth@db/auth?connect_timeout=10&sslmode=disable" -bootstrap
     environment:
       - AUTH_ADMIN_EMAIL=admin@admin
       - AUTH_ADMIN_PASSWORD=admin
     volumes:
-      - ./config.json:/app/config.json
+      - ./config.example.json:/app/config.json
     depends_on:
       - db
   apidocs:

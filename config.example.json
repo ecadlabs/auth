@@ -1,9 +1,12 @@
 {
 	"jwt_secret": "secret",
 	"email": {
-		"address": "smtp.gmail.com:587",
-		"user": "e.asphyx@gmail.com",
-		"password": "",
-		"from_address": "e.asphyx@gmail.com"
+		"from_address": "e.asphyx@gmail.com",
+		"driver": "smtp",
+		"config": {
+			"address": "smtp.gmail.com:587",
+			"user": "e.asphyx@gmail.com",
+			"password": ""			
+		}
 	}
 }

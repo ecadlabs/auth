@@ -5,7 +5,7 @@ import { JwtHelperService } from '@auth0/angular-jwt';
 import { map, catchError, tap, filter, switchMap, distinctUntilChanged } from 'rxjs/operators';
 import { of as observableOf, Observable, Observer, BehaviorSubject, interval } from 'rxjs';
 import { authConfig } from '../tokens';
-import { ILoginService, Credentials, AuthConfig, LoginResult, User } from '../interfaces';
+import { ILoginService, Credentials, AuthConfig, LoginResult, UserToken } from '../interfaces';
 
 @Injectable({
   providedIn: 'root'
@@ -13,7 +13,13 @@ import { ILoginService, Credentials, AuthConfig, LoginResult, User } from '../in
 export class StandardLoginService implements ILoginService {
 
   private readonly AUTO_REFRESH_INTERVAL = (this.config && this.config.autoRefreshInterval) || 60000;
-  public user: BehaviorSubject<User> = new BehaviorSubject(this.token);
+  public user: BehaviorSubject<UserToken> = new BehaviorSubject(this.token);
+
+  private readonly postLoginOperations = [
+    tap((result: {token: string}) => localStorage.setItem(this.config.tokenName, result.token)),
+    tap((result: {refresh: string}) => localStorage.setItem('refreshTokenUrl', result.refresh)),
+    tap(() => this.user.next(this.token))
+  ];
 
   public isLoggedIn: Observable<Boolean> = this.user.pipe(
     map(() => {
@@ -73,9 +79,7 @@ export class StandardLoginService implements ILoginService {
   public login(credential: Credentials): Observable<LoginResult> {
     const requestOptions = this.createRequestOptions(credential);
     return this.httpClient.get<LoginResult>(this.config.loginUrl, requestOptions).pipe(
-      tap((result) => localStorage.setItem(this.config.tokenName, result.token)),
-      tap((result) => localStorage.setItem('refreshTokenUrl', result.refresh)),
-      tap(() => this.user.next(this.token))
+      ...this.postLoginOperations
     );
   }
 
@@ -103,6 +107,11 @@ export class StandardLoginService implements ILoginService {
   * Refresh the JWT by querying the refresh url provided in previous login response
   */
   public refreshToken(): Observable<boolean> {
-    return this.httpClient.get(localStorage.getItem('refreshTokenUrl')).pipe(map(() => true));
+    return this.httpClient
+    .get(localStorage.getItem('refreshTokenUrl'))
+    .pipe(
+      ...this.postLoginOperations,
+      map(() => true)
+    );
   }
 }
