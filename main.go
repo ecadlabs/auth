@@ -142,6 +142,10 @@ func main() {
 		}
 	}
 
+	if config.Email.Driver == "" {
+		config.Email.Driver = "debug"
+	}
+
 	// Service instance
 	svc, err := config.New()
 	if err != nil {
