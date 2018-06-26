@@ -2,7 +2,7 @@ import { DataSource } from '@angular/cdk/table';
 import { of, Observable, Subject, BehaviorSubject, combineLatest, merge } from 'rxjs';
 import { CollectionViewer } from '@angular/cdk/collections';
 import { Sort } from '@angular/material';
-import { FilterCondition, PagedResult } from '../ecad-angular-auth-admin/users/resources.service';
+import { FilterCondition, PagedResult } from '../resource-util/resources.service';
 import { startWith, switchMap, map, debounceTime, tap } from 'rxjs/operators';
 
 export interface FilterableService<T> {
