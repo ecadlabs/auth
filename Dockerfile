@@ -15,4 +15,5 @@ RUN mkdir /data
 # 
 # VOLUME /data
 
-CMD ["/app/auth", "-c", "/app/config.json"]
+ENTRYPOINT ["/app/auth"]
+CMD ["-c", "/app/config.json"]
