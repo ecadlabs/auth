@@ -200,7 +200,7 @@ func main() {
 	}
 
 	if bootstrap {
-		if err := svc.Bootstrap(); err != nil {
+		if _, err := svc.Bootstrap(); err != nil {
 			if err != service.ErrNoBootstrap {
 				log.Fatal(err)
 			}

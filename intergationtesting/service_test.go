@@ -6,8 +6,8 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"git.ecadlabs.com/ecad/auth/handlers"
 	"git.ecadlabs.com/ecad/auth/migrations"
+	"git.ecadlabs.com/ecad/auth/notification"
 	"git.ecadlabs.com/ecad/auth/service"
 	"git.ecadlabs.com/ecad/auth/users"
 	"github.com/dgrijalva/jwt-go"
@@ -15,7 +15,6 @@ import (
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
 	"github.com/satori/go.uuid"
-	"golang.org/x/crypto/bcrypt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -24,8 +23,8 @@ import (
 
 const (
 	testJWTSecret  = "09f67dc4-8fea-4d97-9cc0-bf674f5ec418"
-	testPassword   = "password"
-	superUserEmail = "superuser@example.com"
+	testPassword   = "admin"
+	superUserEmail = "admin@admin"
 	usersNum       = 10
 )
 
@@ -37,15 +36,25 @@ func init() {
 	flag.Parse()
 }
 
+type testNotifier chan string
+
+func (t testNotifier) NewUser(ctx context.Context, d *notification.ResetData) error {
+	(chan string)(t) <- d.Token
+	return nil
+}
+
+func (t testNotifier) PasswordReset(ctx context.Context, d *notification.ResetData) error {
+	return t.NewUser(ctx, d)
+}
+
 func genTestUser(n int) *users.User {
 	return &users.User{
-		Email:    fmt.Sprintf("user%d@example.com", n),
-		Name:     fmt.Sprintf("Test User %d", n),
-		Password: testPassword,
+		Email: fmt.Sprintf("user%d@example.com", n),
+		Name:  fmt.Sprintf("Test User %d", n),
 	}
 }
 
-func createUser(srv *httptest.Server, u *users.User, token string) (int, *users.User, error) {
+func createUser(srv *httptest.Server, u *users.User, token string, tokenCh chan string) (int, *users.User, error) {
 	buf, err := json.Marshal(u)
 	if err != nil {
 		return 0, nil, err
@@ -75,6 +84,34 @@ func createUser(srv *httptest.Server, u *users.User, token string) (int, *users.
 	dec := json.NewDecoder(resp.Body)
 	if err := dec.Decode(&res); err != nil {
 		return 0, nil, err
+	}
+
+	resetToken := <-tokenCh
+
+	resetRequest := struct {
+		Token    string `json:"token"`
+		Password string `json:"password"`
+	}{
+		Token:    resetToken,
+		Password: testPassword,
+	}
+
+	buf, err = json.Marshal(&resetRequest)
+	if err != nil {
+		return 0, nil, err
+	}
+
+	req, err = http.NewRequest("POST", srv.URL+"/password_reset", bytes.NewReader(buf))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err = srv.Client().Do(req)
+	if err != nil {
+		return 0, nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode/100 != 2 {
+		return resp.StatusCode, nil, nil
 	}
 
 	return resp.StatusCode, &res, nil
@@ -218,7 +255,7 @@ func TestService(t *testing.T) {
 	}
 	defer db.Close()
 
-	_, err = db.Exec("DROP TABLE IF EXISTS schema_migrations, users, roles, log")
+	_, err = db.Exec("DROP TABLE IF EXISTS schema_migrations, users, roles, log, bootstrap")
 	if err != nil {
 		t.Error(err)
 		return
@@ -236,6 +273,8 @@ func TestService(t *testing.T) {
 		return
 	}
 
+	tokenCh := make(chan string, 10)
+
 	// Create test server
 	var srv *httptest.Server
 
@@ -245,6 +284,7 @@ func TestService(t *testing.T) {
 		SessionMaxAge: 259200,
 		PostgresURL:   *dbURL,
 		DBTimeout:     10,
+		Notifier:      testNotifier(tokenCh),
 	}
 
 	svc, err := config.New()
@@ -253,30 +293,15 @@ func TestService(t *testing.T) {
 		return
 	}
 
-	srv = httptest.NewServer(svc.APIHandler())
-	defer srv.Close()
-
-	// Create superuser
-	storage := users.Storage{
-		DB: sqlx.NewDb(svc.DB, "postgres"),
-	}
-
-	hash, _ := bcrypt.GenerateFromPassword([]byte(testPassword), bcrypt.DefaultCost)
-
-	u := users.User{
-		Email:        superUserEmail,
-		Name:         "Super User",
-		PasswordHash: hash,
-		Roles: users.Roles{
-			handlers.RoleAdmin: struct{}{},
-		},
-	}
-
-	res, err := storage.NewUser(context.Background(), &u)
+	// Bootstrap
+	superuser, err := svc.Bootstrap()
 	if err != nil {
 		t.Error(err)
 		return
 	}
+
+	srv = httptest.NewServer(svc.APIHandler())
+	defer srv.Close()
 
 	// Login as superuser
 	code, token, _, err := doLogin(srv, superUserEmail, testPassword)
@@ -285,26 +310,26 @@ func TestService(t *testing.T) {
 		return
 	}
 
-	fmt.Println(token)
+	//fmt.Println(token)
 
 	if code != http.StatusOK {
 		t.Error(code)
 		return
 	}
 
-	usersList := []*users.User{res}
+	usersList := []*users.User{superuser}
 
 	// Create other users
 	for i := 0; i < usersNum; i++ {
 		u := genTestUser(i)
 
-		code, res, err := createUser(srv, u, token)
+		code, res, err := createUser(srv, u, token, tokenCh)
 		if err != nil {
 			t.Error(err)
 			return
 		}
 
-		if code != http.StatusCreated {
+		if code/100 != 2 {
 			t.Error(code)
 			return
 		}

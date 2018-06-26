@@ -23,7 +23,7 @@ const (
 
 var ErrNoBootstrap = errors.New("No bootstrapping")
 
-func (s *Service) Bootstrap() (err error) {
+func (s *Service) Bootstrap() (user *users.User, err error) {
 	db := sqlx.NewDb(s.DB, "postgres")
 
 	tx, err := db.Beginx()
@@ -69,7 +69,7 @@ func (s *Service) Bootstrap() (err error) {
 		},
 	}
 
-	_, err = users.NewUserInt(context.Background(), tx, &u)
+	user, err = users.NewUserInt(context.Background(), tx, &u)
 	if err != nil {
 		return
 	}
