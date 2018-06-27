@@ -182,7 +182,6 @@ func (u *Users) resetToken(user *users.User) (string, error) {
 }
 
 func (u *Users) NewUser(w http.ResponseWriter, r *http.Request) {
-	// TODO Email confirmation
 	self := r.Context().Value(UserContextKey).(*users.User)
 
 	var user users.User
@@ -237,13 +236,13 @@ func (u *Users) NewUser(w http.ResponseWriter, r *http.Request) {
 
 	// Log
 	if u.AuxLogger != nil {
-		u.AuxLogger.WithFields(logFields(map[string]interface{}{
+		u.AuxLogger.WithFields(logFields(EvCreate, self.ID, ret.ID, r)).WithFields(log.Fields{
 			"email":          ret.Email,
 			"name":           ret.Name,
 			"added":          ret.Added,
 			"email_verified": ret.EmailVerified,
 			"roles":          ret.Roles,
-		}, EvCreate, self.ID, ret.ID)).Printf("User %v created account %v", self.ID, ret.ID)
+		}).Printf("User %v created account %v", self.ID, ret.ID)
 	}
 
 	w.Header().Set("Location", u.UsersURL()+ret.ID.String())
@@ -312,15 +311,15 @@ func (u *Users) PatchUser(w http.ResponseWriter, r *http.Request) {
 	// Log
 	if u.AuxLogger != nil {
 		if len(ops.Update) != 0 {
-			u.AuxLogger.WithFields(logFields(ops.Update, EvUpdate, self.ID, uid)).Printf("User %v updated account %v", self.ID, uid)
+			u.AuxLogger.WithFields(logFields(EvUpdate, self.ID, uid, r)).WithFields(log.Fields(ops.Update)).Printf("User %v updated account %v", self.ID, uid)
 		}
 
 		for _, role := range ops.AddRoles {
-			u.AuxLogger.WithFields(logFields(map[string]interface{}{"role": role}, EvAddRole, self.ID, uid)).Printf("User %v added role `%s' to account %v", self.ID, role, uid)
+			u.AuxLogger.WithFields(logFields(EvAddRole, self.ID, uid, r)).WithField("role", role).Printf("User %v added role `%s' to account %v", self.ID, role, uid)
 		}
 
 		for _, role := range ops.RemoveRoles {
-			u.AuxLogger.WithFields(logFields(map[string]interface{}{"role": role}, EvRemoveRole, self.ID, uid)).Printf("User %v removed role `%s' from account %v", self.ID, role, uid)
+			u.AuxLogger.WithFields(logFields(EvRemoveRole, self.ID, uid, r)).WithField("role", role).Printf("User %v removed role `%s' from account %v", self.ID, role, uid)
 		}
 	}
 
@@ -353,7 +352,7 @@ func (u *Users) DeleteUser(w http.ResponseWriter, r *http.Request) {
 
 	// Log
 	if u.AuxLogger != nil {
-		u.AuxLogger.WithFields(logFields(nil, EvDelete, self.ID, uid)).Printf("User %v deleted account %v", self.ID, uid)
+		u.AuxLogger.WithFields(logFields(EvDelete, self.ID, uid, r)).Printf("User %v deleted account %v", self.ID, uid)
 	}
 
 	w.WriteHeader(http.StatusNoContent)
@@ -454,7 +453,7 @@ func (u *Users) ResetPassword(w http.ResponseWriter, r *http.Request) {
 
 	// Log
 	if u.AuxLogger != nil {
-		u.AuxLogger.WithFields(logFields(nil, EvReset, id, id)).Printf("Password for account %v reset", id)
+		u.AuxLogger.WithFields(logFields(EvReset, id, id, r)).Printf("Password for account %v reset", id)
 	}
 }
 
@@ -507,8 +506,6 @@ func (u *Users) SendResetRequest(w http.ResponseWriter, r *http.Request) {
 
 	// Log
 	if u.AuxLogger != nil {
-		u.AuxLogger.WithFields(logFields(map[string]interface{}{
-			"email": user.Email,
-		}, EvResetRequest, user.ID, user.ID)).Printf("User %v requested password reset", user.ID)
+		u.AuxLogger.WithFields(logFields(EvResetRequest, user.ID, user.ID, r)).WithField("email", user.Email).Printf("User %v requested password reset", user.ID)
 	}
 }

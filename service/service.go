@@ -131,19 +131,20 @@ func (s *Service) APIHandler() http.Handler {
 	m.Methods("POST").Path("/password_reset").HandlerFunc(usersHandler.ResetPassword)
 	m.Methods("GET", "POST").Path("/request_password_reset").HandlerFunc(usersHandler.SendResetRequest)
 	m.Methods("GET", "POST").Path("/login").HandlerFunc(usersHandler.Login)
-	m.Methods("GET").Path("/refresh").Handler(jwtMiddleware.Handler(aud.Handler(http.HandlerFunc(usersHandler.Refresh))))
 
-	// Users API
-	ud := middleware.UserData{
+	userdata := middleware.UserData{
 		TokenContextKey: handlers.TokenContextKey,
 		UserContextKey:  handlers.UserContextKey,
 		Storage:         s.storage,
 	}
 
+	m.Methods("GET").Path("/refresh").Handler(jwtMiddleware.Handler(aud.Handler(userdata.Handler(http.HandlerFunc(usersHandler.Refresh)))))
+
+	// Users API
 	umux := m.PathPrefix("/users").Subrouter()
 	umux.Use(jwtMiddleware.Handler)
 	umux.Use(aud.Handler)
-	umux.Use(ud.Handler)
+	umux.Use(userdata.Handler)
 
 	umux.Methods("POST").Path("/").HandlerFunc(usersHandler.NewUser)
 	umux.Methods("GET").Path("/").HandlerFunc(usersHandler.GetUsers)

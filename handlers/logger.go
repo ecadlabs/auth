@@ -1,6 +1,10 @@
 package handlers
 
 import (
+	"net"
+	"net/http"
+	"strings"
+
 	"git.ecadlabs.com/ecad/auth/logger"
 	"github.com/satori/go.uuid"
 	"github.com/sirupsen/logrus"
@@ -17,11 +21,41 @@ const (
 	EvLogin        = "login"
 )
 
-func logFields(data map[string]interface{}, ev string, self, id uuid.UUID) logrus.Fields {
-	d := make(logrus.Fields, len(data)+2)
-	for k, v := range data {
-		d[k] = v
+func getRemoteAddr(r *http.Request) string {
+	if fh := r.Header.Get("Forwarded"); fh != "" {
+		chunks := strings.Split(fh, ",")
+
+		for _, c := range chunks {
+			opts := strings.Split(strings.TrimSpace(c), ";")
+
+			for _, o := range opts {
+				v := strings.SplitN(strings.TrimSpace(o), "=", 2)
+				if len(v) == 2 && v[0] == "for" && v[1] != "" {
+					return v[1]
+				}
+			}
+		}
 	}
+
+	if xfh := r.Header.Get("X-Forwarded-For"); xfh != "" {
+		chunks := strings.Split(xfh, ",")
+		for _, c := range chunks {
+			if c = strings.TrimSpace(c); c != "" {
+				return c
+			}
+		}
+	}
+
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err == nil {
+		return host
+	}
+
+	return r.RemoteAddr
+}
+
+func logFields(ev string, self, id uuid.UUID, r *http.Request) logrus.Fields {
+	d := make(logrus.Fields, 4)
 
 	if id != uuid.Nil {
 		d[logger.DefaultTargetIDKey] = id
@@ -32,6 +66,7 @@ func logFields(data map[string]interface{}, ev string, self, id uuid.UUID) logru
 	}
 
 	d[logger.DefaultEventKey] = ev
+	d[logger.DefaultAddrKey] = getRemoteAddr(r)
 
 	return d
 }
