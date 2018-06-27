@@ -84,12 +84,17 @@ type User struct {
 	RefreshTimestamp *time.Time `json:"refresh_ts,omitempty"`
 }
 
-const (
-	ColumnID       = "id"
-	ColumnEmail    = "email"
-	ColumnName     = "name"
-	ColumnAdded    = "added"
-	ColumnModified = "modified"
-)
+type LogEntry struct {
+	ID        uuid.UUID              `json:"id"`
+	Timestamp time.Time              `json:"ts"`
+	Event     string                 `json:"event"`
+	UserID    uuid.UUID              `json:"user_id,omitempty"`
+	TargerID  uuid.UUID              `json:"target_id,omitempty"`
+	Data      map[string]interface{} `json:"data,omitempty"`
+	Address   string                 `json:"addr,omitempty"`
+}
 
-const DefaultSortColumn = ColumnAdded
+const (
+	UsersDefaultSortColumn = "added"
+	LogDefaultSortColumn   = "ts"
+)

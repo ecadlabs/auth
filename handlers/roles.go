@@ -21,6 +21,7 @@ const (
 	permissionDelete     = "delete"
 	permissionAddRole    = "add_role"
 	permissionDeleteRole = "delete_role"
+	permissionLog        = "log"
 )
 
 func assertNonAdminUser(args map[string]interface{}) bool {
@@ -63,5 +64,6 @@ var (
 		permissionAddRole:    nil,
 		permissionDeleteRole: nil,
 		permissionList:       nil,
+		permissionLog:        nil,
 	}, nil)
 )

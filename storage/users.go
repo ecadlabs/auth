@@ -91,7 +91,7 @@ func (s *Storage) GetUserByEmail(ctx context.Context, email string) (*User, erro
 	return s.getUser(ctx, "email", email)
 }
 
-var queryColumns = map[string]struct{}{
+var userQueryColumns = map[string]struct{}{
 	"id":             struct{}{},
 	"email":          struct{}{},
 	"name":           struct{}{},
@@ -107,7 +107,7 @@ var queryColumns = map[string]struct{}{
 
 func (s *Storage) GetUsers(ctx context.Context, q *query.Query) (users []*User, count int, next *query.Query, err error) {
 	if q.SortBy == "" {
-		q.SortBy = DefaultSortColumn
+		q.SortBy = UsersDefaultSortColumn
 	}
 
 	selOpt := query.SelectOptions{
@@ -115,7 +115,7 @@ func (s *Storage) GetUsers(ctx context.Context, q *query.Query) (users []*User, 
 		FromExpr:   "users LEFT JOIN (SELECT user_id, array_agg(role) AS roles FROM roles GROUP BY user_id) AS ra ON ra.user_id = users.id",
 		IDColumn:   "id",
 		ValidateColumn: func(col string) bool {
-			_, ok := queryColumns[col]
+			_, ok := userQueryColumns[col]
 			return ok
 		},
 	}

@@ -38,6 +38,7 @@ type Users struct {
 	UsersPath   string
 	RefreshPath string
 	ResetPath   string
+	LogPath     string
 	Namespace   string
 
 	Notifier         notification.Notifier
@@ -56,6 +57,10 @@ func (u *Users) RefreshURL() string {
 
 func (u *Users) ResetURL() string {
 	return u.BaseURL() + u.ResetPath
+}
+
+func (u *Users) LogURL() string {
+	return u.BaseURL() + u.LogPath
 }
 
 func (u *Users) context(r *http.Request) context.Context {

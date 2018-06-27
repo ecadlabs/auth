@@ -96,6 +96,7 @@ func (s *Service) APIHandler() http.Handler {
 		UsersPath:   "/users/",
 		RefreshPath: "/refresh",
 		ResetPath:   "/password_reset",
+		LogPath:     "/logs/",
 		Namespace:   s.config.Namespace(),
 
 		SessionMaxAge:    time.Duration(s.config.SessionMaxAge) * time.Second,
@@ -151,6 +152,14 @@ func (s *Service) APIHandler() http.Handler {
 	umux.Methods("GET").Path("/{id}").HandlerFunc(usersHandler.GetUser)
 	umux.Methods("PATCH").Path("/{id}").HandlerFunc(usersHandler.PatchUser)
 	umux.Methods("DELETE").Path("/{id}").HandlerFunc(usersHandler.DeleteUser)
+
+	// Log API
+	lmux := m.PathPrefix("/logs").Subrouter()
+	lmux.Use(jwtMiddleware.Handler)
+	lmux.Use(aud.Handler)
+	lmux.Use(userdata.Handler)
+
+	lmux.Methods("GET").Path("/").HandlerFunc(usersHandler.GetLogs)
 
 	// Miscellaneous
 	m.Methods("GET").Path("/version").Handler(handlers.VersionHandler(version))
