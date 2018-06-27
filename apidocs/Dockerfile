@@ -1,9 +1,9 @@
 FROM node:alpine as build
-RUN npm install -g api2html speccy
 WORKDIR /spec
+RUN npm install api2html speccy
 COPY openapi.yaml logo.png /spec/
-RUN speccy lint openapi.yaml
-RUN api2html -o index.html -c logo.png openapi.yaml 
+RUN $(npm bin)/speccy lint openapi.yaml
+RUN $(npm bin)/api2html -o index.html -c logo.png openapi.yaml
 
 # TODO Should use something lighter than nginx
 FROM nginx

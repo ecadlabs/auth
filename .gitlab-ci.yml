@@ -44,6 +44,7 @@ build-auth-api-docs:
     - docker:dind
   script:
     - echo ${GOOGLE_GCR_KEY} | docker login -u _json_key --password-stdin ${DOCKER_REGISTRY}
+    - cd apidocs
     - >
       docker build 
       -t "${DOCKER_REGISTRY_URL}/auth_api_docs:${CI_COMMIT_REF_NAME}" 
@@ -51,6 +52,23 @@ build-auth-api-docs:
       .
     - docker push "${DOCKER_REGISTRY_URL}/auth_api_docs:${CI_COMMIT_REF_NAME}"
     - docker push "${DOCKER_REGISTRY_URL}/auth_api_docs:latest"
+
+
+build-auth-webapp:
+  stage: build
+  image: docker
+  services:
+    - docker:dind
+  script:
+    - echo ${GOOGLE_GCR_KEY} | docker login -u _json_key --password-stdin ${DOCKER_REGISTRY}
+    - cd webapp
+    - >
+      docker build 
+      -t "${DOCKER_REGISTRY_URL}/auth_webapp:${CI_COMMIT_REF_NAME}" 
+      -t "${DOCKER_REGISTRY_URL}/auth_webapp:latest" 
+      .
+    - docker push "${DOCKER_REGISTRY_URL}/auth_webapp:${CI_COMMIT_REF_NAME}"
+    - docker push "${DOCKER_REGISTRY_URL}/auth_webapp:latest"
 
 
 .deploy_tpl: &deploy_tpl
