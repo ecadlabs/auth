@@ -14,6 +14,8 @@
 // data/6_add_gen_column.up.sql
 // data/7_add_ip_column.down.sql
 // data/7_add_ip_column.up.sql
+// data/8_add_user_addr_columns.down.sql
+// data/8_add_user_addr_columns.up.sql
 // DO NOT EDIT!
 
 package migrations
@@ -361,6 +363,46 @@ func _7_add_ip_columnUpSql() (*asset, error) {
 	return a, nil
 }
 
+var __8_add_user_addr_columnsDownSql = []byte("\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\x72\xf4\x09\x71\x0d\x52\x08\x71\x74\xf2\x71\x55\x28\x2d\x4e\x2d\x2a\xe6\xe2\x74\x09\xf2\x0f\x50\x70\xf6\xf7\x09\xf5\xf5\x53\xc8\x49\x2c\x2e\x89\xcf\xc9\x4f\xcf\xcc\x8b\x4f\x4c\x49\x29\xd2\xc1\x29\x5b\x52\x8c\x4d\xae\x28\x35\xad\x28\xb5\x38\x03\xa7\x5e\x98\x7c\x49\xb1\x35\x17\x20\x00\x00\xff\xff\xb1\xe2\xea\x62\x8a\x00\x00\x00")
+
+func _8_add_user_addr_columnsDownSqlBytes() ([]byte, error) {
+	return bindataRead(
+		__8_add_user_addr_columnsDownSql,
+		"8_add_user_addr_columns.down.sql",
+	)
+}
+
+func _8_add_user_addr_columnsDownSql() (*asset, error) {
+	bytes, err := _8_add_user_addr_columnsDownSqlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "8_add_user_addr_columns.down.sql", size: 138, mode: os.FileMode(420), modTime: time.Unix(1530121110, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
+var __8_add_user_addr_columnsUpSql = []byte("\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\x72\xf4\x09\x71\x0d\x52\x08\x71\x74\xf2\x71\x55\x28\x2d\x4e\x2d\x2a\xe6\xe2\x74\x74\x71\x51\x70\xf6\xf7\x09\xf5\xf5\x53\xc8\xc9\x4f\xcf\xcc\x8b\x4f\x4c\x49\x29\x52\x08\x73\x0c\x72\xf6\x70\x0c\xd2\x30\x33\xd1\x54\xf0\xf3\x0f\x51\xf0\x0b\xf5\xf1\x51\x70\x71\x75\x73\x0c\xf5\x09\x51\x50\x57\xd7\xc1\xa2\xaf\xa4\x58\x21\xc4\xd3\xd7\x35\x38\xc4\xd1\x37\x40\x21\xdc\x33\xc4\x03\xcc\x55\x88\xf2\xf7\x73\xc5\x62\x44\x6a\x41\x7e\x72\x06\x9a\x39\x45\xa9\x69\x45\xa9\xc5\x19\x64\xb8\x00\xa6\x93\x1c\x37\x58\x73\x01\x02\x00\x00\xff\xff\x07\xaf\xae\x99\x16\x01\x00\x00")
+
+func _8_add_user_addr_columnsUpSqlBytes() ([]byte, error) {
+	return bindataRead(
+		__8_add_user_addr_columnsUpSql,
+		"8_add_user_addr_columns.up.sql",
+	)
+}
+
+func _8_add_user_addr_columnsUpSql() (*asset, error) {
+	bytes, err := _8_add_user_addr_columnsUpSqlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "8_add_user_addr_columns.up.sql", size: 278, mode: os.FileMode(420), modTime: time.Unix(1530121161, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
 // Asset loads and returns the asset for the given name.
 // It returns an error if the asset could not be found or
 // could not be loaded.
@@ -427,6 +469,8 @@ var _bindata = map[string]func() (*asset, error){
 	"6_add_gen_column.up.sql": _6_add_gen_columnUpSql,
 	"7_add_ip_column.down.sql": _7_add_ip_columnDownSql,
 	"7_add_ip_column.up.sql": _7_add_ip_columnUpSql,
+	"8_add_user_addr_columns.down.sql": _8_add_user_addr_columnsDownSql,
+	"8_add_user_addr_columns.up.sql": _8_add_user_addr_columnsUpSql,
 }
 
 // AssetDir returns the file names below a certain
@@ -483,6 +527,8 @@ var _bintree = &bintree{nil, map[string]*bintree{
 	"6_add_gen_column.up.sql": &bintree{_6_add_gen_columnUpSql, map[string]*bintree{}},
 	"7_add_ip_column.down.sql": &bintree{_7_add_ip_columnDownSql, map[string]*bintree{}},
 	"7_add_ip_column.up.sql": &bintree{_7_add_ip_columnUpSql, map[string]*bintree{}},
+	"8_add_user_addr_columns.down.sql": &bintree{_8_add_user_addr_columnsDownSql, map[string]*bintree{}},
+	"8_add_user_addr_columns.up.sql": &bintree{_8_add_user_addr_columnsUpSql, map[string]*bintree{}},
 }}
 
 // RestoreAsset restores an asset under the given directory

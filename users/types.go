@@ -69,15 +69,19 @@ func (r Roles) Delete(role string) {
 }
 
 type User struct {
-	ID            uuid.UUID `json:"id" schema:"id"`
-	Email         string    `json:"email" schema:"email"`
-	PasswordHash  []byte    `json:"-" schema:"-"`
-	Name          string    `json:"name,omitempty" schema:"name"`
-	Added         time.Time `json:"added" schema:"added"`
-	Modified      time.Time `json:"modified" schema:"modified"`
-	EmailVerified bool      `json:"email_verified" schema:"email_verified"`
-	Roles         Roles     `json:"roles,omitempty" schema:"roles"`
-	PasswordGen   int       `json:"-"`
+	ID               uuid.UUID  `json:"id" schema:"id"`
+	Email            string     `json:"email" schema:"email"`
+	PasswordHash     []byte     `json:"-" schema:"-"`
+	Name             string     `json:"name,omitempty" schema:"name"`
+	Added            time.Time  `json:"added" schema:"added"`
+	Modified         time.Time  `json:"modified" schema:"modified"`
+	EmailVerified    bool       `json:"email_verified" schema:"email_verified"`
+	Roles            Roles      `json:"roles,omitempty" schema:"roles"`
+	PasswordGen      int        `json:"-"`
+	LoginAddr        string     `json:"login_addr,omitempty"`
+	LoginTimestamp   *time.Time `json:"login_ts,omitempty"`
+	RefreshAddr      string     `json:"refresh_addr,omitempty"`
+	RefreshTimestamp *time.Time `json:"refresh_ts,omitempty"`
 }
 
 const (

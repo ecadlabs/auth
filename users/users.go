@@ -16,16 +16,20 @@ import (
 )
 
 type userModel struct {
-	ID            uuid.UUID      `db:"id"`
-	Email         string         `db:"email"`
-	PasswordHash  []byte         `db:"password_hash"`
-	PasswordGen   int            `db:"password_gen"`
-	Name          string         `db:"name"`
-	Added         time.Time      `db:"added"`
-	Modified      time.Time      `db:"modified"`
-	EmailVerified bool           `db:"email_verified"`
-	SortedBy      string         `db:"sorted_by"` // Output only
-	Roles         pq.StringArray `db:"roles"`
+	ID               uuid.UUID      `db:"id"`
+	Email            string         `db:"email"`
+	PasswordHash     []byte         `db:"password_hash"`
+	PasswordGen      int            `db:"password_gen"`
+	Name             string         `db:"name"`
+	Added            time.Time      `db:"added"`
+	Modified         time.Time      `db:"modified"`
+	EmailVerified    bool           `db:"email_verified"`
+	SortedBy         string         `db:"sorted_by"` // Output only
+	Roles            pq.StringArray `db:"roles"`
+	LoginAddr        string         `db:"login_addr"`
+	LoginTimestamp   time.Time      `db:"login_ts"`
+	RefreshAddr      string         `db:"refresh_addr"`
+	RefreshTimestamp time.Time      `db:"refresh_ts"`
 }
 
 func (u *userModel) toUser() *User {
@@ -36,9 +40,21 @@ func (u *userModel) toUser() *User {
 		Name:          u.Name,
 		Added:         u.Added,
 		Modified:      u.Modified,
-		Roles:         make(map[string]interface{}, len(u.Roles)),
+		Roles:         make(Roles, len(u.Roles)),
 		EmailVerified: u.EmailVerified,
 		PasswordGen:   u.PasswordGen,
+		LoginAddr:     u.LoginAddr,
+		RefreshAddr:   u.RefreshAddr,
+	}
+
+	epoch := time.Unix(0, 0).UTC()
+
+	if u.LoginTimestamp.UTC() != epoch {
+		ret.LoginTimestamp = &u.LoginTimestamp
+	}
+
+	if u.RefreshTimestamp.UTC() != epoch {
+		ret.RefreshTimestamp = &u.RefreshTimestamp
 	}
 
 	for _, r := range u.Roles {
@@ -83,6 +99,10 @@ var queryColumns = map[string]struct{}{
 	"modified":       struct{}{},
 	"roles":          struct{}{},
 	"email_verified": struct{}{},
+	"login_addr":     struct{}{},
+	"login_ts":       struct{}{},
+	"refresh_addr":   struct{}{},
+	"refresh_ts":     struct{}{},
 }
 
 func (s *Storage) GetUsers(ctx context.Context, q *query.Query) (users []*User, count int, next *query.Query, err error) {
@@ -422,6 +442,16 @@ func (s *Storage) UpdatePasswordWithGen(ctx context.Context, id uuid.UUID, hash 
 	}
 
 	return nil
+}
+
+func (s *Storage) UpdateLoginInfo(ctx context.Context, id uuid.UUID, addr string) error {
+	_, err := s.DB.ExecContext(ctx, "UPDATE users SET login_addr = $1, login_ts = NOW() WHERE id = $2", addr, id)
+	return err
+}
+
+func (s *Storage) UpdateRefreshInfo(ctx context.Context, id uuid.UUID, addr string) error {
+	_, err := s.DB.ExecContext(ctx, "UPDATE users SET refresh_addr = $1, refresh_ts = NOW() WHERE id = $2", addr, id)
+	return err
 }
 
 func (s *Storage) Ping(ctx context.Context) error {

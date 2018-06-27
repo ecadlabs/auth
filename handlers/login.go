@@ -107,6 +107,11 @@ func (u *Users) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if err := u.Storage.UpdateLoginInfo(u.context(r), user.ID, getRemoteAddr(r)); err != nil {
+		utils.JSONError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	if err := u.writeUserToken(w, user); err != nil {
 		utils.JSONError(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -120,6 +125,11 @@ func (u *Users) Login(w http.ResponseWriter, r *http.Request) {
 
 func (u *Users) Refresh(w http.ResponseWriter, r *http.Request) {
 	self := r.Context().Value(UserContextKey).(*users.User)
+
+	if err := u.Storage.UpdateRefreshInfo(u.context(r), self.ID, getRemoteAddr(r)); err != nil {
+		utils.JSONError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
 	if err := u.writeUserToken(w, self); err != nil {
 		utils.JSONError(w, err.Error(), http.StatusInternalServerError)

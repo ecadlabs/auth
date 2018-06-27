@@ -30,8 +30,11 @@ func getRemoteAddr(r *http.Request) string {
 
 			for _, o := range opts {
 				v := strings.SplitN(strings.TrimSpace(o), "=", 2)
-				if len(v) == 2 && v[0] == "for" && v[1] != "" {
-					return v[1]
+
+				if len(v) == 2 && v[0] == "for" {
+					if addr := strings.Trim(v[1], "\"[]"); addr != "" {
+						return addr
+					}
 				}
 			}
 		}
@@ -40,7 +43,7 @@ func getRemoteAddr(r *http.Request) string {
 	if xfh := r.Header.Get("X-Forwarded-For"); xfh != "" {
 		chunks := strings.Split(xfh, ",")
 		for _, c := range chunks {
-			if c = strings.TrimSpace(c); c != "" {
+			if c = strings.Trim(strings.TrimSpace(c), "\"[]"); c != "" {
 				return c
 			}
 		}
