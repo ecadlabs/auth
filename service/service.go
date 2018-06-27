@@ -12,7 +12,7 @@ import (
 	"git.ecadlabs.com/ecad/auth/logger"
 	"git.ecadlabs.com/ecad/auth/middleware"
 	"git.ecadlabs.com/ecad/auth/notification"
-	"git.ecadlabs.com/ecad/auth/users"
+	"git.ecadlabs.com/ecad/auth/storage"
 	"git.ecadlabs.com/ecad/auth/utils"
 	"github.com/auth0/go-jwt-middleware"
 	"github.com/dgrijalva/jwt-go"
@@ -31,7 +31,7 @@ var JWTSigningMethod = jwt.SigningMethodHS256
 
 type Service struct {
 	config   Config
-	storage  *users.Storage
+	storage  *storage.Storage
 	notifier notification.Notifier
 	DB       *sql.DB
 }
@@ -69,7 +69,7 @@ func (c *Config) New() (*Service, error) {
 
 	return &Service{
 		config:   *c,
-		storage:  &users.Storage{DB: sqlx.NewDb(db, "postgres")},
+		storage:  &storage.Storage{DB: sqlx.NewDb(db, "postgres")},
 		DB:       db,
 		notifier: notifier,
 	}, nil

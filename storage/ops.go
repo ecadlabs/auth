@@ -1,4 +1,4 @@
-package users
+package storage
 
 import (
 	"fmt"

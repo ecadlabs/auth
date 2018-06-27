@@ -11,7 +11,7 @@ import (
 	"git.ecadlabs.com/ecad/auth/jsonpatch"
 	"git.ecadlabs.com/ecad/auth/notification"
 	"git.ecadlabs.com/ecad/auth/query"
-	"git.ecadlabs.com/ecad/auth/users"
+	"git.ecadlabs.com/ecad/auth/storage"
 	"git.ecadlabs.com/ecad/auth/utils"
 	"github.com/auth0/go-jwt-middleware"
 	"github.com/dgrijalva/jwt-go"
@@ -27,7 +27,7 @@ const (
 )
 
 type Users struct {
-	Storage *users.Storage
+	Storage *storage.Storage
 	Timeout time.Duration
 
 	SessionMaxAge    time.Duration
@@ -67,7 +67,7 @@ func (u *Users) context(r *http.Request) context.Context {
 }
 
 func errorHTTPStatus(err error) int {
-	if e, ok := err.(*users.Error); ok {
+	if e, ok := err.(*storage.Error); ok {
 		return e.HTTPStatus
 	}
 
@@ -75,7 +75,7 @@ func errorHTTPStatus(err error) int {
 }
 
 func (u *Users) GetUser(w http.ResponseWriter, r *http.Request) {
-	self := r.Context().Value(UserContextKey).(*users.User)
+	self := r.Context().Value(UserContextKey).(*storage.User)
 
 	uid, err := uuid.FromString(mux.Vars(r)["id"])
 	if err != nil {
@@ -104,7 +104,7 @@ func (u *Users) GetUser(w http.ResponseWriter, r *http.Request) {
 
 func (u *Users) GetUsers(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
-	self := r.Context().Value(UserContextKey).(*users.User)
+	self := r.Context().Value(UserContextKey).(*storage.User)
 
 	if err := self.Roles.Get().IsGranted(permissionList, nil); err != nil {
 		log.Error(err)
@@ -159,7 +159,7 @@ func (u *Users) GetUsers(w http.ResponseWriter, r *http.Request) {
 	utils.JSONResponse(w, http.StatusOK, &res)
 }
 
-func (u *Users) resetToken(user *users.User) (string, error) {
+func (u *Users) resetToken(user *storage.User) (string, error) {
 	now := time.Now()
 
 	claims := jwt.MapClaims{
@@ -182,9 +182,9 @@ func (u *Users) resetToken(user *users.User) (string, error) {
 }
 
 func (u *Users) NewUser(w http.ResponseWriter, r *http.Request) {
-	self := r.Context().Value(UserContextKey).(*users.User)
+	self := r.Context().Value(UserContextKey).(*storage.User)
 
-	var user users.User
+	var user storage.User
 	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
 		log.Error(err)
 		utils.JSONError(w, err.Error(), http.StatusBadRequest)
@@ -251,7 +251,7 @@ func (u *Users) NewUser(w http.ResponseWriter, r *http.Request) {
 
 func (u *Users) PatchUser(w http.ResponseWriter, r *http.Request) {
 	// TODO Email verification
-	self := r.Context().Value(UserContextKey).(*users.User)
+	self := r.Context().Value(UserContextKey).(*storage.User)
 
 	uid, err := uuid.FromString(mux.Vars(r)["id"])
 	if err != nil {
@@ -267,7 +267,7 @@ func (u *Users) PatchUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ops, err := users.OpsFromPatch(p)
+	ops, err := storage.OpsFromPatch(p)
 	if err != nil {
 		log.Error(err)
 		utils.JSONError(w, err.Error(), errorHTTPStatus(err))
@@ -327,7 +327,7 @@ func (u *Users) PatchUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func (u *Users) DeleteUser(w http.ResponseWriter, r *http.Request) {
-	self := r.Context().Value(UserContextKey).(*users.User)
+	self := r.Context().Value(UserContextKey).(*storage.User)
 
 	uid, err := uuid.FromString(mux.Vars(r)["id"])
 	if err != nil {

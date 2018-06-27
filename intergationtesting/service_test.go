@@ -14,7 +14,7 @@ import (
 	"git.ecadlabs.com/ecad/auth/migrations"
 	"git.ecadlabs.com/ecad/auth/notification"
 	"git.ecadlabs.com/ecad/auth/service"
-	"git.ecadlabs.com/ecad/auth/users"
+	"git.ecadlabs.com/ecad/auth/storage"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/golang-migrate/migrate"
 	"github.com/jmoiron/sqlx"
@@ -48,14 +48,14 @@ func (t testNotifier) PasswordReset(ctx context.Context, d *notification.Notific
 	return t.InviteUser(ctx, d)
 }
 
-func genTestUser(n int) *users.User {
-	return &users.User{
+func genTestUser(n int) *storage.User {
+	return &storage.User{
 		Email: fmt.Sprintf("user%d@example.com", n),
 		Name:  fmt.Sprintf("Test User %d", n),
 	}
 }
 
-func createUser(srv *httptest.Server, u *users.User, token string, tokenCh chan string) (int, *users.User, error) {
+func createUser(srv *httptest.Server, u *storage.User, token string, tokenCh chan string) (int, *storage.User, error) {
 	buf, err := json.Marshal(u)
 	if err != nil {
 		return 0, nil, err
@@ -81,7 +81,7 @@ func createUser(srv *httptest.Server, u *users.User, token string, tokenCh chan 
 		return resp.StatusCode, nil, nil
 	}
 
-	var res users.User
+	var res storage.User
 	dec := json.NewDecoder(resp.Body)
 	if err := dec.Decode(&res); err != nil {
 		return 0, nil, err
@@ -157,7 +157,7 @@ func doLogin(srv *httptest.Server, email, password string) (code int, token stri
 	return resp.StatusCode, res.Token, res.RefreshURL, nil
 }
 
-func getUser(srv *httptest.Server, token string, uid uuid.UUID) (int, *users.User, error) {
+func getUser(srv *httptest.Server, token string, uid uuid.UUID) (int, *storage.User, error) {
 	req, err := http.NewRequest("GET", srv.URL+"/users/"+uid.String(), nil)
 	if err != nil {
 		return 0, nil, err
@@ -177,7 +177,7 @@ func getUser(srv *httptest.Server, token string, uid uuid.UUID) (int, *users.Use
 		return resp.StatusCode, nil, nil
 	}
 
-	var u users.User
+	var u storage.User
 
 	dec := json.NewDecoder(resp.Body)
 	if err := dec.Decode(&u); err != nil {
@@ -187,7 +187,7 @@ func getUser(srv *httptest.Server, token string, uid uuid.UUID) (int, *users.Use
 	return resp.StatusCode, &u, nil
 }
 
-func getList(srv *httptest.Server, token string, query url.Values) (int, []*users.User, error) {
+func getList(srv *httptest.Server, token string, query url.Values) (int, []*storage.User, error) {
 	tmpUrl, err := url.Parse(srv.URL)
 	if err != nil {
 		return 0, nil, err
@@ -197,7 +197,7 @@ func getList(srv *httptest.Server, token string, query url.Values) (int, []*user
 	tmpUrl.RawQuery = query.Encode()
 	reqUrl := tmpUrl.String()
 
-	result := make([]*users.User, 0)
+	result := make([]*storage.User, 0)
 
 	for {
 		req, err := http.NewRequest("GET", reqUrl, nil)
@@ -224,9 +224,9 @@ func getList(srv *httptest.Server, token string, query url.Values) (int, []*user
 		}
 
 		var res struct {
-			Value      []*users.User `json:"value"`
-			TotalCount int           `json:"total_count"`
-			Next       string        `json:"next"`
+			Value      []*storage.User `json:"value"`
+			TotalCount int             `json:"total_count"`
+			Next       string          `json:"next"`
 		}
 
 		dec := json.NewDecoder(resp.Body)
@@ -319,7 +319,7 @@ func TestService(t *testing.T) {
 		return
 	}
 
-	usersList := []*users.User{superuser}
+	usersList := []*storage.User{superuser}
 
 	// Create other users
 	for i := 0; i < usersNum; i++ {

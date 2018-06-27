@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	"git.ecadlabs.com/ecad/auth/users"
+	"git.ecadlabs.com/ecad/auth/storage"
 	"git.ecadlabs.com/ecad/auth/utils"
 	"github.com/dgrijalva/jwt-go"
 	log "github.com/sirupsen/logrus"
@@ -16,7 +16,7 @@ const (
 	TokenContextKey = "token"
 )
 
-func (u *Users) writeUserToken(w http.ResponseWriter, user *users.User) error {
+func (u *Users) writeUserToken(w http.ResponseWriter, user *storage.User) error {
 	roles := make([]string, 0, len(user.Roles))
 	for r := range user.Roles {
 		roles = append(roles, r)
@@ -124,7 +124,7 @@ func (u *Users) Login(w http.ResponseWriter, r *http.Request) {
 }
 
 func (u *Users) Refresh(w http.ResponseWriter, r *http.Request) {
-	self := r.Context().Value(UserContextKey).(*users.User)
+	self := r.Context().Value(UserContextKey).(*storage.User)
 
 	if err := u.Storage.UpdateRefreshInfo(u.context(r), self.ID, getRemoteAddr(r)); err != nil {
 		utils.JSONError(w, err.Error(), http.StatusInternalServerError)
