@@ -2,11 +2,12 @@ package migrations
 
 import (
 	"database/sql"
+	"net/url"
+	"strconv"
+
 	"github.com/golang-migrate/migrate"
 	"github.com/golang-migrate/migrate/database/postgres"
 	"github.com/golang-migrate/migrate/source/go-bindata"
-	"net/url"
-	"strconv"
 )
 
 const (

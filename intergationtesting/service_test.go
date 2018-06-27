@@ -6,6 +6,11 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
+	"testing"
+
 	"git.ecadlabs.com/ecad/auth/migrations"
 	"git.ecadlabs.com/ecad/auth/notification"
 	"git.ecadlabs.com/ecad/auth/service"
@@ -15,10 +20,6 @@ import (
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
 	"github.com/satori/go.uuid"
-	"net/http"
-	"net/http/httptest"
-	"net/url"
-	"testing"
 )
 
 const (
@@ -38,13 +39,13 @@ func init() {
 
 type testNotifier chan string
 
-func (t testNotifier) NewUser(ctx context.Context, d *notification.ResetData) error {
+func (t testNotifier) InviteUser(ctx context.Context, d *notification.NotificationData) error {
 	(chan string)(t) <- d.Token
 	return nil
 }
 
-func (t testNotifier) PasswordReset(ctx context.Context, d *notification.ResetData) error {
-	return t.NewUser(ctx, d)
+func (t testNotifier) PasswordReset(ctx context.Context, d *notification.NotificationData) error {
+	return t.InviteUser(ctx, d)
 }
 
 func genTestUser(n int) *users.User {

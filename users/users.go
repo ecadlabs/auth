@@ -4,14 +4,15 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"net/http"
+	"strings"
+	"time"
+
 	"git.ecadlabs.com/ecad/auth/query"
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
 	"github.com/satori/go.uuid"
 	log "github.com/sirupsen/logrus"
-	"net/http"
-	"strings"
-	"time"
 )
 
 type userModel struct {

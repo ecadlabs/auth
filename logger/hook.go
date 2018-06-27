@@ -3,6 +3,7 @@ package logger
 import (
 	"database/sql"
 	"encoding/json"
+
 	"github.com/lib/pq"
 	"github.com/sirupsen/logrus"
 )

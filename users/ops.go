@@ -2,9 +2,10 @@ package users
 
 import (
 	"fmt"
-	"git.ecadlabs.com/ecad/auth/jsonpatch"
 	"net/http"
 	"strings"
+
+	"git.ecadlabs.com/ecad/auth/jsonpatch"
 )
 
 type UserOps struct {

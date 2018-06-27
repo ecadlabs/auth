@@ -2,9 +2,10 @@ package middleware
 
 import (
 	"fmt"
+	"net/http"
+
 	"git.ecadlabs.com/ecad/auth/utils"
 	"github.com/dgrijalva/jwt-go"
-	"net/http"
 )
 
 type Audience struct {

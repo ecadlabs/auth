@@ -28,10 +28,10 @@ func (s *SMTPDriver) SendMessage(msg *Message) error {
 
 	var body bytes.Buffer
 
-	fmt.Fprintf(&body, "From: %s\r\n", msg.From.String())
-	fmt.Fprintf(&body, "To: %s\r\n", msg.To.String())
-	fmt.Fprintf(&body, "Subject: %s\r\n", msg.Subject)
-	body.WriteString("Mime-Version: 1.0\r\nContent-Type: text/plain; charset=UTF-8\r\n\r\n")
+	fmt.Fprintf(&body, "From: %s\n", msg.From.String())
+	fmt.Fprintf(&body, "To: %s\n", msg.To.String())
+	fmt.Fprintf(&body, "Subject: %s\n", msg.Subject)
+	body.WriteString("Mime-Version: 1.0\nContent-Type: text/plain; charset=UTF-8\n\n")
 	body.Write(msg.Body)
 
 	return smtp.SendMail(s.Address,
