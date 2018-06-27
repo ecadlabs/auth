@@ -39,13 +39,13 @@ func init() {
 
 type testNotifier chan string
 
-func (t testNotifier) NewUser(ctx context.Context, d *notification.ResetData) error {
+func (t testNotifier) InviteUser(ctx context.Context, d *notification.NotificationData) error {
 	(chan string)(t) <- d.Token
 	return nil
 }
 
-func (t testNotifier) PasswordReset(ctx context.Context, d *notification.ResetData) error {
-	return t.NewUser(ctx, d)
+func (t testNotifier) PasswordReset(ctx context.Context, d *notification.NotificationData) error {
+	return t.InviteUser(ctx, d)
 }
 
 func genTestUser(n int) *users.User {
