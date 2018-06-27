@@ -234,6 +234,34 @@ paths:
             $ref: '#/components/schemas/Predicate'
           style: deepObject
           explode: true
+        - in: query
+          name: login_addr
+          description: Query on last login source address of user
+          schema:
+            $ref: '#/components/schemas/Predicate'
+          style: deepObject
+          explode: true
+        - in: query
+          name: login_ts
+          description: Query on last login timestamp of user
+          schema:
+            $ref: '#/components/schemas/Predicate'
+          style: deepObject
+          explode: true
+        - in: query
+          name: refresh_addr
+          description: Query on last token refreshing source address of user
+          schema:
+            $ref: '#/components/schemas/Predicate'
+          style: deepObject
+          explode: true
+        - in: query
+          name: refresh_ts
+          description: Query on last token refreshing timestamp of user
+          schema:
+            $ref: '#/components/schemas/Predicate'
+          style: deepObject
+          explode: true
       responses:
         '200':
           description: List of Users
@@ -401,6 +429,16 @@ components:
           nullable: true
           items:
             type: string
+        login_addr:
+          type: string
+        login_ts:
+          type: string
+          format: date-time
+        refresh_addr:
+          type: string
+        refresh_ts:
+          type: string
+          format: date-time
     Predicate:
       type: object
       properties:
