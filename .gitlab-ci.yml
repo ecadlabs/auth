@@ -54,6 +54,17 @@ build-auth-api-docs:
     - docker push "${DOCKER_REGISTRY_URL}/auth_api_docs:latest"
 
 
+build-auth-webapp-packages:
+  stage: build
+  image: node:alpine
+  services:
+    - docker:dind
+  script:
+    - cd webapp
+    - ng build --prod ecad-angular-auth
+    - cd webapp/dist/ecad-angular-auth
+    - npm publish --registry http://npm.ecadlabs.com --tag ${CI_COMMIT_REF_NAME}
+
 build-auth-webapp:
   stage: build
   image: docker
