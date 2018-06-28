@@ -47,7 +47,6 @@ var logQueryColumns = map[string]struct{}{
 	"event":     struct{}{},
 	"user_id":   struct{}{},
 	"target_id": struct{}{},
-	"data":      struct{}{},
 	"addr":      struct{}{},
 }
 
