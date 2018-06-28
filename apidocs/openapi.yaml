@@ -541,11 +541,13 @@ components:
         target_id:
           type: string
           format: uuid
+        addr:
+          type: string
+        msg:
+          type: string
         data:
           type: object
           additionalProperties: true
-        addr:
-          type: string
     Predicate:
       type: object
       properties:
