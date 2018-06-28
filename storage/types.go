@@ -90,8 +90,9 @@ type LogEntry struct {
 	Event     string                 `json:"event"`
 	UserID    uuid.UUID              `json:"user_id,omitempty"`
 	TargerID  uuid.UUID              `json:"target_id,omitempty"`
-	Data      map[string]interface{} `json:"data,omitempty"`
 	Address   string                 `json:"addr,omitempty"`
+	Message   string                 `json:"msg,omitempty"`
+	Data      map[string]interface{} `json:"data,omitempty"`
 }
 
 const (

@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"net/http"
 	"time"
@@ -13,14 +14,15 @@ import (
 )
 
 type logEntryModel struct {
-	ID        uuid.UUID `db:"id"`
-	Timestamp time.Time `db:"ts"`
-	Event     string    `db:"event"`
-	UserID    uuid.UUID `db:"user_id"`
-	TargerID  uuid.UUID `db:"target_id"`
-	Data      []byte    `db:"data"`
-	Address   string    `db:"addr"`
-	SortedBy  string    `db:"sorted_by"` // Output only
+	ID        uuid.UUID      `db:"id"`
+	Timestamp time.Time      `db:"ts"`
+	Event     string         `db:"event"`
+	UserID    uuid.UUID      `db:"user_id"`
+	TargerID  uuid.UUID      `db:"target_id"`
+	Data      []byte         `db:"data"`
+	Address   string         `db:"addr"`
+	Message   sql.NullString `db:"msg"`
+	SortedBy  string         `db:"sorted_by"` // Output only
 }
 
 func (l *logEntryModel) toLogEntry() *LogEntry {
@@ -31,6 +33,7 @@ func (l *logEntryModel) toLogEntry() *LogEntry {
 		UserID:    l.UserID,
 		TargerID:  l.TargerID,
 		Address:   l.Address,
+		Message:   l.Message.String,
 	}
 
 	if len(l.Data) != 0 {

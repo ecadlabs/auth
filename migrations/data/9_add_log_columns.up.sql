@@ -2,7 +2,9 @@ BEGIN;
 
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
-ALTER TABLE log ADD COLUMN id UUID PRIMARY KEY DEFAULT uuid_generate_v4();
+ALTER TABLE log
+	ADD COLUMN id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+	ADD COLUMN msg TEXT;
 
 UPDATE log SET user_id = uuid_nil() WHERE user_id IS NULL;
 UPDATE log SET target_id = uuid_nil() WHERE target_id IS NULL;

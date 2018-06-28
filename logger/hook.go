@@ -94,7 +94,7 @@ func (h *Hook) Fire(entry *logrus.Entry) error {
 	ev := entry.Data[h.eventKey()]
 	addr := entry.Data[h.addrKey()]
 
-	_, err = h.DB.Exec("INSERT INTO "+pq.QuoteIdentifier(h.table())+" (id, ts, event, user_id, target_id, addr, data) VALUES ($1, $2, $3, $4, $5, $6, $7)", uuid.NewV4(), entry.Time, ev, uid, tid, addr, buf)
+	_, err = h.DB.Exec("INSERT INTO "+pq.QuoteIdentifier(h.table())+" (id, ts, event, user_id, target_id, addr, msg, data) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)", uuid.NewV4(), entry.Time, ev, uid, tid, addr, entry.Message, buf)
 	if err != nil {
 		return err
 	}
