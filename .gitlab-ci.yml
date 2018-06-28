@@ -68,7 +68,9 @@ build-auth-webapp-packages:
     - cd dist/ecad-angular-auth
     - mv package.json package_bak.json
     - cat package_bak.json | jq -M '.version="$(npm show ecad-angular-auth version --registry http://npm.ecadlabs.com)"' > package.json
+    - npm version
     - npm version patch
+    - npm version
     - npm publish --registry http://npm.ecadlabs.com --tag ${CI_COMMIT_REF_NAME}
     - npm show ecad-angular-auth version --registry http://npm.ecadlabs.com
   only:
