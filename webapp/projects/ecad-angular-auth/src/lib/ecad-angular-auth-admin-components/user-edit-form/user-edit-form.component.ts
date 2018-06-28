@@ -1,9 +1,10 @@
 import { Component, OnInit, Inject } from '@angular/core';
 import { MatDialogRef, MAT_DIALOG_DATA } from '@angular/material';
-import { UsersService } from '../../ecad-angular-auth-admin/users/users.service';
 import { FormBuilder, Form, FormGroup, Validators } from '@angular/forms';
 import { MinSelection } from './user-edit-form.validators';
 import { User, CreateUser } from '../../ecad-angular-auth-admin/interfaces';
+import { USERS_SERVICE } from '../../ecad-angular-auth-admin/tokens';
+import { IUsersService } from '../../ecad-angular-auth-admin/interfaces/user-service.i';
 
 @Component({
   selector: 'auth-user-edit-form',
@@ -18,8 +19,9 @@ export class UserEditFormComponent implements OnInit {
   constructor(
     private dialogRef: MatDialogRef<User>,
     @Inject(MAT_DIALOG_DATA)
-    private dialogData: User | null,
-    private userService: UsersService,
+    public dialogData: User | null,
+    @Inject(USERS_SERVICE)
+    private userService: IUsersService,
     private _fb: FormBuilder,
   ) { }
 
@@ -52,13 +54,13 @@ export class UserEditFormComponent implements OnInit {
     try {
       if (!this.dialogData) {
         const createUserPayload: CreateUser = this.userForm.value;
-        createUserPayload.roles = this.userForm.value.roles.reduce((prev, val) => Object.assign(prev, {[val]: true}), {});
+        createUserPayload.roles = this.userForm.value.roles.reduce((prev, val) => Object.assign(prev, { [val]: true }), {});
         await this.userService.create(createUserPayload).toPromise();
       } else {
         const payload = this.userForm.value;
         const remove = this.getDeletedRole(Object.keys(this.dialogData.roles), this.userForm.value.roles);
         const added = this.getAddedRole(Object.keys(this.dialogData.roles), this.userForm.value.roles);
-        await this.userService.update(Object.assign(payload, {id: this.dialogData.id}), added, remove).toPromise();
+        await this.userService.update(Object.assign(payload, { id: this.dialogData.id }), added, remove).toPromise();
       }
       this.error = {};
       this.dialogRef.close();

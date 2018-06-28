@@ -5,7 +5,7 @@ import { ActivatedRouteSnapshot, RouterStateSnapshot } from '@angular/router';
 import { Observable, of } from 'rxjs';
 import { Router } from '@angular/router';
 import { LoggedinGuard } from './loggedin.guard';
-import { LoginService, authConfig } from '../tokens';
+import { LOGIN_SERVICE, AUTH_CONFIG } from '../tokens';
 import { ILoginService, AuthConfig } from '../interfaces';
 
 
@@ -13,11 +13,11 @@ import { ILoginService, AuthConfig } from '../interfaces';
 export class IpWhiteListedGuard extends LoggedinGuard {
 
   constructor(
-    @Inject(LoginService)
+    @Inject(LOGIN_SERVICE)
     protected loginService: ILoginService,
     protected router: Router,
     @Optional()
-    @Inject(authConfig)
+    @Inject(AUTH_CONFIG)
     protected config: AuthConfig,
   ) {
     super(loginService, config, router);

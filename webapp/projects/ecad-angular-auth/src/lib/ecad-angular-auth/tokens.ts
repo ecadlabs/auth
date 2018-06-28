@@ -1,3 +1,3 @@
-export const LoginService = 'LOGIN_SERVICE';
-export const PasswordReset = 'PASSWORD_RESET_SERVICE';
-export const authConfig = 'AUTH_CONFIG_TOKEN';
+export const LOGIN_SERVICE = 'LOGIN_SERVICE';
+export const PASSWORD_RESET = 'PASSWORD_RESET_SERVICE';
+export const AUTH_CONFIG = 'AUTH_CONFIG_TOKEN';
