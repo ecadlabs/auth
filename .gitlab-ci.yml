@@ -60,6 +60,7 @@ build-auth-webapp-packages:
   services:
     - docker:dind
   script:
+    - apk add --no-cache jq
     - cd webapp
     - echo ${NPM_RC} > $HOME/.npmrc
     - npm ci
