@@ -18,7 +18,7 @@ export class UserEditFormComponent implements OnInit {
   constructor(
     private dialogRef: MatDialogRef<User>,
     @Inject(MAT_DIALOG_DATA)
-    private dialogData: User | null,
+    public dialogData: User | null,
     private userService: UsersService,
     private _fb: FormBuilder,
   ) { }
@@ -52,13 +52,13 @@ export class UserEditFormComponent implements OnInit {
     try {
       if (!this.dialogData) {
         const createUserPayload: CreateUser = this.userForm.value;
-        createUserPayload.roles = this.userForm.value.roles.reduce((prev, val) => Object.assign(prev, {[val]: true}), {});
+        createUserPayload.roles = this.userForm.value.roles.reduce((prev, val) => Object.assign(prev, { [val]: true }), {});
         await this.userService.create(createUserPayload).toPromise();
       } else {
         const payload = this.userForm.value;
         const remove = this.getDeletedRole(Object.keys(this.dialogData.roles), this.userForm.value.roles);
         const added = this.getAddedRole(Object.keys(this.dialogData.roles), this.userForm.value.roles);
-        await this.userService.update(Object.assign(payload, {id: this.dialogData.id}), added, remove).toPromise();
+        await this.userService.update(Object.assign(payload, { id: this.dialogData.id }), added, remove).toPromise();
       }
       this.error = {};
       this.dialogRef.close();

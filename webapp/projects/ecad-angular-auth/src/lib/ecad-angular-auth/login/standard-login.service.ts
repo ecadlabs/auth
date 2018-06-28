@@ -16,14 +16,14 @@ export class StandardLoginService implements ILoginService {
   public user: BehaviorSubject<UserToken> = new BehaviorSubject(this.token);
 
   private readonly postLoginOperations = [
-    tap((result: {token: string}) => localStorage.setItem(this.config.tokenName, result.token)),
-    tap((result: {refresh: string}) => localStorage.setItem('refreshTokenUrl', result.refresh)),
+    tap((result: { token: string }) => this.config.tokenSetter(result.token)),
+    tap((result: { refresh: string }) => localStorage.setItem('refreshTokenUrl', result.refresh)),
     tap(() => this.user.next(this.token))
   ];
 
   public isLoggedIn: Observable<Boolean> = this.user.pipe(
     map(() => {
-      const rawToken = localStorage.getItem(this.config.tokenName) || null;
+      const rawToken = this.config.tokenGetter() || null;
       return !!(rawToken && !this.jwtHelper.isTokenExpired(rawToken));
     }),
     distinctUntilChanged()
@@ -45,13 +45,13 @@ export class StandardLoginService implements ILoginService {
       switchMap(() => this.user),
       switchMap((user) => {
         return interval(this.AUTO_REFRESH_INTERVAL)
-        .pipe(switchMap(() => {
-          return this.refreshToken().pipe(catchError(() => observableOf(false)));
-        }));
+          .pipe(switchMap(() => {
+            return this.refreshToken().pipe(catchError(() => observableOf(false)));
+          }));
       }),
       tap(() => this.user.next(this.token))
     )
-    .subscribe();
+      .subscribe();
   }
 
   private createRequestOptions(credential: Credentials) {
@@ -65,7 +65,7 @@ export class StandardLoginService implements ILoginService {
   }
 
   private get token() {
-    const token = localStorage.getItem(this.config.tokenName);
+    const token = this.config.tokenGetter();
     if (token) {
       return this.jwtHelper.decodeToken(token);
     } else {
@@ -97,7 +97,7 @@ export class StandardLoginService implements ILoginService {
   */
   public logout(): Observable<Boolean> {
     return Observable.create((observer: Observer<Boolean>) => {
-      localStorage.setItem(this.config.tokenName, '');
+      this.config.tokenSetter('');
       this.user.next(this.token);
       observer.next(true);
     });
@@ -108,10 +108,10 @@ export class StandardLoginService implements ILoginService {
   */
   public refreshToken(): Observable<boolean> {
     return this.httpClient
-    .get(localStorage.getItem('refreshTokenUrl'))
-    .pipe(
-      ...this.postLoginOperations,
-      map(() => true)
-    );
+      .get(localStorage.getItem('refreshTokenUrl'))
+      .pipe(
+        ...this.postLoginOperations,
+        map(() => true)
+      );
   }
 }

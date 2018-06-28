@@ -18,24 +18,22 @@ export function tokenGetter() {
 @NgModule({
   imports: [
     HttpClientModule,
-    JwtModule.forRoot({
-      config: {
-        blacklistedRoutes,
-        whitelistedDomains: whiteListedDomain,
-        tokenGetter: tokenGetter,
-      }
-    }),
   ],
   declarations: [],
   exports: []
 })
 export class EcadAngularAuthModule {
   public static forRoot(config: AuthConfig): ModuleWithProviders {
-    tokenName = config.tokenName;
-    blacklistedRoutes.push(config.loginUrl);
     return {
       ngModule: EcadAngularAuthModule,
       providers: [
+        ...JwtModule.forRoot({
+          config: {
+            blacklistedRoutes: [config.loginUrl],
+            whitelistedDomains: [new RegExp('^null$'), new RegExp(`.*${location.hostname}.*`)],
+            tokenGetter: config.tokenGetter,
+          }
+        }).providers,
         { provide: authConfig, useValue: config },
         { provide: LoginService, useClass: StandardLoginService },
         { provide: PasswordReset, useClass: PasswordResetService },
