@@ -1,5 +1,6 @@
 version: '3'
 services:
+
   envoy:
     image: envoyproxy/envoy-alpine
     volumes:
@@ -8,13 +9,22 @@ services:
     ports:
       - "8000:10000"
       - "9901:9901"
+
   db:
     image: "postgres:alpine"
     environment:
       - POSTGRES_USER=auth
       - POSTGRES_PASSWORD=auth
       - POSTGRES_DB=auth
+
   auth:
+    build:
+      context: .
+    depends_on:
+      - db
+    environment:
+      - AUTH_ADMIN_EMAIL=admin@admin
+      - AUTH_ADMIN_PASSWORD=admin
     entrypoint: /app/auth
     command:
       - -db
@@ -24,23 +34,15 @@ services:
       - -bootstrap
       - -c
       - /app/config.json
-    build:
-      context: .
-    environment:
-      - AUTH_ADMIN_EMAIL=admin@admin
-      - AUTH_ADMIN_PASSWORD=admin
     volumes:
       - ./config.example.json:/app/config.json
-    depends_on:
-      - db
+
   apidocs:
     build:
       context: apidocs/
-    ports:
-      - "8900:80"
-    command: /bin/bash -c "nginx -g 'daemon off;'"
     depends_on:
       - envoy 
+    command: /bin/bash -c "nginx -g 'daemon off;'"
 
   webapp:
     build:
@@ -52,7 +54,6 @@ services:
     depends_on:
       - envoy
       - auth
-    depends_on:
-      - envoy 
+
 volumes:
   node_modules_volume:
