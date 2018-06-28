@@ -1,7 +1,7 @@
 import { Injectable, Inject, Optional } from '@angular/core';
 import { IPasswordReset, AuthConfig, PasswordResetResult } from '../interfaces';
 import { HttpClient } from '@angular/common/http';
-import { authConfig } from '../tokens';
+import { AUTH_CONFIG } from '../tokens';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { PasswordResetEmailResult } from '../interfaces/password-reset-email-result.i';
@@ -13,7 +13,7 @@ export class PasswordResetService implements IPasswordReset {
 
   constructor(
     @Optional()
-    @Inject(authConfig)
+    @Inject(AUTH_CONFIG)
     private config: AuthConfig,
     private httpClient: HttpClient,
   ) {

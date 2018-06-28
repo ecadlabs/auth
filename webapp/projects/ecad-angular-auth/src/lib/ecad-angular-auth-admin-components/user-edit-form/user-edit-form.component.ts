@@ -1,9 +1,10 @@
 import { Component, OnInit, Inject } from '@angular/core';
 import { MatDialogRef, MAT_DIALOG_DATA } from '@angular/material';
-import { UsersService } from '../../ecad-angular-auth-admin/users/users.service';
 import { FormBuilder, Form, FormGroup, Validators } from '@angular/forms';
 import { MinSelection } from './user-edit-form.validators';
 import { User, CreateUser } from '../../ecad-angular-auth-admin/interfaces';
+import { USERS_SERVICE } from '../../ecad-angular-auth-admin/tokens';
+import { IUsersService } from '../../ecad-angular-auth-admin/interfaces/user-service.i';
 
 @Component({
   selector: 'auth-user-edit-form',
@@ -19,7 +20,8 @@ export class UserEditFormComponent implements OnInit {
     private dialogRef: MatDialogRef<User>,
     @Inject(MAT_DIALOG_DATA)
     public dialogData: User | null,
-    private userService: UsersService,
+    @Inject(USERS_SERVICE)
+    private userService: IUsersService,
     private _fb: FormBuilder,
   ) { }
 

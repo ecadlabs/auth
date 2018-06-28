@@ -1,6 +1,6 @@
 import { Component, OnInit, Inject } from '@angular/core';
 import { Router } from '@angular/router';
-import { LoginService, PasswordReset } from '../../ecad-angular-auth/tokens';
+import { LOGIN_SERVICE, PASSWORD_RESET } from '../../ecad-angular-auth/tokens';
 import { ILoginService, IPasswordReset } from '../../ecad-angular-auth/interfaces';
 import { FormBuilder, Validators, FormGroup, AbstractControl } from '@angular/forms';
 import { getParameterByName } from '../../utils';
@@ -21,7 +21,7 @@ export class ResetPasswordFormComponent implements OnInit {
   public resetPasswordForm: FormGroup;
 
   constructor(
-    @Inject(PasswordReset)
+    @Inject(PASSWORD_RESET)
     private resetPassword: IPasswordReset,
     private router: Router,
     fb: FormBuilder,

@@ -1,1 +1,2 @@
-export const authAdminConfig = 'AUTH_ADMIN_CONFIG_TOKEN';
+export const AUTH_ADMIN_CONFIG = 'AUTH_ADMIN_CONFIG_TOKEN';
+export const USERS_SERVICE = 'USER_SERVICE_TOKEN';

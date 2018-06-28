@@ -1,17 +1,18 @@
 import { Injectable, Inject } from '@angular/core';
 import { ResourcesService, PagedResult, FilterCondition } from '../../resource-util/resources.service';
 import { AuthAdminConfig, CreateUser, User, UpdateUser } from '../interfaces';
-import { authAdminConfig } from '../tokens';
+import { AUTH_ADMIN_CONFIG } from '../tokens';
 import { Observable } from 'rxjs';
+import { IUsersService } from '../interfaces/user-service.i';
 
 @Injectable({
   providedIn: 'root'
 })
-export class UsersService {
+export class UsersService implements IUsersService {
 
   constructor(
     private resourcesService: ResourcesService<User, CreateUser>,
-    @Inject(authAdminConfig)
+    @Inject(AUTH_ADMIN_CONFIG)
     private authAdminConfigVal: AuthAdminConfig
   ) { }
 
