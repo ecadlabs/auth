@@ -73,7 +73,7 @@ build-auth-webapp-packages:
     - cat package.json | jq '.version'
     - npm version patch
     - cat package.json | jq '.version'
-    - npm publish --registry http://npm.ecadlabs.com --tag ${CI_COMMIT_REF_NAME}
+    - npm publish --registry http://npm.ecadlabs.com
     - npm show ecad-angular-auth version --registry http://npm.ecadlabs.com
   only:
   - tags
