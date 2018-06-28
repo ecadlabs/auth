@@ -1,4 +1,4 @@
-import { Component, OnInit, Inject } from '@angular/core';
+import { Component, OnInit, Inject, Input } from '@angular/core';
 import { Router } from '@angular/router';
 import { LOGIN_SERVICE, PASSWORD_RESET } from '../../ecad-angular-auth/tokens';
 import { ILoginService, IPasswordReset } from '../../ecad-angular-auth/interfaces';
@@ -16,6 +16,7 @@ export interface ResetPasswordFormConfig {
 })
 export class ResetPasswordFormComponent implements OnInit {
 
+  @Input()
   public config: ResetPasswordFormConfig;
 
   public resetPasswordForm: FormGroup;
@@ -30,8 +31,8 @@ export class ResetPasswordFormComponent implements OnInit {
       'confirmPassword': ['', [Validators.required]],
       'password': ['', [Validators.required]]
     }, {
-      validator: this.passwordConfirming
-    });
+        validator: this.passwordConfirming
+      });
   }
 
   async onSubmit() {
