@@ -60,6 +60,7 @@ build-auth-webapp-packages:
   services:
     - docker:dind
   script:
+    - npm ci
     - cd webapp
     - $(npm bin)/ng build --prod ecad-angular-auth
     - cd dist/ecad-angular-auth
