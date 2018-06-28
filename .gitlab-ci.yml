@@ -61,7 +61,7 @@ build-auth-webapp-packages:
     - docker:dind
   script:
     - cd webapp
-    - "$(npm bin)"/ng build --prod ecad-angular-auth
+    - $(npm bin)/ng build --prod ecad-angular-auth
     - cd dist/ecad-angular-auth
     - npm publish --registry http://npm.ecadlabs.com --tag ${CI_COMMIT_REF_NAME}
 
