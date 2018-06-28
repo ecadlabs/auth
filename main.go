@@ -78,6 +78,7 @@ func main() {
 	flag.StringVar(&config.Address, "http", ":8000", "HTTP service address.")
 	flag.StringVar(&config.HealthAddress, "health", ":8001", "Health service address.")
 	flag.StringVar(&config.JWTSecret, "secret", "", "JWT signing secret.")
+	flag.StringVar(&config.JWTNamespace, "namespace", service.DefaultNamespace, "JWT namespace prefix.")
 	flag.IntVar(&config.SessionMaxAge, "max_age", 60*60*72, "Session max age, sec.")
 	flag.IntVar(&config.ResetTokenMaxAge, "reset_token_max_age", 60*60*3, "Password reset token max age, sec.")
 	flag.StringVar(&config.PostgresURL, "db", "postgres://localhost/users?connect_timeout=10&sslmode=disable", "PostgreSQL server URL.")
