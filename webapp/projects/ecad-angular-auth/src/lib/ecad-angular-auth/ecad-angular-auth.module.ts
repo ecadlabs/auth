@@ -7,7 +7,6 @@ import { AuthConfig } from './interfaces';
 import { PasswordResetService } from './password-reset/password-reset.service';
 import { IpWhiteListedGuard } from './guards/ip-whitelisted.guard';
 import { LoggedinGuard } from './guards/loggedin.guard';
-import { PermissionsGuard } from './guards/permissions.guard';
 import { EcadPermissionsDirective } from './ecad-permissions.directive';
 
 export const blacklistedRoutes = [];
@@ -22,7 +21,7 @@ export function tokenGetter() {
     HttpClientModule,
   ],
   declarations: [EcadPermissionsDirective],
-  exports: [EcadPermissionsDirective]
+  exports: []
 })
 export class EcadAngularAuthModule {
   public static forRoot(config: AuthConfig): ModuleWithProviders {
@@ -40,8 +39,7 @@ export class EcadAngularAuthModule {
         { provide: LOGIN_SERVICE, useClass: StandardLoginService },
         { provide: PASSWORD_RESET, useClass: PasswordResetService },
         IpWhiteListedGuard,
-        LoggedinGuard,
-        PermissionsGuard
+        LoggedinGuard
       ]
     };
   }
