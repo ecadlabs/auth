@@ -2,9 +2,11 @@ package service
 
 import (
 	"database/sql"
+	"log"
 	"net/http"
 	"net/mail"
 	"net/url"
+	"os"
 	"strconv"
 	"time"
 
@@ -132,6 +134,34 @@ func (s *Service) APIHandler() http.Handler {
 	m.Methods("POST").Path("/password_reset").HandlerFunc(usersHandler.ResetPassword)
 	m.Methods("GET", "POST").Path("/request_password_reset").HandlerFunc(usersHandler.SendResetRequest)
 	m.Methods("GET", "POST").Path("/login").HandlerFunc(usersHandler.Login)
+
+	//TODO replace this "feature" with "ServiceAccount" concept.
+	//Visitors can "log in" using their source IP address alone, and will get a
+	//JWT token in return
+	//
+	// See gitlab issue ecad/auth#29
+	ipCheckMiddleware, err := middleware.NewIPAccessChecker([]string{
+		"10.60.58.5/32",
+		"208.92.18.70/32",    //Simon montreal
+		"216.232.49.35/32",   //ECADLabs vancouver
+		"217.194.176.242/32", //NOC
+		"217.194.176.254/32", //NOC
+		"217.194.177.209/32", //VPN from vancouver
+		// "172.19.0.0/24",      //Docker default class C for dev
+	})
+
+	if err != nil {
+		log.Printf("Error setting up IP Access Checker middleware %e", err)
+		os.Exit(1)
+	}
+
+	// /checkip checks if the RequestIP is in our access list
+	m.Methods("GET").
+		Path("/checkip").
+		Handler(ipCheckMiddleware.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+			return
+		})))
 
 	userdata := middleware.UserData{
 		TokenContextKey: handlers.TokenContextKey,
