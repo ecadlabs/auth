@@ -21,7 +21,7 @@ export function tokenGetter() {
     HttpClientModule,
   ],
   declarations: [EcadPermissionsDirective],
-  exports: []
+  exports: [EcadPermissionsDirective]
 })
 export class EcadAngularAuthModule {
   public static forRoot(config: AuthConfig): ModuleWithProviders {
@@ -39,7 +39,8 @@ export class EcadAngularAuthModule {
         { provide: LOGIN_SERVICE, useClass: StandardLoginService },
         { provide: PASSWORD_RESET, useClass: PasswordResetService },
         IpWhiteListedGuard,
-        LoggedinGuard
+        LoggedinGuard,
+        RoleGuard
       ]
     };
   }

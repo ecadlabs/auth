@@ -26,7 +26,6 @@ export class StandardLoginService implements ILoginService {
       const rawToken = this.config.tokenGetter() || null;
       return !!(rawToken && !this.jwtHelper.isTokenExpired(rawToken));
     }),
-    distinctUntilChanged()
   );
 
   private readonly DEFAULT_PREFIX = 'com.ecadlabs.auth';
