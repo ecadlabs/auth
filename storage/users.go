@@ -254,8 +254,9 @@ func errPatchPath(p string) error {
 }
 
 var updatePaths = map[string]struct{}{
-	"email": struct{}{},
-	"name":  struct{}{},
+	// "email":         struct{}{}, // TODO
+	"name":          struct{}{},
+	"password_hash": struct{}{},
 }
 
 func (s *Storage) UpdateUser(ctx context.Context, id uuid.UUID, ops *UserOps) (user *User, err error) {
