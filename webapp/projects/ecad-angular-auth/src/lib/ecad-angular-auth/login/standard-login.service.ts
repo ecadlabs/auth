@@ -29,6 +29,8 @@ export class StandardLoginService implements ILoginService {
     distinctUntilChanged()
   );
 
+  private readonly DEFAULT_PREFIX = 'com.ecadlabs.auth';
+
   constructor(
     @Optional()
     @Inject(AUTH_CONFIG)
@@ -64,10 +66,18 @@ export class StandardLoginService implements ILoginService {
     };
   }
 
-  private get token() {
+  private getPrefixed(token: any, propName: string) {
+    return token[`${this.config.tokenPropertyPrefix || this.DEFAULT_PREFIX}/${propName}`];
+  }
+
+  private get token(): UserToken {
     const token = this.config.tokenGetter();
     if (token) {
-      return this.jwtHelper.decodeToken(token);
+      const decodedToken = this.jwtHelper.decodeToken(token);
+      const email = this.getPrefixed(decodedToken, 'email');
+      const name = this.getPrefixed(decodedToken, 'name');
+      const roles = this.getPrefixed(decodedToken, 'roles');
+      return { email, name, roles, ...decodedToken };
     } else {
       return null;
     }
@@ -87,6 +97,10 @@ export class StandardLoginService implements ILoginService {
   * Check if the ip is whitelisted by querying the whiteListUrl provided in authConfig
   */
   public get isIpWhiteListed(): Observable<Boolean> {
+    if (!this.config.whiteListUrl) {
+      throw new Error('Please configure whiteListUrl to enable this feature');
+    }
+
     return this.httpClient.get(this.config.whiteListUrl, { observe: 'response' }).pipe(
       map((response) => String(response.status) === '200'),
       catchError((err, response) => observableOf(false)));
