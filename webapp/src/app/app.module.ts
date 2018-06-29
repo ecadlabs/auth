@@ -8,8 +8,10 @@ import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import {
   EcadAngularAuthModule,
   LoggedinGuard,
+  IpWhiteListedGuard,
+  PermissionsGuard,
   EcadAngularAuthAdminComponentsModule,
-  EcadAngularAuthAdminModule
+  EcadAngularAuthAdminModule,
 } from 'ecad-angular-auth';
 import {
   EcadAngularAuthComponentsModule
@@ -33,12 +35,16 @@ export function tokenSetter(value: string) { localStorage.setItem('token', value
   imports: [
     EcadAngularAuthModule.forRoot({
       loginUrl: '/api/v1/login',
-      whiteListUrl: 'test',
+      whiteListUrl: '/api/v1/checkip',
       tokenGetter,
       tokenSetter,
       passwordResetUrl: '/api/v1/password_reset',
       sendResetEmailUrl: '/api/v1/request_password_reset',
       loginPageUrl: '',
+      tokenPropertyPrefix: 'com.ecadlabs.auth',
+      rolesPermissionsMapping: {
+        'com.ecadlabs.auth.admin': ['show.is-admin']
+      }
     }),
     EcadAngularAuthComponentsModule,
     EcadAngularAuthAdminComponentsModule,
@@ -55,7 +61,7 @@ export function tokenSetter(value: string) { localStorage.setItem('token', value
       { path: '', pathMatch: 'full', component: LoginComponent },
       { path: 'reset-password', component: ResetPasswordComponent },
       { path: 'reset-password-email', component: ResetPasswordEmailComponent },
-      { path: 'protected', component: ProtectedComponent, canActivate: [LoggedinGuard] }
+      { path: 'protected', component: ProtectedComponent, data: { permissions: ['show.is-admin', 'show.boo'] }, canActivate: [LoggedinGuard, PermissionsGuard] }
     ]),
     MatToolbarModule,
   ],

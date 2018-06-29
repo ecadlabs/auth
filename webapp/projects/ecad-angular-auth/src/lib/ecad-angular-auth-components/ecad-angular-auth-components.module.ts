@@ -6,6 +6,7 @@ import { MatInputModule, MatCardModule, MatButtonModule } from '@angular/materia
 import { ResetPasswordFormComponent } from './reset-password-form/reset-password-form.component';
 import { ResetPasswordEmailFormComponent } from './reset-password-email-form/reset-password-email-form.component';
 import { AlertComponent } from './alert/alert.component';
+// import { EcadPermissionsDirective } from './ecad-permissions.directive';
 
 @NgModule({
   imports: [

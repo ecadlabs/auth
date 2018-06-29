@@ -67,7 +67,7 @@ export class StandardLoginService implements ILoginService {
   }
 
   private getPrefixed(token: any, propName: string) {
-    return token[`${this.config.tokenPropertyPrefix || this.DEFAULT_PREFIX}/${propName}`];
+    return token[`${this.config.tokenPropertyPrefix || this.DEFAULT_PREFIX}.${propName}`];
   }
 
   private get token(): UserToken {
@@ -104,6 +104,22 @@ export class StandardLoginService implements ILoginService {
     return this.httpClient.get(this.config.whiteListUrl, { observe: 'response' }).pipe(
       map((response) => String(response.status) === '200'),
       catchError((err, response) => observableOf(false)));
+  }
+
+  public hasPermissions(permissions: string[]): Observable<boolean> {
+    return this.user.pipe(
+      map((user) => {
+        if (!user) {
+          return new Set();
+        }
+
+        return user.roles.reduce((prevSet: Set<string>, role) => {
+          this.config.rolesPermissionsMapping[role].forEach((permission) => prevSet.add(permission));
+          return prevSet;
+        }, new Set<string>());
+      }),
+      map((permissionsSet) => permissions.every(permission => permissionsSet.has(permission)))
+    );
   }
 
   /*

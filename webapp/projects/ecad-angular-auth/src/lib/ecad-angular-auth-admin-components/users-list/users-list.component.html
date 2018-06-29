@@ -5,62 +5,63 @@
       <mat-header-cell class="col-lg" *matHeaderCellDef mat-sort-header i18n> Email </mat-header-cell>
       <mat-cell class="col-lg" *matCellDef="let element"> {{element.email}} </mat-cell>
     </ng-container>
-  
+
     <ng-container matColumnDef="name">
-        <mat-header-cell class="col-lg" *matHeaderCellDef mat-sort-header i18n> Name </mat-header-cell>
-        <mat-cell class="col-lg" *matCellDef="let element"> {{element.name}} </mat-cell>
-      </ng-container>
-  
+      <mat-header-cell class="col-lg" *matHeaderCellDef mat-sort-header i18n> Name </mat-header-cell>
+      <mat-cell class="col-lg" *matCellDef="let element"> {{element.name}} </mat-cell>
+    </ng-container>
+
     <ng-container matColumnDef="email_verified">
       <mat-header-cell class="col-lg" *matHeaderCellDef mat-sort-header i18n> Verfied </mat-header-cell>
       <mat-cell class="col-lg" *matCellDef="let element"> {{element.email_verified}} </mat-cell>
     </ng-container>
-  
+
     <ng-container matColumnDef="added">
       <mat-header-cell class="col-lg" *matHeaderCellDef mat-sort-header i18n> Added </mat-header-cell>
       <mat-cell class="col-lg" *matCellDef="let element"> {{element.added | date:"dd-MM-yyyy HH:mm"}} </mat-cell>
     </ng-container>
-  
+
     <ng-container matColumnDef="modified">
       <mat-header-cell class="col-lg" *matHeaderCellDef mat-sort-header i18n> Modified </mat-header-cell>
       <mat-cell class="col-lg" *matCellDef="let element"> {{element.modified | date:"dd-MM-yyyy HH:mm"}} </mat-cell>
     </ng-container>
-  
+
     <ng-container matColumnDef="roles">
       <mat-header-cell class="col-lg" *matHeaderCellDef mat-sort-header i18n> Roles </mat-header-cell>
       <mat-cell class="col-lg" *matCellDef="let element"> {{getDisplayRoles(element)}} </mat-cell>
     </ng-container>
-  
+
     <ng-container matColumnDef='edit'>
-        <mat-header-cell class="col-lg" *matHeaderCellDef mat-sort-header></mat-header-cell>
-        <mat-cell class="col-lg" *matCellDef="let element">
-          <button mat-raised-button (click)='updateUser(element)' color='primary'>
-              <mat-icon>edit</mat-icon>
-          </button>
-        </mat-cell>
+      <mat-header-cell class="col-lg" *matHeaderCellDef mat-sort-header></mat-header-cell>
+      <mat-cell class="col-lg" *matCellDef="let element">
+        <button mat-raised-button (click)='updateUser(element)' color='primary'>
+          <mat-icon>edit</mat-icon>
+        </button>
+      </mat-cell>
     </ng-container>
-  
+
     <ng-container matColumnDef='delete'>
-        <mat-header-cell class="col-lg" *matHeaderCellDef mat-sort-header></mat-header-cell>
-        <mat-cell class="col-lg" *matCellDef="let element">
-          <button mat-raised-button (click)='delete(element)' color='primary'>
-            <mat-icon>archive</mat-icon>
-          </button>
-        </mat-cell>
+      <mat-header-cell class="col-lg" *matHeaderCellDef mat-sort-header></mat-header-cell>
+      <mat-cell class="col-lg" *matCellDef="let element">
+        <button mat-raised-button (click)='delete(element)' color='primary'>
+          <mat-icon>archive</mat-icon>
+        </button>
+      </mat-cell>
     </ng-container>
-  
+
     <ng-container matColumnDef='reset-password'>
-        <mat-header-cell class="col-lg" *matHeaderCellDef mat-sort-header></mat-header-cell>
-        <mat-cell class="col-lg" *matCellDef="let element">
-          <button mat-raised-button (click)='resetPassword(element)' color='primary'>
-            Reset Password
-          </button>
-        </mat-cell>
+      <mat-header-cell class="col-lg" *matHeaderCellDef mat-sort-header></mat-header-cell>
+      <mat-cell class="col-lg" *matCellDef="let element">
+        <button mat-raised-button (click)='resetPassword(element)' color='primary'>
+          Reset Password
+        </button>
+      </mat-cell>
     </ng-container>
 
     <mat-header-row *matHeaderRowDef="displayedColumns"></mat-header-row>
     <mat-row *matRowDef="let row; columns: displayedColumns;"></mat-row>
   </mat-table>
-  <mat-paginator (page)='changePage($event)' [length]="((dataSource.pageInfo$ | async) || {totalCount: 0}).totalCount" [pageSize]="20" [pageSizeOptions]="[20]">
+  <mat-paginator (page)='changePage($event)' [length]="((dataSource.pageInfo$ | async) || {totalCount: 0}).totalCount" [pageSize]="20"
+    [pageSizeOptions]="[20]">
   </mat-paginator>
 </div>

@@ -9,4 +9,5 @@ export interface ILoginService<T = {}> {
     isLoggedIn: Observable<Boolean>;
     login(credentials: Credentials): Observable<LoginResult>;
     logout(): Observable<Boolean>;
+    hasPermissions(permissions: string[]): Observable<boolean>;
 }

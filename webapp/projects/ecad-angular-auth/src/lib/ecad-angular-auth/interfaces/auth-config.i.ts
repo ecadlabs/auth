@@ -8,4 +8,7 @@ export interface AuthConfig {
     loginPageUrl: string;
     autoRefreshInterval?: number;
     tokenPropertyPrefix?: string;
+    rolesPermissionsMapping: {
+        [key: string]: string[]
+    };
 }
