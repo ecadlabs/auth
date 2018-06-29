@@ -26,7 +26,6 @@ export class StandardLoginService implements ILoginService {
       const rawToken = this.config.tokenGetter() || null;
       return !!(rawToken && !this.jwtHelper.isTokenExpired(rawToken));
     }),
-    distinctUntilChanged()
   );
 
   private readonly DEFAULT_PREFIX = 'com.ecadlabs.auth';
@@ -67,7 +66,7 @@ export class StandardLoginService implements ILoginService {
   }
 
   private getPrefixed(token: any, propName: string) {
-    return token[`${this.config.tokenPropertyPrefix || this.DEFAULT_PREFIX}/${propName}`];
+    return token[`${this.config.tokenPropertyPrefix || this.DEFAULT_PREFIX}.${propName}`];
   }
 
   private get token(): UserToken {
