@@ -279,6 +279,31 @@ func (u *Users) PatchUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if _, ok := ops.Update["password_hash"]; ok {
+		utils.JSONError(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
+
+	if v, ok := ops.Update["password"]; ok {
+		delete(ops.Update, "password")
+
+		if p, ok := v.(string); ok {
+			if p == "" {
+				utils.JSONError(w, "Password is empty", http.StatusBadRequest)
+				return
+			}
+
+			hash, err := bcrypt.GenerateFromPassword([]byte(p), bcrypt.DefaultCost)
+			if err != nil {
+				log.Error(err)
+				utils.JSONError(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			ops.Update["password_hash"] = hash
+		}
+	}
+
 	userRoles := self.Roles.Get()
 
 	if err = userRoles.IsGranted(permissionModify, map[string]interface{}{
