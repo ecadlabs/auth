@@ -3,16 +3,16 @@ import { CanActivate, ActivatedRouteSnapshot, RouterStateSnapshot } from '@angul
 import { Observable } from 'rxjs';
 import { Router } from '@angular/router';
 import { ILoginService, AuthConfig } from '../interfaces';
-import { LoginService, authConfig } from '../tokens';
+import { LOGIN_SERVICE, AUTH_CONFIG } from '../tokens';
 import { map } from 'rxjs/operators';
 
 @Injectable()
 export class LoggedinGuard implements CanActivate {
 
   constructor(
-    @Inject(LoginService) protected loginService: ILoginService,
+    @Inject(LOGIN_SERVICE) protected loginService: ILoginService,
     @Optional()
-    @Inject(authConfig)
+    @Inject(AUTH_CONFIG)
     protected config: AuthConfig,
     protected router: Router
   ) { }

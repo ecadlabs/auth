@@ -10,5 +10,6 @@ RUN npm run-script build-prod
 
 FROM nginx:alpine
 COPY nginx_default.conf /etc/nginx/conf.d/default.conf
-COPY --from=build-env /app/dist /usr/share/nginx/html
+RUN rm -rf /usr/share/nginx/html
+COPY --from=build-env /app/dist/webapp /usr/share/nginx/html
 

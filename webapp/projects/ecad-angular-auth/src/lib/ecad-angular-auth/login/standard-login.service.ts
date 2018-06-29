@@ -4,7 +4,7 @@ import { JwtHelperService } from '@auth0/angular-jwt';
 
 import { map, catchError, tap, filter, switchMap, distinctUntilChanged } from 'rxjs/operators';
 import { of as observableOf, Observable, Observer, BehaviorSubject, interval } from 'rxjs';
-import { authConfig } from '../tokens';
+import { AUTH_CONFIG } from '../tokens';
 import { ILoginService, Credentials, AuthConfig, LoginResult, UserToken } from '../interfaces';
 
 @Injectable({
@@ -16,22 +16,24 @@ export class StandardLoginService implements ILoginService {
   public user: BehaviorSubject<UserToken> = new BehaviorSubject(this.token);
 
   private readonly postLoginOperations = [
-    tap((result: {token: string}) => localStorage.setItem(this.config.tokenName, result.token)),
-    tap((result: {refresh: string}) => localStorage.setItem('refreshTokenUrl', result.refresh)),
+    tap((result: { token: string }) => this.config.tokenSetter(result.token)),
+    tap((result: { refresh: string }) => localStorage.setItem('refreshTokenUrl', result.refresh)),
     tap(() => this.user.next(this.token))
   ];
 
   public isLoggedIn: Observable<Boolean> = this.user.pipe(
     map(() => {
-      const rawToken = localStorage.getItem(this.config.tokenName) || null;
+      const rawToken = this.config.tokenGetter() || null;
       return !!(rawToken && !this.jwtHelper.isTokenExpired(rawToken));
     }),
     distinctUntilChanged()
   );
 
+  private readonly DEFAULT_PREFIX = 'com.ecadlabs.auth';
+
   constructor(
     @Optional()
-    @Inject(authConfig)
+    @Inject(AUTH_CONFIG)
     private config: AuthConfig,
     private httpClient: HttpClient,
     private jwtHelper: JwtHelperService
@@ -45,13 +47,13 @@ export class StandardLoginService implements ILoginService {
       switchMap(() => this.user),
       switchMap((user) => {
         return interval(this.AUTO_REFRESH_INTERVAL)
-        .pipe(switchMap(() => {
-          return this.refreshToken().pipe(catchError(() => observableOf(false)));
-        }));
+          .pipe(switchMap(() => {
+            return this.refreshToken().pipe(catchError(() => observableOf(false)));
+          }));
       }),
       tap(() => this.user.next(this.token))
     )
-    .subscribe();
+      .subscribe();
   }
 
   private createRequestOptions(credential: Credentials) {
@@ -64,10 +66,18 @@ export class StandardLoginService implements ILoginService {
     };
   }
 
-  private get token() {
-    const token = localStorage.getItem(this.config.tokenName);
+  private getPrefixed(token: any, propName: string) {
+    return token[`${this.config.tokenPropertyPrefix || this.DEFAULT_PREFIX}/${propName}`];
+  }
+
+  private get token(): UserToken {
+    const token = this.config.tokenGetter();
     if (token) {
-      return this.jwtHelper.decodeToken(token);
+      const decodedToken = this.jwtHelper.decodeToken(token);
+      const email = this.getPrefixed(decodedToken, 'email');
+      const name = this.getPrefixed(decodedToken, 'name');
+      const roles = this.getPrefixed(decodedToken, 'roles');
+      return { email, name, roles, ...decodedToken };
     } else {
       return null;
     }
@@ -87,6 +97,10 @@ export class StandardLoginService implements ILoginService {
   * Check if the ip is whitelisted by querying the whiteListUrl provided in authConfig
   */
   public get isIpWhiteListed(): Observable<Boolean> {
+    if (!this.config.whiteListUrl) {
+      throw new Error('Please configure whiteListUrl to enable this feature');
+    }
+
     return this.httpClient.get(this.config.whiteListUrl, { observe: 'response' }).pipe(
       map((response) => String(response.status) === '200'),
       catchError((err, response) => observableOf(false)));
@@ -97,7 +111,7 @@ export class StandardLoginService implements ILoginService {
   */
   public logout(): Observable<Boolean> {
     return Observable.create((observer: Observer<Boolean>) => {
-      localStorage.setItem(this.config.tokenName, '');
+      this.config.tokenSetter('');
       this.user.next(this.token);
       observer.next(true);
     });
@@ -108,10 +122,10 @@ export class StandardLoginService implements ILoginService {
   */
   public refreshToken(): Observable<boolean> {
     return this.httpClient
-    .get(localStorage.getItem('refreshTokenUrl'))
-    .pipe(
-      ...this.postLoginOperations,
-      map(() => true)
-    );
+      .get(localStorage.getItem('refreshTokenUrl'))
+      .pipe(
+        ...this.postLoginOperations,
+        map(() => true)
+      );
   }
 }

@@ -1,7 +1,8 @@
 import { Component, OnInit, Inject, Input } from '@angular/core';
 import { Router } from '@angular/router';
-import { LoginService, ILoginService } from 'projects/ecad-angular-auth/src/public_api';
 import { FormBuilder, Validators, FormGroup } from '@angular/forms';
+import { ILoginService } from '../../ecad-angular-auth/interfaces';
+import { LOGIN_SERVICE } from '../../ecad-angular-auth/tokens';
 
 export interface LoginFormConfig {
   successUrlRedirect: string;
@@ -20,7 +21,7 @@ export class LoginComponent {
   public loginForm: FormGroup;
 
   constructor(
-    @Inject(LoginService)
+    @Inject(LOGIN_SERVICE)
     private loginService: ILoginService,
     private router: Router,
     fb: FormBuilder,
@@ -29,7 +30,7 @@ export class LoginComponent {
       'username': ['', [Validators.required]],
       'password': ['', [Validators.required]]
     });
-   }
+  }
 
   async onSubmit() {
     await this.loginService.login(this.loginForm.value).toPromise();

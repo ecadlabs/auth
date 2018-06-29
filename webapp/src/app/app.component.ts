@@ -1,6 +1,5 @@
 import { Component, Inject } from '@angular/core';
-import { LoginService, ILoginService } from 'ecad-angular-auth';
-import { map } from 'rxjs/operators';
+import { LOGIN_SERVICE, ILoginService } from 'ecad-angular-auth';
 
 @Component({
   selector: 'app-root',
@@ -11,7 +10,7 @@ export class AppComponent {
   title = 'app';
 
   constructor(
-    @Inject(LoginService)
+    @Inject(LOGIN_SERVICE)
     private loginService: ILoginService,
   ) {
 

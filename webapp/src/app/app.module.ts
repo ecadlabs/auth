@@ -5,7 +5,12 @@ import { RouterModule } from '@angular/router';
 import { MatToolbarModule } from '@angular/material';
 import { AppComponent } from './app.component';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
-import { EcadAngularAuthModule, LoggedinGuard } from 'ecad-angular-auth';
+import {
+  EcadAngularAuthModule,
+  LoggedinGuard,
+  EcadAngularAuthAdminComponentsModule,
+  EcadAngularAuthAdminModule
+} from 'ecad-angular-auth';
 import {
   EcadAngularAuthComponentsModule
 } from 'projects/ecad-angular-auth/src/lib/ecad-angular-auth-components/ecad-angular-auth-components.module';
@@ -13,12 +18,9 @@ import { LoginComponent } from './login/login.component';
 import { ResetPasswordComponent } from './reset-password/reset-password.component';
 import { ResetPasswordEmailComponent } from './reset-password-email/reset-password-email.component';
 import { ProtectedComponent } from './protected/protected.component';
-import {
-  EcadAngularAuthAdminComponentsModule
-} from 'projects/ecad-angular-auth/src/lib/ecad-angular-auth-admin-components/ecad-angular-auth-admin-components.module';
-import { EcadAngularAuthAdminModule } from 'projects/ecad-angular-auth/src/lib/ecad-angular-auth-admin/ecad-angular-auth-admin.module';
 
-
+export function tokenGetter() { return localStorage.getItem('token'); }
+export function tokenSetter(value: string) { localStorage.setItem('token', value); }
 
 @NgModule({
   declarations: [
@@ -32,7 +34,8 @@ import { EcadAngularAuthAdminModule } from 'projects/ecad-angular-auth/src/lib/e
     EcadAngularAuthModule.forRoot({
       loginUrl: '/api/v1/login',
       whiteListUrl: 'test',
-      tokenName: 'token',
+      tokenGetter,
+      tokenSetter,
       passwordResetUrl: '/api/v1/password_reset',
       sendResetEmailUrl: '/api/v1/request_password_reset',
       loginPageUrl: '',

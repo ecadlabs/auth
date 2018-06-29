@@ -1,12 +1,13 @@
 import { Component, OnInit, ViewChild, Inject } from '@angular/core';
 import { FilteredDatasource } from '../../filterable-datasource/filtered-datasource';
-import { UsersService } from '../../ecad-angular-auth-admin/users/users.service';
 import { Subject } from 'rxjs';
 import { UserEditFormComponent } from '../user-edit-form/user-edit-form.component';
 import { IPasswordReset } from '../../ecad-angular-auth/interfaces';
-import { PasswordReset } from '../../ecad-angular-auth/tokens';
+import { PASSWORD_RESET } from '../../ecad-angular-auth/tokens';
 import { User } from '../../ecad-angular-auth-admin/interfaces';
-import { MatSort, MatDialog, MatSnackBar, DialogPosition } from '@angular/material';
+import { MatSort, MatDialog, MatSnackBar } from '@angular/material';
+import { IUsersService } from '../../ecad-angular-auth-admin/interfaces/user-service.i';
+import { USERS_SERVICE } from '../../ecad-angular-auth-admin/tokens';
 
 @Component({
   selector: 'auth-users-list',
@@ -33,9 +34,10 @@ export class UsersListComponent implements OnInit {
   ];
 
   constructor(
-    private userService: UsersService,
+    @Inject(USERS_SERVICE)
+    private userService: IUsersService,
     private dialog: MatDialog,
-    @Inject(PasswordReset)
+    @Inject(PASSWORD_RESET)
     private passwordReset: IPasswordReset,
     private snackBar: MatSnackBar
   ) { }
@@ -45,7 +47,7 @@ export class UsersListComponent implements OnInit {
   }
 
   changePage($event) {
-    this.dataSource.pageInfo$.subscribe(({currentPage}) => {
+    this.dataSource.pageInfo$.subscribe(({ currentPage }) => {
       if (currentPage > $event.value) {
         this.prevousPage$.next();
       } else {
@@ -65,34 +67,34 @@ export class UsersListComponent implements OnInit {
 
   getDisplayRoles(user: User) {
     return this.userService.getRoles()
-    .filter(({value}) => Object.keys(user.roles).includes(value))
-    .map(({displayValue}) => displayValue);
+      .filter(({ value }) => Object.keys(user.roles).includes(value))
+      .map(({ displayValue }) => displayValue);
   }
   async resetPassword(user: User) {
     await this.passwordReset.sendResetEmail(user.email).toPromise();
-    this.snackBar.open('Reset password email sent', undefined, { duration: 2000, horizontalPosition: 'end'});
+    this.snackBar.open('Reset password email sent', undefined, { duration: 2000, horizontalPosition: 'end' });
   }
 
   updateUser(user: User) {
-    this.dialog.open(UserEditFormComponent, {data: user, width: '500px' })
-    .afterClosed()
-    .subscribe(() => {
-      this.dataSource.refresh();
-    });
+    this.dialog.open(UserEditFormComponent, { data: user, width: '500px' })
+      .afterClosed()
+      .subscribe(() => {
+        this.dataSource.refresh();
+      });
   }
 
   addUser() {
-    this.dialog.open(UserEditFormComponent, {width: '500px'})
-    .afterClosed()
-    .subscribe(() => {
-      this.dataSource.refresh();
-    });
+    this.dialog.open(UserEditFormComponent, { width: '500px' })
+      .afterClosed()
+      .subscribe(() => {
+        this.dataSource.refresh();
+      });
   }
 
   delete(user: User) {
     this.userService.delete(user.id)
-    .subscribe(() => {
-      this.dataSource.refresh();
-    });
+      .subscribe(() => {
+        this.dataSource.refresh();
+      });
   }
 }

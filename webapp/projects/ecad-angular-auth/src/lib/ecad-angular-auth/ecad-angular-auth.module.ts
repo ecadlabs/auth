@@ -1,7 +1,7 @@
 import { NgModule, ModuleWithProviders } from '@angular/core';
 import { HttpClientModule } from '@angular/common/http';
 import { JwtModule } from '@auth0/angular-jwt';
-import { authConfig, LoginService, PasswordReset } from './tokens';
+import { AUTH_CONFIG, LOGIN_SERVICE, PASSWORD_RESET } from './tokens';
 import { StandardLoginService } from './login/standard-login.service';
 import { AuthConfig } from './interfaces';
 import { PasswordResetService } from './password-reset/password-reset.service';
@@ -18,27 +18,25 @@ export function tokenGetter() {
 @NgModule({
   imports: [
     HttpClientModule,
-    JwtModule.forRoot({
-      config: {
-        blacklistedRoutes,
-        whitelistedDomains: whiteListedDomain,
-        tokenGetter: tokenGetter,
-      }
-    }),
   ],
   declarations: [],
   exports: []
 })
 export class EcadAngularAuthModule {
   public static forRoot(config: AuthConfig): ModuleWithProviders {
-    tokenName = config.tokenName;
-    blacklistedRoutes.push(config.loginUrl);
     return {
       ngModule: EcadAngularAuthModule,
       providers: [
-        { provide: authConfig, useValue: config },
-        { provide: LoginService, useClass: StandardLoginService },
-        { provide: PasswordReset, useClass: PasswordResetService },
+        ...JwtModule.forRoot({
+          config: {
+            blacklistedRoutes: [config.loginUrl],
+            whitelistedDomains: [new RegExp('^null$'), new RegExp(`.*${location.hostname}.*`)],
+            tokenGetter: config.tokenGetter,
+          }
+        }).providers,
+        { provide: AUTH_CONFIG, useValue: config },
+        { provide: LOGIN_SERVICE, useClass: StandardLoginService },
+        { provide: PASSWORD_RESET, useClass: PasswordResetService },
         IpWhiteListedGuard,
         LoggedinGuard
       ]

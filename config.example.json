@@ -1,15 +1,15 @@
 {
 	"jwt_secret": "secret",
 	"email": {
-		"from_address": "e.asphyx@gmail.com",
-		"driver": "smtp",
+		"from_address": "auth@ecadlabs.com",
+		"driver": "debug",
 		"config": {
 			"address": "smtp.gmail.com:587",
-			"user": "e.asphyx@gmail.com",
+			"user": "auth@ecadlabs.com",
 			"password": ""			
 		},
 		"template": {
-			"reset_url_prefix": "https://auth.ecadlabs.com/reset-password?token=",
+			"reset_url_prefix": "http://localhost:8000/reset-password?token=",
 			"app_name": "ECAD Portal"
 		}
 	}
