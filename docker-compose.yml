@@ -32,6 +32,8 @@ services:
       - -base
       - "http://localhost:8000/api/v1"
       - -bootstrap
+      - -namespace
+      - com.ecadlabs.auth
       - -c
       - /app/config.json
     volumes:
