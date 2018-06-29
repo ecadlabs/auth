@@ -4,13 +4,13 @@ import (
 	"context"
 	"time"
 
-	"git.ecadlabs.com/ecad/auth/users"
+	"git.ecadlabs.com/ecad/auth/storage"
 	log "github.com/sirupsen/logrus"
 )
 
 type NotificationData struct {
-	CurrentUser *users.User
-	TargetUser  *users.User
+	CurrentUser *storage.User
+	TargetUser  *storage.User
 	Token       string
 	TokenMaxAge time.Duration
 }

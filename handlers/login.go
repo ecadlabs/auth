@@ -2,11 +2,10 @@ package handlers
 
 import (
 	"encoding/json"
-	"net"
 	"net/http"
-	"strings"
 	"time"
 
+	"git.ecadlabs.com/ecad/auth/storage"
 	"git.ecadlabs.com/ecad/auth/utils"
 	"github.com/dgrijalva/jwt-go"
 	log "github.com/sirupsen/logrus"
@@ -17,40 +16,25 @@ const (
 	TokenContextKey = "token"
 )
 
-func xff(r *http.Request) string {
-	if fh := r.Header.Get("Forwarded"); fh != "" {
-		chunks := strings.Split(fh, ",")
-
-		for _, c := range chunks {
-			opts := strings.Split(strings.TrimSpace(c), ";")
-
-			for _, o := range opts {
-				v := strings.SplitN(strings.TrimSpace(o), "=", 2)
-				if len(v) == 2 && v[0] == "for" && v[1] != "" {
-					return v[1]
-				}
-			}
-		}
+func (u *Users) writeUserToken(w http.ResponseWriter, user *storage.User) error {
+	roles := make([]string, 0, len(user.Roles))
+	for r := range user.Roles {
+		roles = append(roles, r)
 	}
 
-	if xfh := r.Header.Get("X-Forwarded-For"); xfh != "" {
-		chunks := strings.Split(xfh, ",")
-		for _, c := range chunks {
-			if c = strings.TrimSpace(c); c != "" {
-				return c
-			}
-		}
+	now := time.Now()
+
+	claims := jwt.MapClaims{
+		"sub": user.ID,
+		"exp": now.Add(u.SessionMaxAge).Unix(),
+		"iat": now.Unix(),
+		"iss": u.BaseURL(),
+		"aud": u.BaseURL(),
+		utils.NSClaim(u.Namespace, "email"): user.Email,
+		utils.NSClaim(u.Namespace, "name"):  user.Name,
+		utils.NSClaim(u.Namespace, "roles"): roles,
 	}
 
-	host, _, err := net.SplitHostPort(r.RemoteAddr)
-	if err == nil {
-		return host
-	}
-
-	return r.RemoteAddr
-}
-
-func (u *Users) writeTokenWithClaims(w http.ResponseWriter, claims jwt.Claims) error {
 	token := jwt.NewWithClaims(u.JWTSigningMethod, claims)
 	secret, err := u.JWTSecretGetter()
 	if err != nil {
@@ -123,46 +107,32 @@ func (u *Users) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	roles := make([]string, 0, len(user.Roles))
-	for r := range user.Roles {
-		roles = append(roles, r)
+	if err := u.Storage.UpdateLoginInfo(u.context(r), user.ID, getRemoteAddr(r)); err != nil {
+		utils.JSONError(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
-	ns := u.Namespace
-	now := time.Now()
-
-	claims := jwt.MapClaims{
-		"sub": user.ID,
-		"exp": now.Add(u.SessionMaxAge).Unix(),
-		"iat": now.Unix(),
-		"iss": u.BaseURL(),
-		"aud": u.BaseURL(),
-		utils.NSClaim(ns, "email"): user.Email,
-		utils.NSClaim(ns, "name"):  user.Name,
-		utils.NSClaim(ns, "roles"): roles,
-	}
-
-	if err := u.writeTokenWithClaims(w, claims); err != nil {
+	if err := u.writeUserToken(w, user); err != nil {
 		utils.JSONError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	// Log
 	if u.AuxLogger != nil {
-		u.AuxLogger.WithFields(logFields(log.Fields{
-			"address": xff(r),
-			"email":   user.Email,
-		}, EvLogin, user.ID, user.ID)).Printf("User %v logged in", user.ID)
+		u.AuxLogger.WithFields(logFields(EvLogin, user.ID, user.ID, r)).WithField("email", user.Email).Printf("User %v logged in", user.ID)
 	}
 }
 
-func (u *Users) Refresh(w http.ResponseWriter, req *http.Request) {
-	claims := req.Context().Value(TokenContextKey).(*jwt.Token).Claims.(jwt.MapClaims)
+func (u *Users) Refresh(w http.ResponseWriter, r *http.Request) {
+	self := r.Context().Value(UserContextKey).(*storage.User)
 
-	// Update timestamp only
-	now := time.Now()
-	claims["exp"] = now.Add(u.SessionMaxAge).Unix()
-	claims["iat"] = now.Unix()
+	if err := u.Storage.UpdateRefreshInfo(u.context(r), self.ID, getRemoteAddr(r)); err != nil {
+		utils.JSONError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
-	u.writeTokenWithClaims(w, claims)
+	if err := u.writeUserToken(w, self); err != nil {
+		utils.JSONError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 }

@@ -4,7 +4,7 @@ import (
 	"context"
 	"net/http"
 
-	"git.ecadlabs.com/ecad/auth/users"
+	"git.ecadlabs.com/ecad/auth/storage"
 	"git.ecadlabs.com/ecad/auth/utils"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/satori/go.uuid"
@@ -22,8 +22,8 @@ type TokenUserData struct {
 
 func (t *TokenUserData) Handler(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		user := users.User{
-			Roles: make(users.Roles),
+		user := storage.User{
+			Roles: make(storage.Roles),
 		}
 		req := r.WithContext(context.WithValue(r.Context(), t.UserContextKey, &user))
 
@@ -65,7 +65,7 @@ func (t *TokenUserData) Handler(h http.Handler) http.Handler {
 
 // Gets user data from DB
 type UserData struct {
-	Storage         *users.Storage
+	Storage         *storage.Storage
 	TokenContextKey string
 	UserContextKey  string
 }
@@ -81,7 +81,7 @@ func (u *UserData) Handler(h http.Handler) http.Handler {
 				var id uuid.UUID
 
 				if id, err = uuid.FromString(sub); err == nil {
-					var user *users.User
+					var user *storage.User
 
 					if user, err = u.Storage.GetUserByID(r.Context(), id); err == nil {
 						if user.EmailVerified {

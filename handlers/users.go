@@ -11,7 +11,7 @@ import (
 	"git.ecadlabs.com/ecad/auth/jsonpatch"
 	"git.ecadlabs.com/ecad/auth/notification"
 	"git.ecadlabs.com/ecad/auth/query"
-	"git.ecadlabs.com/ecad/auth/users"
+	"git.ecadlabs.com/ecad/auth/storage"
 	"git.ecadlabs.com/ecad/auth/utils"
 	"github.com/auth0/go-jwt-middleware"
 	"github.com/dgrijalva/jwt-go"
@@ -27,7 +27,7 @@ const (
 )
 
 type Users struct {
-	Storage *users.Storage
+	Storage *storage.Storage
 	Timeout time.Duration
 
 	SessionMaxAge    time.Duration
@@ -38,6 +38,7 @@ type Users struct {
 	UsersPath   string
 	RefreshPath string
 	ResetPath   string
+	LogPath     string
 	Namespace   string
 
 	Notifier         notification.Notifier
@@ -58,6 +59,10 @@ func (u *Users) ResetURL() string {
 	return u.BaseURL() + u.ResetPath
 }
 
+func (u *Users) LogURL() string {
+	return u.BaseURL() + u.LogPath
+}
+
 func (u *Users) context(r *http.Request) context.Context {
 	if u.Timeout != 0 {
 		ctx, _ := context.WithTimeout(r.Context(), u.Timeout)
@@ -67,7 +72,7 @@ func (u *Users) context(r *http.Request) context.Context {
 }
 
 func errorHTTPStatus(err error) int {
-	if e, ok := err.(*users.Error); ok {
+	if e, ok := err.(*storage.Error); ok {
 		return e.HTTPStatus
 	}
 
@@ -75,7 +80,7 @@ func errorHTTPStatus(err error) int {
 }
 
 func (u *Users) GetUser(w http.ResponseWriter, r *http.Request) {
-	self := r.Context().Value(UserContextKey).(*users.User)
+	self := r.Context().Value(UserContextKey).(*storage.User)
 
 	uid, err := uuid.FromString(mux.Vars(r)["id"])
 	if err != nil {
@@ -104,7 +109,7 @@ func (u *Users) GetUser(w http.ResponseWriter, r *http.Request) {
 
 func (u *Users) GetUsers(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
-	self := r.Context().Value(UserContextKey).(*users.User)
+	self := r.Context().Value(UserContextKey).(*storage.User)
 
 	if err := self.Roles.Get().IsGranted(permissionList, nil); err != nil {
 		log.Error(err)
@@ -159,7 +164,7 @@ func (u *Users) GetUsers(w http.ResponseWriter, r *http.Request) {
 	utils.JSONResponse(w, http.StatusOK, &res)
 }
 
-func (u *Users) resetToken(user *users.User) (string, error) {
+func (u *Users) resetToken(user *storage.User) (string, error) {
 	now := time.Now()
 
 	claims := jwt.MapClaims{
@@ -182,10 +187,9 @@ func (u *Users) resetToken(user *users.User) (string, error) {
 }
 
 func (u *Users) NewUser(w http.ResponseWriter, r *http.Request) {
-	// TODO Email confirmation
-	self := r.Context().Value(UserContextKey).(*users.User)
+	self := r.Context().Value(UserContextKey).(*storage.User)
 
-	var user users.User
+	var user storage.User
 	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
 		log.Error(err)
 		utils.JSONError(w, err.Error(), http.StatusBadRequest)
@@ -237,13 +241,13 @@ func (u *Users) NewUser(w http.ResponseWriter, r *http.Request) {
 
 	// Log
 	if u.AuxLogger != nil {
-		u.AuxLogger.WithFields(logFields(map[string]interface{}{
+		u.AuxLogger.WithFields(logFields(EvCreate, self.ID, ret.ID, r)).WithFields(log.Fields{
 			"email":          ret.Email,
 			"name":           ret.Name,
 			"added":          ret.Added,
 			"email_verified": ret.EmailVerified,
 			"roles":          ret.Roles,
-		}, EvCreate, self.ID, ret.ID)).Printf("User %v created account %v", self.ID, ret.ID)
+		}).Printf("User %v created account %v", self.ID, ret.ID)
 	}
 
 	w.Header().Set("Location", u.UsersURL()+ret.ID.String())
@@ -252,7 +256,7 @@ func (u *Users) NewUser(w http.ResponseWriter, r *http.Request) {
 
 func (u *Users) PatchUser(w http.ResponseWriter, r *http.Request) {
 	// TODO Email verification
-	self := r.Context().Value(UserContextKey).(*users.User)
+	self := r.Context().Value(UserContextKey).(*storage.User)
 
 	uid, err := uuid.FromString(mux.Vars(r)["id"])
 	if err != nil {
@@ -268,7 +272,7 @@ func (u *Users) PatchUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ops, err := users.OpsFromPatch(p)
+	ops, err := storage.OpsFromPatch(p)
 	if err != nil {
 		log.Error(err)
 		utils.JSONError(w, err.Error(), errorHTTPStatus(err))
@@ -312,15 +316,15 @@ func (u *Users) PatchUser(w http.ResponseWriter, r *http.Request) {
 	// Log
 	if u.AuxLogger != nil {
 		if len(ops.Update) != 0 {
-			u.AuxLogger.WithFields(logFields(ops.Update, EvUpdate, self.ID, uid)).Printf("User %v updated account %v", self.ID, uid)
+			u.AuxLogger.WithFields(logFields(EvUpdate, self.ID, uid, r)).WithFields(log.Fields(ops.Update)).Printf("User %v updated account %v", self.ID, uid)
 		}
 
 		for _, role := range ops.AddRoles {
-			u.AuxLogger.WithFields(logFields(map[string]interface{}{"role": role}, EvAddRole, self.ID, uid)).Printf("User %v added role `%s' to account %v", self.ID, role, uid)
+			u.AuxLogger.WithFields(logFields(EvAddRole, self.ID, uid, r)).WithField("role", role).Printf("User %v added role `%s' to account %v", self.ID, role, uid)
 		}
 
 		for _, role := range ops.RemoveRoles {
-			u.AuxLogger.WithFields(logFields(map[string]interface{}{"role": role}, EvRemoveRole, self.ID, uid)).Printf("User %v removed role `%s' from account %v", self.ID, role, uid)
+			u.AuxLogger.WithFields(logFields(EvRemoveRole, self.ID, uid, r)).WithField("role", role).Printf("User %v removed role `%s' from account %v", self.ID, role, uid)
 		}
 	}
 
@@ -328,7 +332,7 @@ func (u *Users) PatchUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func (u *Users) DeleteUser(w http.ResponseWriter, r *http.Request) {
-	self := r.Context().Value(UserContextKey).(*users.User)
+	self := r.Context().Value(UserContextKey).(*storage.User)
 
 	uid, err := uuid.FromString(mux.Vars(r)["id"])
 	if err != nil {
@@ -353,7 +357,7 @@ func (u *Users) DeleteUser(w http.ResponseWriter, r *http.Request) {
 
 	// Log
 	if u.AuxLogger != nil {
-		u.AuxLogger.WithFields(logFields(nil, EvDelete, self.ID, uid)).Printf("User %v deleted account %v", self.ID, uid)
+		u.AuxLogger.WithFields(logFields(EvDelete, self.ID, uid, r)).Printf("User %v deleted account %v", self.ID, uid)
 	}
 
 	w.WriteHeader(http.StatusNoContent)
@@ -454,7 +458,7 @@ func (u *Users) ResetPassword(w http.ResponseWriter, r *http.Request) {
 
 	// Log
 	if u.AuxLogger != nil {
-		u.AuxLogger.WithFields(logFields(nil, EvReset, id, id)).Printf("Password for account %v reset", id)
+		u.AuxLogger.WithFields(logFields(EvReset, id, id, r)).Printf("Password for account %v reset", id)
 	}
 }
 
@@ -507,8 +511,6 @@ func (u *Users) SendResetRequest(w http.ResponseWriter, r *http.Request) {
 
 	// Log
 	if u.AuxLogger != nil {
-		u.AuxLogger.WithFields(logFields(map[string]interface{}{
-			"email": user.Email,
-		}, EvResetRequest, user.ID, user.ID)).Printf("User %v requested password reset", user.ID)
+		u.AuxLogger.WithFields(logFields(EvResetRequest, user.ID, user.ID, r)).WithField("email", user.Email).Printf("User %v requested password reset", user.ID)
 	}
 }

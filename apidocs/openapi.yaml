@@ -11,6 +11,8 @@ tags:
     description: Authentication and JWT token management
   - name: users
     description: Users operations
+  - name: logs
+    description: Logs operations
 paths:
   /login:
     summary: Authenticate client
@@ -234,6 +236,34 @@ paths:
             $ref: '#/components/schemas/Predicate'
           style: deepObject
           explode: true
+        - in: query
+          name: login_addr
+          description: Query on last login source address of user
+          schema:
+            $ref: '#/components/schemas/Predicate'
+          style: deepObject
+          explode: true
+        - in: query
+          name: login_ts
+          description: Query on last login timestamp of user
+          schema:
+            $ref: '#/components/schemas/Predicate'
+          style: deepObject
+          explode: true
+        - in: query
+          name: refresh_addr
+          description: Query on last token refreshing source address of user
+          schema:
+            $ref: '#/components/schemas/Predicate'
+          style: deepObject
+          explode: true
+        - in: query
+          name: refresh_ts
+          description: Query on last token refreshing timestamp of user
+          schema:
+            $ref: '#/components/schemas/Predicate'
+          style: deepObject
+          explode: true
       responses:
         '200':
           description: List of Users
@@ -307,6 +337,76 @@ paths:
           $ref: '#/components/responses/Error'
       security:
         - jwtAuth: []
+  /logs/:
+    get:
+      tags:
+        - logs
+      summary: Get log
+      operationId: getLogs
+      parameters:
+        - $ref: '#/components/parameters/SortBy'
+        - $ref: '#/components/parameters/Order'
+        - $ref: '#/components/parameters/Last'
+        - $ref: '#/components/parameters/LastID'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Count'
+        - in: query
+          name: ts
+          description: Log entry time stamp
+          schema:
+            $ref: '#/components/schemas/Predicate'
+          style: deepObject
+          explode: true
+        - in: query
+          name: event
+          description: Event
+          schema:
+            $ref: '#/components/schemas/Predicate'
+          style: deepObject
+          explode: true
+        - in: query
+          name: user_id
+          description: Current user ID
+          schema:
+            $ref: '#/components/schemas/Predicate'
+          style: deepObject
+          explode: true
+        - in: query
+          name: target_id
+          description: Target user ID (subject of operation)
+          schema:
+            $ref: '#/components/schemas/Predicate'
+          style: deepObject
+          explode: true
+        - in: query
+          name: addr
+          description: Source address
+          schema:
+            $ref: '#/components/schemas/Predicate'
+          style: deepObject
+          explode: true
+      responses:
+        '200':
+          description: Log data
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Paginated'
+                  - type: object
+                    required:
+                      - value
+                    properties:
+                      value:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/LogEntry'
+        '204':
+          description: Empty response
+        default:
+          $ref: '#/components/responses/Error'
+      security:
+        - jwtAuth: []  
   /version:
     get:
       tags:
@@ -401,6 +501,53 @@ components:
           nullable: true
           items:
             type: string
+        login_addr:
+          type: string
+        login_ts:
+          type: string
+          format: date-time
+        refresh_addr:
+          type: string
+        refresh_ts:
+          type: string
+          format: date-time
+    LogEntry:
+      type: object
+      required:
+        - id
+        - ts
+        - event
+      properties:
+        id:
+          type: string
+          format: uuid
+        ts:
+          type: string
+          format: date-time
+        event:
+          type: string
+          enum:
+            - create
+            - update
+            - add_role
+            - remove_role
+            - delete
+            - reset
+            - reset_request
+            - login
+        user_id:
+          type: string
+          format: uuid
+        target_id:
+          type: string
+          format: uuid
+        addr:
+          type: string
+        msg:
+          type: string
+        data:
+          type: object
+          additionalProperties: true
     Predicate:
       type: object
       properties:

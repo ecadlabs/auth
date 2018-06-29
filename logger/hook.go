@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 
 	"github.com/lib/pq"
+	"github.com/satori/go.uuid"
 	"github.com/sirupsen/logrus"
 )
 
@@ -13,6 +14,7 @@ const (
 	DefaultUserIDKey   = "user_id"
 	DefaultTargetIDKey = "id"
 	DefaultEventKey    = "event"
+	DefaultAddrKey     = "addr"
 )
 
 var hookLevels = []logrus.Level{logrus.InfoLevel}
@@ -23,6 +25,7 @@ type Hook struct {
 	UserIDKey   string
 	TargetIDKey string
 	EventKey    string
+	AddrKey     string
 }
 
 func (h *Hook) table() string {
@@ -57,6 +60,14 @@ func (h *Hook) eventKey() string {
 	return DefaultEventKey
 }
 
+func (h *Hook) addrKey() string {
+	if h.AddrKey != "" {
+		return h.AddrKey
+	}
+
+	return DefaultAddrKey
+}
+
 func (h *Hook) Levels() []logrus.Level {
 	return hookLevels
 }
@@ -81,8 +92,9 @@ func (h *Hook) Fire(entry *logrus.Entry) error {
 	uid := entry.Data[h.userIDKey()]
 	tid := entry.Data[h.targetIDKey()]
 	ev := entry.Data[h.eventKey()]
+	addr := entry.Data[h.addrKey()]
 
-	_, err = h.DB.Exec("INSERT INTO "+pq.QuoteIdentifier(h.table())+" (ts, event, user_id, target_id, data) VALUES ($1, $2, $3, $4, $5)", entry.Time, ev, uid, tid, buf)
+	_, err = h.DB.Exec("INSERT INTO "+pq.QuoteIdentifier(h.table())+" (id, ts, event, user_id, target_id, addr, msg, data) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)", uuid.NewV4(), entry.Time, ev, uid, tid, addr, entry.Message, buf)
 	if err != nil {
 		return err
 	}

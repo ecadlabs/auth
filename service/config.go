@@ -7,7 +7,7 @@ import (
 	"git.ecadlabs.com/ecad/auth/notification"
 )
 
-const defaultNamespace = "com.ecadlabs.auth"
+const DefaultNamespace = "com.ecadlabs.auth"
 
 type EmailConfig struct {
 	FromAddress  string                         `json:"from_address"`
@@ -24,6 +24,7 @@ type Config struct {
 	TLSKey             string                `json:"tls_key"`
 	JWTSecret          string                `json:"jwt_secret"`
 	JWTSecretFile      string                `json:"jwt_secret_file"`
+	JWTNamespace       string                `json:"jwt_namespace"`
 	SessionMaxAge      int                   `json:"session_max_age"`
 	ResetTokenMaxAge   int                   `json:"reset_token_max_age"`
 	PostgresURL        string                `json:"db_url"`
@@ -68,9 +69,9 @@ func (c *Config) Load(name string) error {
 }
 
 func (c *Config) Namespace() string {
-	if c.BaseURL != "" {
-		return c.BaseURL
+	if c.JWTNamespace != "" {
+		return c.JWTNamespace
 	}
 
-	return defaultNamespace
+	return DefaultNamespace
 }

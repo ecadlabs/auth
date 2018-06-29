@@ -12,7 +12,7 @@ import (
 	"git.ecadlabs.com/ecad/auth/logger"
 	"git.ecadlabs.com/ecad/auth/middleware"
 	"git.ecadlabs.com/ecad/auth/notification"
-	"git.ecadlabs.com/ecad/auth/users"
+	"git.ecadlabs.com/ecad/auth/storage"
 	"git.ecadlabs.com/ecad/auth/utils"
 	"github.com/auth0/go-jwt-middleware"
 	"github.com/dgrijalva/jwt-go"
@@ -31,7 +31,7 @@ var JWTSigningMethod = jwt.SigningMethodHS256
 
 type Service struct {
 	config   Config
-	storage  *users.Storage
+	storage  *storage.Storage
 	notifier notification.Notifier
 	DB       *sql.DB
 }
@@ -69,7 +69,7 @@ func (c *Config) New() (*Service, error) {
 
 	return &Service{
 		config:   *c,
-		storage:  &users.Storage{DB: sqlx.NewDb(db, "postgres")},
+		storage:  &storage.Storage{DB: sqlx.NewDb(db, "postgres")},
 		DB:       db,
 		notifier: notifier,
 	}, nil
@@ -96,6 +96,7 @@ func (s *Service) APIHandler() http.Handler {
 		UsersPath:   "/users/",
 		RefreshPath: "/refresh",
 		ResetPath:   "/password_reset",
+		LogPath:     "/logs/",
 		Namespace:   s.config.Namespace(),
 
 		SessionMaxAge:    time.Duration(s.config.SessionMaxAge) * time.Second,
@@ -131,25 +132,34 @@ func (s *Service) APIHandler() http.Handler {
 	m.Methods("POST").Path("/password_reset").HandlerFunc(usersHandler.ResetPassword)
 	m.Methods("GET", "POST").Path("/request_password_reset").HandlerFunc(usersHandler.SendResetRequest)
 	m.Methods("GET", "POST").Path("/login").HandlerFunc(usersHandler.Login)
-	m.Methods("GET").Path("/refresh").Handler(jwtMiddleware.Handler(aud.Handler(http.HandlerFunc(usersHandler.Refresh))))
 
-	// Users API
-	ud := middleware.UserData{
+	userdata := middleware.UserData{
 		TokenContextKey: handlers.TokenContextKey,
 		UserContextKey:  handlers.UserContextKey,
 		Storage:         s.storage,
 	}
 
+	m.Methods("GET").Path("/refresh").Handler(jwtMiddleware.Handler(aud.Handler(userdata.Handler(http.HandlerFunc(usersHandler.Refresh)))))
+
+	// Users API
 	umux := m.PathPrefix("/users").Subrouter()
 	umux.Use(jwtMiddleware.Handler)
 	umux.Use(aud.Handler)
-	umux.Use(ud.Handler)
+	umux.Use(userdata.Handler)
 
 	umux.Methods("POST").Path("/").HandlerFunc(usersHandler.NewUser)
 	umux.Methods("GET").Path("/").HandlerFunc(usersHandler.GetUsers)
 	umux.Methods("GET").Path("/{id}").HandlerFunc(usersHandler.GetUser)
 	umux.Methods("PATCH").Path("/{id}").HandlerFunc(usersHandler.PatchUser)
 	umux.Methods("DELETE").Path("/{id}").HandlerFunc(usersHandler.DeleteUser)
+
+	// Log API
+	lmux := m.PathPrefix("/logs").Subrouter()
+	lmux.Use(jwtMiddleware.Handler)
+	lmux.Use(aud.Handler)
+	lmux.Use(userdata.Handler)
+
+	lmux.Methods("GET").Path("/").HandlerFunc(usersHandler.GetLogs)
 
 	// Miscellaneous
 	m.Methods("GET").Path("/version").Handler(handlers.VersionHandler(version))

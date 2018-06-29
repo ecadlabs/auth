@@ -7,7 +7,7 @@ import (
 	"os"
 
 	"git.ecadlabs.com/ecad/auth/handlers"
-	"git.ecadlabs.com/ecad/auth/users"
+	"git.ecadlabs.com/ecad/auth/storage"
 	"github.com/jmoiron/sqlx"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -24,7 +24,7 @@ const (
 
 var ErrNoBootstrap = errors.New("No bootstrapping")
 
-func (s *Service) Bootstrap() (user *users.User, err error) {
+func (s *Service) Bootstrap() (user *storage.User, err error) {
 	db := sqlx.NewDb(s.DB, "postgres")
 
 	tx, err := db.Beginx()
@@ -61,16 +61,16 @@ func (s *Service) Bootstrap() (user *users.User, err error) {
 
 	hash, _ := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 
-	u := users.User{
+	u := storage.User{
 		Email:         email,
 		PasswordHash:  hash,
 		EmailVerified: true, // Allow logging in !!!
-		Roles: users.Roles{
+		Roles: storage.Roles{
 			handlers.RoleAdmin: struct{}{},
 		},
 	}
 
-	user, err = users.NewUserInt(context.Background(), tx, &u)
+	user, err = storage.NewUserInt(context.Background(), tx, &u)
 	if err != nil {
 		return
 	}

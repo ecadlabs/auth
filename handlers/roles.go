@@ -2,7 +2,7 @@ package handlers
 
 import (
 	"git.ecadlabs.com/ecad/auth/roles"
-	"git.ecadlabs.com/ecad/auth/users"
+	"git.ecadlabs.com/ecad/auth/storage"
 	"github.com/satori/go.uuid"
 )
 
@@ -21,11 +21,12 @@ const (
 	permissionDelete     = "delete"
 	permissionAddRole    = "add_role"
 	permissionDeleteRole = "delete_role"
+	permissionLog        = "log"
 )
 
 func assertNonAdminUser(args map[string]interface{}) bool {
 	// Create regular only
-	user, ok := args["user"].(*users.User)
+	user, ok := args["user"].(*storage.User)
 	return ok && !user.Roles.Has(RoleAdmin)
 }
 
@@ -63,5 +64,6 @@ var (
 		permissionAddRole:    nil,
 		permissionDeleteRole: nil,
 		permissionList:       nil,
+		permissionLog:        nil,
 	}, nil)
 )
