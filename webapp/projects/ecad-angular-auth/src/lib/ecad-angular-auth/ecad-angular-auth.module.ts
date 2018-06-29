@@ -8,6 +8,7 @@ import { PasswordResetService } from './password-reset/password-reset.service';
 import { IpWhiteListedGuard } from './guards/ip-whitelisted.guard';
 import { LoggedinGuard } from './guards/loggedin.guard';
 import { EcadPermissionsDirective } from './ecad-permissions.directive';
+import { PermissionsGuard } from './guards';
 
 export const blacklistedRoutes = [];
 export const whiteListedDomain = [new RegExp('^null$'), new RegExp(`.*${location.hostname}.*`)];
@@ -40,7 +41,7 @@ export class EcadAngularAuthModule {
         { provide: PASSWORD_RESET, useClass: PasswordResetService },
         IpWhiteListedGuard,
         LoggedinGuard,
-        RoleGuard
+        PermissionsGuard
       ]
     };
   }
