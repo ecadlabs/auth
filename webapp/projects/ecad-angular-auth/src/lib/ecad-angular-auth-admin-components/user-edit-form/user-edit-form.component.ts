@@ -2,7 +2,8 @@ import { Component, OnInit, Inject } from '@angular/core';
 import { MatDialogRef, MAT_DIALOG_DATA } from '@angular/material';
 import { FormBuilder, Form, FormGroup, Validators } from '@angular/forms';
 import { MinSelection } from './user-edit-form.validators';
-import { User, CreateUser } from '../../ecad-angular-auth-admin/interfaces';
+import { CreateUser } from '../../ecad-angular-auth-admin/interfaces/create-user.i';
+import { User } from '../../ecad-angular-auth-admin/interfaces/user.i';
 import { USERS_SERVICE } from '../../ecad-angular-auth-admin/tokens';
 import { IUsersService } from '../../ecad-angular-auth-admin/interfaces/user-service.i';
 

@@ -1,7 +1,7 @@
 import { Component, OnInit, Inject, Input } from '@angular/core';
 import { Router } from '@angular/router';
 import { FormBuilder, Validators, FormGroup } from '@angular/forms';
-import { ILoginService } from '../../ecad-angular-auth/interfaces';
+import { ILoginService } from '../../ecad-angular-auth/interfaces/login-service.i';
 import { LOGIN_SERVICE } from '../../ecad-angular-auth/tokens';
 
 export interface LoginFormConfig {

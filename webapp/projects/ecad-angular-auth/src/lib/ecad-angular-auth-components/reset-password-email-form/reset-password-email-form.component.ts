@@ -1,7 +1,7 @@
 import { Component, OnInit, Inject } from '@angular/core';
 import { FormGroup, FormBuilder, Validators } from '@angular/forms';
 import { PASSWORD_RESET } from '../../ecad-angular-auth/tokens';
-import { IPasswordReset } from '../../ecad-angular-auth/interfaces';
+import { IPasswordReset } from '../../ecad-angular-auth/interfaces/password-reset.i';
 import { Router } from '@angular/router';
 
 @Component({

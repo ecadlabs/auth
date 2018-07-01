@@ -1,6 +1,9 @@
 import { Injectable, Inject } from '@angular/core';
 import { ResourcesService, PagedResult, FilterCondition } from '../../resource-util/resources.service';
-import { AuthAdminConfig, CreateUser, User, UpdateUser } from '../interfaces';
+import { AuthAdminConfig } from '../interfaces/auth-admin-config.i';
+import { CreateUser } from '../interfaces/create-user.i';
+import { UpdateUser } from '../interfaces/update-user.i';
+import { User } from '../interfaces/user.i';
 import { AUTH_ADMIN_CONFIG } from '../tokens';
 import { Observable } from 'rxjs';
 import { IUsersService } from '../interfaces/user-service.i';

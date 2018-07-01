@@ -2,7 +2,8 @@ import { Injectable, Inject, Optional } from '@angular/core';
 import { CanActivate, ActivatedRouteSnapshot, RouterStateSnapshot } from '@angular/router';
 import { Observable } from 'rxjs';
 import { Router } from '@angular/router';
-import { ILoginService, AuthConfig } from '../interfaces';
+import { ILoginService } from '../interfaces/login-service.i';
+import { AuthConfig } from '../interfaces/auth-config.i';
 import { LOGIN_SERVICE, AUTH_CONFIG } from '../tokens';
 import { map, tap } from 'rxjs/operators';
 
@@ -21,8 +22,8 @@ export class RoleGuard implements CanActivate {
     next: ActivatedRouteSnapshot,
     state: RouterStateSnapshot,
     redirect = true): Observable<boolean> {
-      const roles = (next.data && next.data.roles && Array.isArray(next.data.roles)) ? next.data.roles : [];
-      return this.loginService.user
+    const roles = (next.data && next.data.roles && Array.isArray(next.data.roles)) ? next.data.roles : [];
+    return this.loginService.user
       .pipe(map((user) => {
         if (!user) {
           return false;
@@ -36,7 +37,7 @@ export class RoleGuard implements CanActivate {
           this.redirectOnNotAuthorized();
         }
       }));
-    }
+  }
 
   protected redirectOnNotAuthorized() {
     return this.router.navigateByUrl(this.config.loginPageUrl);

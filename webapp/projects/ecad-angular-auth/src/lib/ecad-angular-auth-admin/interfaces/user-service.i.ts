@@ -1,5 +1,7 @@
 import { PagedResult, FilterCondition } from '../../resource-util/resources.service';
-import { CreateUser, User, UpdateUser } from '../interfaces';
+import { User } from '../interfaces/user.i';
+import { CreateUser } from '../interfaces/create-user.i';
+import { UpdateUser } from '../interfaces/update-user.i';
 import { Observable } from 'rxjs';
 
 export interface IUsersService {

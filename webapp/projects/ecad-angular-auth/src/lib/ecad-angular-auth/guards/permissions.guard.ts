@@ -2,7 +2,8 @@ import { Injectable, Inject, Optional } from '@angular/core';
 import { CanActivate, ActivatedRouteSnapshot, RouterStateSnapshot } from '@angular/router';
 import { Observable } from 'rxjs';
 import { Router } from '@angular/router';
-import { ILoginService, AuthConfig } from '../interfaces';
+import { ILoginService } from '../interfaces/login-service.i';
+import { AuthConfig } from '../interfaces/auth-config.i';
 import { LOGIN_SERVICE, AUTH_CONFIG } from '../tokens';
 import { map, tap } from 'rxjs/operators';
 

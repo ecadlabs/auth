@@ -5,7 +5,11 @@ import { JwtHelperService } from '@auth0/angular-jwt';
 import { map, catchError, tap, filter, switchMap, distinctUntilChanged } from 'rxjs/operators';
 import { of as observableOf, Observable, Observer, BehaviorSubject, interval } from 'rxjs';
 import { AUTH_CONFIG } from '../tokens';
-import { ILoginService, Credentials, AuthConfig, LoginResult, UserToken } from '../interfaces';
+import { ILoginService } from '../interfaces/login-service.i';
+import { UserToken } from '../interfaces/user-token.i';
+import { AuthConfig } from '../interfaces/auth-config.i';
+import { Credentials } from '../interfaces/credentials.i';
+import { LoginResult } from '../interfaces/loginResult.i';
 
 @Injectable({
   providedIn: 'root'

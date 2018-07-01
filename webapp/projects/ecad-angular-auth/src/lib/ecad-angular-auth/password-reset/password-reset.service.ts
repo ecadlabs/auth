@@ -1,5 +1,7 @@
 import { Injectable, Inject, Optional } from '@angular/core';
-import { IPasswordReset, AuthConfig, PasswordResetResult } from '../interfaces';
+import { AuthConfig } from '../interfaces/auth-config.i';
+import { IPasswordReset } from '../interfaces/password-reset.i';
+import { PasswordResetResult } from '../interfaces/password-reset-result.i';
 import { HttpClient } from '@angular/common/http';
 import { AUTH_CONFIG } from '../tokens';
 import { Observable } from 'rxjs';
@@ -21,13 +23,13 @@ export class PasswordResetService implements IPasswordReset {
   }
 
   resetPassword(token: string, password: string): Observable<PasswordResetResult> {
-    return this.httpClient.post(this.config.passwordResetUrl, {token, password}).pipe(
-      map(() => ({ success: true}))
+    return this.httpClient.post(this.config.passwordResetUrl, { token, password }).pipe(
+      map(() => ({ success: true }))
     );
   }
 
   sendResetEmail(email: string): Observable<PasswordResetEmailResult> {
-    return this.httpClient.post(this.config.sendResetEmailUrl, {email}).pipe(map(() => ({
+    return this.httpClient.post(this.config.sendResetEmailUrl, { email }).pipe(map(() => ({
       success: true
     })));
   }
