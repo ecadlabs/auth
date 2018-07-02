@@ -9,10 +9,10 @@ info:
 tags:
   - name: auth
     description: Authentication and JWT token management
-  - name: users
-    description: Users operations
   - name: logs
     description: Logs operations
+  - name: users
+    description: Users operations
 paths:
   /login:
     summary: Authenticate client
