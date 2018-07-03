@@ -61,7 +61,7 @@ export function tokenSetter(value: string) { localStorage.setItem('token', value
       { path: '', pathMatch: 'full', component: LoginComponent },
       { path: 'reset-password', component: ResetPasswordComponent },
       { path: 'reset-password-email', component: ResetPasswordEmailComponent },
-      { path: 'protected', component: ProtectedComponent, data: { permissions: ['show.is-admin', 'show.boo'] }, canActivate: [LoggedinGuard, PermissionsGuard] }
+      { path: 'protected', component: ProtectedComponent, data: { permissions: ['show.is-admin'] }, canActivate: [LoggedinGuard, PermissionsGuard] }
     ]),
     MatToolbarModule,
   ],

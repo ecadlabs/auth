@@ -6,6 +6,8 @@ import { CreateUser } from '../../ecad-angular-auth-admin/interfaces/create-user
 import { User } from '../../ecad-angular-auth-admin/interfaces/user.i';
 import { USERS_SERVICE } from '../../ecad-angular-auth-admin/tokens';
 import { IUsersService } from '../../ecad-angular-auth-admin/interfaces/user-service.i';
+import { AuthConfig } from '../../ecad-angular-auth/interfaces/auth-config.i';
+import { AUTH_CONFIG } from '../../ecad-angular-auth/tokens';
 
 @Component({
   selector: 'auth-user-edit-form',
@@ -18,6 +20,8 @@ export class UserEditFormComponent implements OnInit {
   public error: any = {};
 
   constructor(
+    @Inject(AUTH_CONFIG)
+    private authConfig: AuthConfig,
     private dialogRef: MatDialogRef<User>,
     @Inject(MAT_DIALOG_DATA)
     public dialogData: User | null,
@@ -37,8 +41,9 @@ export class UserEditFormComponent implements OnInit {
   ngOnInit() {
     this.userForm = this._fb.group(
       {
-        'email': ['', [Validators.required, Validators.pattern(/^[\w\.]+@[a-zA-Z_]+?\.[a-zA-Z]{2,3}$/)]],
-        'password': ['', !this.dialogData ? [Validators.required] : []],
+        'email': ['', [Validators.required, Validators.pattern(
+          this.authConfig.emailValidationRegex || /^.+@.+\..{2,3}$/
+        )]],
         'name': [''],
         'roles': [[this.userService.getRoles()[0].value], MinSelection(1)]
       }

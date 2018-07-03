@@ -12,7 +12,7 @@ export interface FilterCondition<T> {
 }
 
 export type FilterOperation = 'eq' | 'ne' | 'lt' | 'gt' | 'le' | 'ge' | 're' | 'l' | 'p' | 's' | 'sub' | 'has' |
-'!eq' | '!ne' | '!lt' | '!gt' | '!le' | '!ge' | '!re' | '!l' | '!p' | '!s' | '!sub' | '!has';
+  '!eq' | '!ne' | '!lt' | '!gt' | '!le' | '!ge' | '!re' | '!l' | '!p' | '!s' | '!sub' | '!has';
 
 export type PagedResult<T> = any;
 export interface PatchPayload<T> {
@@ -47,12 +47,13 @@ export class ResourcesService<T, U> {
 
   fetch(resourceUrl: string, filters: FilterCondition<T>[], sortBy: keyof T, order: 'asc' | 'desc'): Observable<PagedResult<T>> {
     const filter = filters
-    .filter(x => x)
-    .map((x) => {
-      return x ? `${x.field}[${x.operation}]=${x.value}` : undefined;
-    })
-    .join('&');
-    return this.httpClient.get<PagedResult<T>>(`${resourceUrl}/?count=true&sortBy=${sortBy}&order=${order}&${filter}`);
+      .filter(x => x)
+      .map((x) => {
+        return x ? `${x.field}[${x.operation}]=${x.value}` : undefined;
+      })
+      .join('&');
+    return this.httpClient.get<PagedResult<T>>(`${resourceUrl}/?count=true&sortBy=${sortBy}&order=${order}&${filter}`)
+      .pipe(map((page: PagedResult<T>) => ({ ...page, currentPage: 1 })));
   }
 
   private createEmptyPagedResult(current: string, result?: PagedResult<T>, currentPage = 1) {

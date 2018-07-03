@@ -9,11 +9,9 @@ import { IpWhiteListedGuard } from './guards/ip-whitelisted.guard';
 import { LoggedinGuard } from './guards/loggedin.guard';
 import { PermissionsGuard } from './guards/permissions.guard';
 
-export const blacklistedRoutes = [];
-export const whiteListedDomain = [new RegExp('^null$'), new RegExp(`.*${location.hostname}.*`)];
-export let tokenName = '';
-export function tokenGetter() {
-  return window.localStorage.getItem(tokenName);
+// Used to escape the hostname in case it contains reserved regex characters
+export function escapeRegExp(str: string) {
+  return str.replace(/[\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, '\\$&');
 }
 
 @NgModule({
@@ -30,9 +28,10 @@ export class EcadAngularAuthModule {
       providers: [
         ...JwtModule.forRoot({
           config: {
-            blacklistedRoutes: [config.loginUrl],
-            whitelistedDomains: [new RegExp('^null$'), new RegExp(`.*${location.hostname}.*`)],
+            blacklistedRoutes: [config.loginUrl, config.passwordResetUrl],
+            whitelistedDomains: [new RegExp('^null$'), new RegExp(`^${escapeRegExp(location.hostname)}.*$`)],
             tokenGetter: config.tokenGetter,
+            skipWhenExpired: true,
           }
         }).providers,
         { provide: AUTH_CONFIG, useValue: config },

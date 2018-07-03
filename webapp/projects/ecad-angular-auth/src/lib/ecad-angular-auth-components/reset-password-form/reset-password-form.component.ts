@@ -17,6 +17,9 @@ export interface ResetPasswordFormConfig {
 })
 export class ResetPasswordFormComponent implements OnInit {
 
+  public token_expired = false;
+  public error_occured = false;
+
   @Input()
   public config: ResetPasswordFormConfig;
 
@@ -37,8 +40,17 @@ export class ResetPasswordFormComponent implements OnInit {
   }
 
   async onSubmit() {
-    await this.resetPassword.resetPassword(getParameterByName('token'), this.resetPasswordForm.value.password).toPromise();
-    await this.router.navigateByUrl(this.config.successUrlRedirect);
+    try {
+      await this.resetPassword.resetPassword(getParameterByName('token'), this.resetPasswordForm.value.password).toPromise();
+      await this.router.navigateByUrl(this.config.successUrlRedirect);
+    } catch (err) {
+      console.log(err);
+      if (err && String(err.status) === '400') {
+        this.token_expired = true;
+      } else {
+        this.error_occured = true;
+      }
+    }
   }
 
   passwordConfirming(c: AbstractControl): { invalid: boolean } {

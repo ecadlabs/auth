@@ -11,4 +11,5 @@ export interface AuthConfig {
     rolesPermissionsMapping: {
         [key: string]: string[]
     };
+    emailValidationRegex?: RegExp;
 }

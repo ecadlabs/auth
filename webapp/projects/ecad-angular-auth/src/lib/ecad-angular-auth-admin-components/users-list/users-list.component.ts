@@ -8,6 +8,7 @@ import { User } from '../../ecad-angular-auth-admin/interfaces/user.i';
 import { MatSort, MatDialog, MatSnackBar } from '@angular/material';
 import { IUsersService } from '../../ecad-angular-auth-admin/interfaces/user-service.i';
 import { USERS_SERVICE } from '../../ecad-angular-auth-admin/tokens';
+import { first } from 'rxjs/operators';
 
 @Component({
   selector: 'auth-users-list',
@@ -47,13 +48,15 @@ export class UsersListComponent implements OnInit {
   }
 
   changePage($event) {
-    this.dataSource.pageInfo$.subscribe(({ currentPage }) => {
-      if (currentPage > $event.value) {
-        this.prevousPage$.next();
-      } else {
-        this.nextPage$.next();
-      }
-    });
+    this.dataSource.pageInfo$
+      .pipe(first())
+      .subscribe(({ currentPage }) => {
+        if (currentPage > $event.pageIndex) {
+          this.prevousPage$.next();
+        } else {
+          this.nextPage$.next();
+        }
+      });
   }
 
   ngOnInit() {
