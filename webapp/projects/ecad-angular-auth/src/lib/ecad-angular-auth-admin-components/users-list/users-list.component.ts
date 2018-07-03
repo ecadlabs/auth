@@ -29,9 +29,7 @@ export class UsersListComponent implements OnInit {
     'modified',
     'email_verified',
     'roles',
-    'edit',
-    'delete',
-    'reset-password'
+    'actions',
   ];
 
   constructor(

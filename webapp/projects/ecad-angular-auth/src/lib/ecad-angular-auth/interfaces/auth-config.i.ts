@@ -11,5 +11,6 @@ export interface AuthConfig {
     rolesPermissionsMapping: {
         [key: string]: string[]
     };
+    whitelistedDomains: (string | RegExp)[];
     emailValidationRegex?: RegExp;
 }

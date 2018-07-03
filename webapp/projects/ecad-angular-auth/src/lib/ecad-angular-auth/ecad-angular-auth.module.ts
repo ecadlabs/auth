@@ -9,11 +9,6 @@ import { IpWhiteListedGuard } from './guards/ip-whitelisted.guard';
 import { LoggedinGuard } from './guards/loggedin.guard';
 import { PermissionsGuard } from './guards/permissions.guard';
 
-// Used to escape the hostname in case it contains reserved regex characters
-export function escapeRegExp(str: string) {
-  return str.replace(/[\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, '\\$&');
-}
-
 @NgModule({
   imports: [
     HttpClientModule,
@@ -29,7 +24,7 @@ export class EcadAngularAuthModule {
         ...JwtModule.forRoot({
           config: {
             blacklistedRoutes: [config.loginUrl, config.passwordResetUrl],
-            whitelistedDomains: [new RegExp('^null$'), new RegExp(`^${escapeRegExp(location.hostname)}.*$`)],
+            whitelistedDomains: config.whitelistedDomains,
             tokenGetter: config.tokenGetter,
             skipWhenExpired: true,
           }
