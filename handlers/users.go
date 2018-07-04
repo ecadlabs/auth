@@ -34,15 +34,17 @@ type Users struct {
 	JWTSecretGetter  func() ([]byte, error)
 	JWTSigningMethod jwt.SigningMethod
 
-	BaseURL     func() string
-	UsersPath   string
-	RefreshPath string
-	ResetPath   string
-	LogPath     string
-	Namespace   string
+	BaseURL         func() string
+	UsersPath       string
+	RefreshPath     string
+	ResetPath       string
+	LogPath         string
+	EmailUpdatePath string
+	Namespace       string
 
-	Notifier         notification.Notifier
-	ResetTokenMaxAge time.Duration
+	Notifier               notification.Notifier
+	ResetTokenMaxAge       time.Duration
+	EmailUpdateTokenMaxAge time.Duration
 
 	AuxLogger *log.Logger
 }
@@ -61,6 +63,10 @@ func (u *Users) ResetURL() string {
 
 func (u *Users) LogURL() string {
 	return u.BaseURL() + u.LogPath
+}
+
+func (u *Users) EmailUpdateURL() string {
+	return u.BaseURL() + u.EmailUpdatePath
 }
 
 func (u *Users) context(r *http.Request) context.Context {
@@ -186,6 +192,12 @@ func (u *Users) resetToken(user *storage.User) (string, error) {
 	return token.SignedString(secret)
 }
 
+// Lazy email syntax verification
+func validEmail(s string) bool {
+	i := strings.IndexByte(s, '@')
+	return i >= 1 && i < len(s)-1 && i == strings.LastIndexByte(s, '@')
+}
+
 func (u *Users) NewUser(w http.ResponseWriter, r *http.Request) {
 	self := r.Context().Value(UserContextKey).(*storage.User)
 
@@ -196,8 +208,7 @@ func (u *Users) NewUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Lazy email syntax verification
-	if i := strings.IndexByte(user.Email, '@'); i < 1 || i == len(user.Email)-1 || i != strings.LastIndexByte(user.Email, '@') {
+	if !validEmail(user.Email) {
 		utils.JSONError(w, "Invalid email syntax", http.StatusBadRequest)
 		return
 	}
@@ -230,7 +241,8 @@ func (u *Users) NewUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err = u.Notifier.InviteUser(r.Context(), &notification.NotificationData{
+	if err = u.Notifier.Notify(r.Context(), notification.NotificationInvite, &notification.NotificationData{
+		Addr:        getRemoteAddr(r),
 		CurrentUser: self,
 		TargetUser:  ret,
 		Token:       token,
@@ -441,7 +453,7 @@ func (u *Users) ResetPassword(w http.ResponseWriter, r *http.Request) {
 	// Verify audience
 	claims := token.Claims.(jwt.MapClaims)
 	if !claims.VerifyAudience(u.ResetURL(), true) {
-		utils.JSONError(w, "Not a session token", http.StatusUnauthorized)
+		utils.JSONError(w, "Not a reset token", http.StatusUnauthorized)
 		return
 	}
 
@@ -524,7 +536,8 @@ func (u *Users) SendResetRequest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err = u.Notifier.PasswordReset(r.Context(), &notification.NotificationData{
+	if err = u.Notifier.Notify(r.Context(), notification.NotificationReset, &notification.NotificationData{
+		Addr:        getRemoteAddr(r),
 		CurrentUser: user,
 		TargetUser:  user,
 		Token:       token,
@@ -537,5 +550,193 @@ func (u *Users) SendResetRequest(w http.ResponseWriter, r *http.Request) {
 	// Log
 	if u.AuxLogger != nil {
 		u.AuxLogger.WithFields(logFields(EvResetRequest, user.ID, user.ID, r)).WithField("email", user.Email).Printf("User %v requested password reset", user.ID)
+	}
+}
+
+func (u *Users) SendUpdateEmailRequest(w http.ResponseWriter, r *http.Request) {
+	self := r.Context().Value(UserContextKey).(*storage.User)
+
+	var request struct {
+		Email string    `json:"email"`
+		ID    uuid.UUID `json:"id"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		log.Error(err)
+		utils.JSONError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if request.Email == "" {
+		utils.JSONError(w, "Email must not be empty", http.StatusBadRequest)
+		return
+	}
+
+	if !validEmail(request.Email) {
+		utils.JSONError(w, "Invalid email syntax", http.StatusBadRequest)
+		return
+	}
+
+	userRoles := self.Roles.Get()
+	if err := userRoles.IsGranted(permissionModify, map[string]interface{}{
+		"self": self.ID,
+		"id":   request.ID,
+	}); err != nil {
+		log.Error(err)
+		utils.JSONError(w, err.Error(), http.StatusForbidden)
+		return
+	}
+
+	user, err := u.Storage.GetUserByID(u.context(r), request.ID)
+	if err != nil {
+		log.Error(err)
+		utils.JSONError(w, err.Error(), errorHTTPStatus(err))
+		return
+	}
+
+	// Create update token
+	now := time.Now()
+
+	claims := jwt.MapClaims{
+		"sub": user.ID,
+		"exp": now.Add(u.EmailUpdateTokenMaxAge).Unix(),
+		"iat": now.Unix(),
+		"iss": u.BaseURL(),
+		"aud": u.EmailUpdateURL(),
+		utils.NSClaim(u.Namespace, "email"): request.Email,
+		utils.NSClaim(u.Namespace, "gen"):   user.EmailGen,
+	}
+
+	token := jwt.NewWithClaims(u.JWTSigningMethod, claims)
+
+	secret, err := u.JWTSecretGetter()
+	if err != nil {
+		log.Error(err)
+		utils.JSONError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	tokStr, err := token.SignedString(secret)
+	if err != nil {
+		log.Error(err)
+		utils.JSONError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if err = u.Notifier.Notify(r.Context(), notification.NotificationEmailUpdateRequest, &notification.NotificationData{
+		Addr:        getRemoteAddr(r),
+		To:          []string{request.Email},
+		Email:       request.Email,
+		CurrentUser: user,
+		TargetUser:  user,
+		Token:       tokStr,
+		TokenMaxAge: u.EmailUpdateTokenMaxAge,
+	}); err != nil {
+		log.Error(err)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+
+	// Log
+	if u.AuxLogger != nil {
+		u.AuxLogger.WithFields(logFields(EvEmailUpdateRequest, self.ID, user.ID, r)).WithField("email", request.Email).Printf("User %v requested email update for user %v", self.ID, user.ID)
+	}
+}
+
+func (u *Users) UpdateEmail(w http.ResponseWriter, r *http.Request) {
+	var request struct {
+		Token string `json:"token"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		log.Error(err)
+		utils.JSONError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if request.Token == "" {
+		utils.JSONError(w, "Token must not be empty", http.StatusBadRequest)
+		return
+	}
+
+	// Verify token
+	token, err := jwt.Parse(request.Token, func(token *jwt.Token) (interface{}, error) { return u.JWTSecretGetter() })
+	if err != nil {
+		log.Error(err)
+		utils.JSONError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if u.JWTSigningMethod.Alg() != token.Header["alg"] {
+		log.Errorf("Expected %s signing method but token specified %s", u.JWTSigningMethod.Alg(), token.Header["alg"])
+		utils.JSONError(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		return
+	}
+
+	if !token.Valid {
+		log.Errorln("Invalid token")
+		utils.JSONError(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		return
+	}
+
+	// Verify audience
+	claims := token.Claims.(jwt.MapClaims)
+	if !claims.VerifyAudience(u.EmailUpdateURL(), true) {
+		utils.JSONError(w, "Not a email update token", http.StatusUnauthorized)
+		return
+	}
+
+	// Get email
+	email, ok := claims[utils.NSClaim(u.Namespace, "email")].(string)
+	if !ok || !validEmail(email) {
+		utils.JSONError(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
+
+	// Get email generation
+	gen, ok := claims[utils.NSClaim(u.Namespace, "gen")].(float64)
+	if !ok {
+		utils.JSONError(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
+
+	// Get user id
+	sub, ok := claims["sub"].(string)
+	if !ok {
+		utils.JSONError(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
+
+	id, err := uuid.FromString(sub)
+	if err != nil {
+		utils.JSONError(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
+
+	user, prevEmail, err := u.Storage.UpdateEmailWithGen(u.context(r), id, email, int(gen))
+	if err != nil {
+		log.Error(err)
+		utils.JSONError(w, err.Error(), errorHTTPStatus(err))
+		return
+	}
+
+	if err = u.Notifier.Notify(r.Context(), notification.NotificationEmailUpdate, &notification.NotificationData{
+		Addr:        getRemoteAddr(r),
+		Email:       prevEmail,
+		To:          []string{prevEmail, user.Email},
+		CurrentUser: user,
+		TargetUser:  user,
+	}); err != nil {
+		log.Error(err)
+		utils.JSONError(w, err.Error(), errorHTTPStatus(err))
+		return
+	}
+
+	utils.JSONResponse(w, http.StatusOK, user)
+
+	// Log
+	if u.AuxLogger != nil {
+		u.AuxLogger.WithFields(logFields(EvEmailUpdate, id, id, r)).WithField("email", email).Printf("Email for account %v updated", id)
 	}
 }

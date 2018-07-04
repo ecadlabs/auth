@@ -6,20 +6,23 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/mail"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 )
 
 type Message struct {
-	To      *mail.Address
+	To      []*mail.Address
 	From    *mail.Address
 	Subject string
 	Body    []byte
 }
 
 type EmailTemplateData struct {
-	ResetURLPrefix string `json:"reset_url_prefix"`
-	AppName        string `json:"app_name"`
+	ResetURLPrefix       string `json:"reset_url_prefix"`
+	UpdateEmailURLPrefix string `json:"update_email_prefix"`
+	AppName              string `json:"app_name"`
+	SupportEmail         string `json:"support_email"`
 }
 
 type MailDriver interface {
@@ -75,9 +78,11 @@ func (e *EmailNotifier) send(ctx context.Context, d *NotificationData, tplPrefix
 	templateData := struct {
 		*EmailTemplateData
 		*NotificationData
+		Timestamp time.Time `json:"timestamp"`
 	}{
 		NotificationData:  d,
 		EmailTemplateData: e.data,
+		Timestamp:         time.Now(),
 	}
 
 	var subject bytes.Buffer
@@ -91,10 +96,19 @@ func (e *EmailNotifier) send(ctx context.Context, d *NotificationData, tplPrefix
 	}
 
 	msg := Message{
-		To:      &mail.Address{Name: d.TargetUser.Name, Address: d.TargetUser.Email},
 		From:    e.from,
 		Subject: subject.String(),
 		Body:    body.Bytes(),
+	}
+
+	if len(d.To) != 0 {
+		msg.To = make([]*mail.Address, len(d.To))
+
+		for i, addr := range d.To {
+			msg.To[i] = &mail.Address{Address: addr}
+		}
+	} else {
+		msg.To = []*mail.Address{&mail.Address{Name: d.TargetUser.Name, Address: d.TargetUser.Email}}
 	}
 
 	select {
@@ -106,12 +120,8 @@ func (e *EmailNotifier) send(ctx context.Context, d *NotificationData, tplPrefix
 	return nil
 }
 
-func (e *EmailNotifier) InviteUser(ctx context.Context, d *NotificationData) error {
-	return e.send(ctx, d, "invite")
-}
-
-func (e *EmailNotifier) PasswordReset(ctx context.Context, d *NotificationData) error {
-	return e.send(ctx, d, "reset")
+func (e *EmailNotifier) Notify(ctx context.Context, tpl string, d *NotificationData) error {
+	return e.send(ctx, d, tpl)
 }
 
 var _ Notifier = &EmailNotifier{}

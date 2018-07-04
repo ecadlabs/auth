@@ -71,6 +71,7 @@ func (r Roles) Delete(role string) {
 type User struct {
 	ID               uuid.UUID  `json:"id" schema:"id"`
 	Email            string     `json:"email" schema:"email"`
+	EmailGen         int        `json:"-"`
 	PasswordHash     []byte     `json:"-" schema:"-"`
 	Name             string     `json:"name,omitempty" schema:"name"`
 	Added            time.Time  `json:"added" schema:"added"`

@@ -18,6 +18,7 @@ import (
 type userModel struct {
 	ID               uuid.UUID      `db:"id"`
 	Email            string         `db:"email"`
+	EmailGen         int            `db:"email_gen"`
 	PasswordHash     []byte         `db:"password_hash"`
 	PasswordGen      int            `db:"password_gen"`
 	Name             string         `db:"name"`
@@ -45,6 +46,7 @@ func (u *userModel) toUser() *User {
 		PasswordGen:   u.PasswordGen,
 		LoginAddr:     u.LoginAddr,
 		RefreshAddr:   u.RefreshAddr,
+		EmailGen:      u.EmailGen,
 	}
 
 	epoch := time.Unix(0, 0).UTC()
@@ -254,7 +256,6 @@ func errPatchPath(p string) error {
 }
 
 var updatePaths = map[string]struct{}{
-	// "email":         struct{}{}, // TODO
 	"name":          struct{}{},
 	"password_hash": struct{}{},
 }
@@ -443,6 +444,52 @@ func (s *Storage) UpdatePasswordWithGen(ctx context.Context, id uuid.UUID, hash 
 	}
 
 	return nil
+}
+
+func (s *Storage) UpdateEmailWithGen(ctx context.Context, id uuid.UUID, email string, expectedGen int) (user *User, oldEmail string, err error) {
+	tx, err := s.DB.Beginx()
+	if err != nil {
+		return
+	}
+
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+			return
+		}
+
+		err = tx.Commit()
+	}()
+
+	var prev userModel
+	if err := tx.GetContext(ctx, &prev, "SELECT email_gen, email FROM users WHERE id = $1", id); err != nil {
+		if err == sql.ErrNoRows {
+			err = ErrNotFound
+		}
+		return nil, "", err
+	}
+
+	if prev.EmailGen != expectedGen {
+		log.WithFields(log.Fields{"token": expectedGen, "db": prev.EmailGen}).Println("Email update token expired")
+		return nil, "", ErrTokenExpired
+	}
+
+	var u userModel
+	if err = tx.GetContext(ctx, &u, "UPDATE users SET email = $1, email_verified = TRUE, modified = DEFAULT, email_gen = email_gen + 1 WHERE id = $2 AND email_gen = $3 RETURNING *", email, id, prev.EmailGen); err != nil {
+		if err == sql.ErrNoRows {
+			err = ErrNotFound
+		}
+		return nil, "", err
+	}
+
+	// Get roles back
+	if err = tx.GetContext(ctx, &u, "SELECT array_agg(role) AS roles FROM roles WHERE user_id = $1 GROUP BY user_id", id); err != nil {
+		if err != sql.ErrNoRows {
+			return nil, "", err
+		}
+	}
+
+	return u.toUser(), prev.Email, nil
 }
 
 func (s *Storage) UpdateLoginInfo(ctx context.Context, id uuid.UUID, addr string) error {
