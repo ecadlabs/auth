@@ -504,6 +504,9 @@ components:
         refresh:
           type: string
           format: uri
+        id:
+          type: string
+          format: uuid
     Error:
       type: object
       required:

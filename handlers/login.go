@@ -8,6 +8,7 @@ import (
 	"git.ecadlabs.com/ecad/auth/storage"
 	"git.ecadlabs.com/ecad/auth/utils"
 	"github.com/dgrijalva/jwt-go"
+	"github.com/satori/go.uuid"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -47,10 +48,12 @@ func (u *Users) writeUserToken(w http.ResponseWriter, user *storage.User) error 
 	}
 
 	response := struct {
-		Token      string `json:"token"`
-		RefreshURL string `json:"refresh,omitempty"`
+		Token      string    `json:"token"`
+		ID         uuid.UUID `json:"id,omitempty"`
+		RefreshURL string    `json:"refresh,omitempty"`
 	}{
 		Token:      tokenString,
+		ID:         user.ID,
 		RefreshURL: u.RefreshURL(),
 	}
 
