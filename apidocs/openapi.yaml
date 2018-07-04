@@ -337,6 +337,56 @@ paths:
           $ref: '#/components/responses/Error'
       security:
         - jwtAuth: []
+  /request_email_update:
+    post:
+      tags:
+        - users
+      summary: Request email update for specified id
+      operationId: requestEmailUpdate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - id
+              properties:
+                email:
+                  type: string
+                id:
+                  type: string
+                  format: uuid
+      responses:
+        '204':
+          description: Empty response
+        default:
+          $ref: '#/components/responses/Error'
+      security:
+        - jwtAuth: []
+  /email_update:
+    post:
+      tags:
+        - users
+      summary: Update email with given token
+      operationId: updateEmail
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - token
+              properties:
+                token:
+                  type: string
+      responses:
+        '204':
+          description: Empty response
+        default:
+          $ref: '#/components/responses/Error'
   /logs/:
     get:
       tags:

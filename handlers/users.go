@@ -733,7 +733,8 @@ func (u *Users) UpdateEmail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	utils.JSONResponse(w, http.StatusOK, user)
+	//utils.JSONResponse(w, http.StatusOK, user)
+	w.WriteHeader(http.StatusNoContent)
 
 	// Log
 	if u.AuxLogger != nil {
