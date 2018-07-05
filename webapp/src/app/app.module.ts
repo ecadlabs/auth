@@ -12,10 +12,8 @@ import {
   PermissionsGuard,
   EcadAngularAuthAdminComponentsModule,
   EcadAngularAuthAdminModule,
-} from 'ecad-angular-auth';
-import {
   EcadAngularAuthComponentsModule
-} from 'projects/ecad-angular-auth/src/lib/ecad-angular-auth-components/ecad-angular-auth-components.module';
+} from 'ecad-angular-auth';
 import { LoginComponent } from './login/login.component';
 import { ResetPasswordComponent } from './reset-password/reset-password.component';
 import { ResetPasswordEmailComponent } from './reset-password-email/reset-password-email.component';
@@ -23,11 +21,6 @@ import { ProtectedComponent } from './protected/protected.component';
 
 export function tokenGetter() { return localStorage.getItem('token'); }
 export function tokenSetter(value: string) { localStorage.setItem('token', value); }
-
-// Used to escape the hostname in case it contains reserved regex characters
-export function escapeRegExp(str: string) {
-  return str.replace(/[\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, '\\$&');
-}
 
 @NgModule({
   declarations: [
@@ -40,17 +33,17 @@ export function escapeRegExp(str: string) {
   imports: [
     EcadAngularAuthModule.forRoot({
       loginUrl: '/api/v1/login',
-      whitelistedDomains: [new RegExp('^null$'), new RegExp(`^${escapeRegExp(location.hostname)}.*$`)],
       whiteListUrl: '/api/v1/checkip',
       tokenGetter,
       tokenSetter,
       passwordResetUrl: '/api/v1/password_reset',
       sendResetEmailUrl: '/api/v1/request_password_reset',
       loginPageUrl: '',
+      autoRefreshInterval: 5000,
       tokenPropertyPrefix: 'com.ecadlabs.auth',
       rolesPermissionsMapping: {
         'com.ecadlabs.auth.admin': ['show.is-admin']
-      }
+      },
     }),
     EcadAngularAuthComponentsModule,
     EcadAngularAuthAdminComponentsModule,
