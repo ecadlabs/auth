@@ -50,7 +50,6 @@ func assertNonAdminRole(args map[string]interface{}) bool {
 var (
 	roleRegular = roles.NewRole(RoleRegular, map[string]roles.AssertFunc{
 		permissionGet:        assertSelf,
-		permissionDelete:     assertSelf,
 		permissionModify:     assertSelf,
 		permissionAddRole:    assertNonAdminRole,
 		permissionDeleteRole: assertNonAdminRole,
@@ -59,10 +58,10 @@ var (
 	roleAdmin = roles.NewRole(RoleAdmin, map[string]roles.AssertFunc{
 		permissionCreate:     nil,
 		permissionGet:        nil,
-		permissionDelete:     nil,
+		permissionDelete:     func(args map[string]interface{}) bool { return !assertSelf(args) }, // Others
 		permissionModify:     nil,
 		permissionAddRole:    nil,
-		permissionDeleteRole: nil,
+		permissionDeleteRole: assertNonAdminRole,
 		permissionList:       nil,
 		permissionLog:        nil,
 	}, nil)
