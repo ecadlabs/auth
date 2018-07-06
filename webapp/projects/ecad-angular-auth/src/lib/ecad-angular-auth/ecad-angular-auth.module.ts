@@ -9,13 +9,6 @@ import { IpWhiteListedGuard } from './guards/ip-whitelisted.guard';
 import { LoggedinGuard } from './guards/loggedin.guard';
 import { PermissionsGuard } from './guards/permissions.guard';
 
-export const blacklistedRoutes = [];
-export const whiteListedDomain = [new RegExp('^null$'), new RegExp(`.*${location.hostname}.*`)];
-export let tokenName = '';
-export function tokenGetter() {
-  return window.localStorage.getItem(tokenName);
-}
-
 @NgModule({
   imports: [
     HttpClientModule,
@@ -30,9 +23,10 @@ export class EcadAngularAuthModule {
       providers: [
         ...JwtModule.forRoot({
           config: {
-            blacklistedRoutes: [config.loginUrl],
-            whitelistedDomains: [new RegExp('^null$'), new RegExp(`.*${location.hostname}.*`)],
+            blacklistedRoutes: [config.loginUrl, config.passwordResetUrl],
+            whitelistedDomains: config.whitelistedDomains,
             tokenGetter: config.tokenGetter,
+            skipWhenExpired: true,
           }
         }).providers,
         { provide: AUTH_CONFIG, useValue: config },

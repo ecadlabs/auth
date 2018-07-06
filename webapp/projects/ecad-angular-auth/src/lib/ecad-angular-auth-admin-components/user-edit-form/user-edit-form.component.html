@@ -1,5 +1,5 @@
 <div class='user-form' [formGroup]='userForm'>
-  <h2 i18n class='mat-title'>Create new user</h2>
+  <h2 i18n class='mat-title'>Invite new user</h2>
   <br>
   <p *ngIf="error.serverError" class="error-box" i18n>
     An error occured, please try again later.
@@ -17,12 +17,6 @@
     </mat-error>
     <mat-error *ngIf="userForm.get('email')!.hasError('required')" i18n>
       Please enter a valid email
-    </mat-error>
-  </mat-form-field>
-  <mat-form-field *ngIf='!dialogData'>
-    <input matInput formControlName='password' type='password' placeholder='Password' />
-    <mat-error *ngIf="userForm.get('password')!.hasError('required')" i18n>
-      Please enter a password
     </mat-error>
   </mat-form-field>
   <mat-form-field>

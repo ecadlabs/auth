@@ -24,6 +24,11 @@ import { ProtectedComponent } from './protected/protected.component';
 export function tokenGetter() { return localStorage.getItem('token'); }
 export function tokenSetter(value: string) { localStorage.setItem('token', value); }
 
+// Used to escape the hostname in case it contains reserved regex characters
+export function escapeRegExp(str: string) {
+  return str.replace(/[\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, '\\$&');
+}
+
 @NgModule({
   declarations: [
     AppComponent,
@@ -35,6 +40,7 @@ export function tokenSetter(value: string) { localStorage.setItem('token', value
   imports: [
     EcadAngularAuthModule.forRoot({
       loginUrl: '/api/v1/login',
+      whitelistedDomains: [new RegExp('^null$'), new RegExp(`^${escapeRegExp(location.hostname)}.*$`)],
       whiteListUrl: '/api/v1/checkip',
       tokenGetter,
       tokenSetter,
@@ -61,7 +67,7 @@ export function tokenSetter(value: string) { localStorage.setItem('token', value
       { path: '', pathMatch: 'full', component: LoginComponent },
       { path: 'reset-password', component: ResetPasswordComponent },
       { path: 'reset-password-email', component: ResetPasswordEmailComponent },
-      { path: 'protected', component: ProtectedComponent, data: { permissions: ['show.is-admin', 'show.boo'] }, canActivate: [LoggedinGuard, PermissionsGuard] }
+      { path: 'protected', component: ProtectedComponent, data: { permissions: ['show.is-admin'] }, canActivate: [LoggedinGuard, PermissionsGuard] }
     ]),
     MatToolbarModule,
   ],

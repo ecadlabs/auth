@@ -1,5 +1,5 @@
 <div class="list-container">
-  <button mat-raised-button color='primary' (click)='addUser()'>Add User</button>
+  <button mat-raised-button color='primary' (click)='addUser()'>Invite User</button>
   <mat-table #table [dataSource]="dataSource" matSort>
     <ng-container matColumnDef="email">
       <mat-header-cell class="col-lg" *matHeaderCellDef mat-sort-header i18n> Email </mat-header-cell>
@@ -31,29 +31,24 @@
       <mat-cell class="col-lg" *matCellDef="let element"> {{getDisplayRoles(element)}} </mat-cell>
     </ng-container>
 
-    <ng-container matColumnDef='edit'>
-      <mat-header-cell class="col-lg" *matHeaderCellDef mat-sort-header></mat-header-cell>
+    <ng-container matColumnDef='actions'>
+      <mat-header-cell class="col-lg" *matHeaderCellDef></mat-header-cell>
       <mat-cell class="col-lg" *matCellDef="let element">
-        <button mat-raised-button (click)='updateUser(element)' color='primary'>
+        <button mat-icon-button (click)='updateUser(element)' color='accent'>
           <mat-icon>edit</mat-icon>
         </button>
-      </mat-cell>
-    </ng-container>
-
-    <ng-container matColumnDef='delete'>
-      <mat-header-cell class="col-lg" *matHeaderCellDef mat-sort-header></mat-header-cell>
-      <mat-cell class="col-lg" *matCellDef="let element">
-        <button mat-raised-button (click)='delete(element)' color='primary'>
+        <button mat-icon-button (click)='delete(element)' color='accent'>
           <mat-icon>archive</mat-icon>
         </button>
-      </mat-cell>
-    </ng-container>
-
-    <ng-container matColumnDef='reset-password'>
-      <mat-header-cell class="col-lg" *matHeaderCellDef mat-sort-header></mat-header-cell>
-      <mat-cell class="col-lg" *matCellDef="let element">
-        <button mat-raised-button (click)='resetPassword(element)' color='primary'>
-          Reset Password
+        <button mat-icon-button (click)='resetPassword(element)' color='accent'>
+          <mat-icon>
+            <svg xmlns="https://www.w3.org/2000/svg" width="24px" height="24px" class="n5kzDf ShoKeb" viewBox="0 -4 48 48">
+              <g>
+                <path d="M22.6108492,0.931263858 C13.3241865,0.931263858 5.7090873,8.45769401 4.81424603,18.0931264 L0,18.0931264 L6.68088492,25.2114856 L13.3653492,18.0931264 L8.42761508,18.0931264 C9.30813889,10.57051 15.3178929,4.74501109 22.6197976,4.74501109 C30.5301944,4.74501109 36.9372579,11.5754324 36.9372579,20 C36.9372579,28.4245676 30.5301944,35.2549889 22.6197976,35.2549889 C17.4619325,35.2549889 12.9698294,32.3298448 10.4499563,27.9745455 L7.63120635,30.3638581 C10.8204206,35.5925055 16.3183254,39.0687361 22.6108492,39.0687361 C32.5006349,39.0687361 40.516623,30.531663 40.516623,20 C40.516623,9.46833703 32.5024246,0.931263858 22.6108492,0.931263858 L22.6108492,0.931263858 Z"></path>
+                <path d="M27.8975714,16.6439024 L27.8975714,14.7179601 C27.8975714,11.8004435 25.6694167,9.42829268 22.9329921,9.42829268 C20.1965675,9.42829268 17.9684127,11.8004435 17.9684127,14.7179601 L17.9684127,16.6439024 C17.0682024,16.6553437 16.3380119,17.4333481 16.3380119,18.3963193 L16.3380119,27.181286 C16.3380119,28.1518847 17.0753611,28.9394235 17.9863095,28.9394235 L27.8814643,28.9394235 C28.7924127,28.9394235 29.5297619,28.1518847 29.5297619,27.181286 L29.5297619,18.3982262 C29.5297619,17.4333481 28.7995714,16.6553437 27.8975714,16.6439024 L27.8975714,16.6439024 Z M22.9329921,12.0979157 C24.2877817,12.0979157 25.3920159,13.2725499 25.3920159,14.7179601 L25.3920159,16.6419956 L20.4739683,16.6419956 L20.4739683,14.7179601 C20.4739683,13.2725499 21.5764127,12.0979157 22.9329921,12.0979157 L22.9329921,12.0979157 Z"></path>
+              </g>
+            </svg>
+          </mat-icon>
         </button>
       </mat-cell>
     </ng-container>
