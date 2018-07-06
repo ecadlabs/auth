@@ -30,11 +30,18 @@ const (
 	OrderDesc = "desc"
 )
 
+const (
+	ColQuery = 1 << iota
+	ColSort
+)
+
 type Expr struct {
 	Col   string
 	Op    string
 	Value string
 }
+
+type ColFlagsFunc func(string) int
 
 type Query struct {
 	SortBy     string
@@ -218,10 +225,10 @@ func (a *argIndex) Next() string {
 }
 
 type SelectOptions struct {
-	SelectExpr     string
-	FromExpr       string
-	IDColumn       string
-	ValidateColumn func(string) bool
+	SelectExpr      string
+	FromExpr        string
+	IDColumn        string
+	ColumnFlagsFunc ColFlagsFunc
 }
 
 func (q *Query) CountStmt(o *SelectOptions) (string, []interface{}) {
@@ -254,8 +261,8 @@ func (q *Query) SelectStmt(o *SelectOptions) (string, []interface{}, error) {
 		return "", nil, errors.New("Sorting column is not specified")
 	}
 
-	if o.ValidateColumn != nil {
-		if err := q.ValidateColumnsFunc(o.ValidateColumn); err != nil {
+	if o.ColumnFlagsFunc != nil {
+		if err := q.validateColumnsFunc(o.ColumnFlagsFunc); err != nil {
 			return "", nil, err
 		}
 	}
@@ -331,13 +338,13 @@ func errCol(col string) error {
 	return fmt.Errorf("Invalid column name `%s'", col)
 }
 
-func (q *Query) ValidateColumnsFunc(f func(string) bool) error {
-	if !f(q.SortBy) {
+func (q *Query) validateColumnsFunc(f ColFlagsFunc) error {
+	if f(q.SortBy)&ColSort == 0 {
 		return errCol(q.SortBy)
 	}
 
 	for _, e := range q.Match {
-		if !f(e.Col) {
+		if f(e.Col)&ColQuery == 0 {
 			return errCol(e.Col)
 		}
 	}

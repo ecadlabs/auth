@@ -93,18 +93,18 @@ func (s *Storage) GetUserByEmail(ctx context.Context, email string) (*User, erro
 	return s.getUser(ctx, "email", email)
 }
 
-var userQueryColumns = map[string]struct{}{
-	"id":             struct{}{},
-	"email":          struct{}{},
-	"name":           struct{}{},
-	"added":          struct{}{},
-	"modified":       struct{}{},
-	"roles":          struct{}{},
-	"email_verified": struct{}{},
-	"login_addr":     struct{}{},
-	"login_ts":       struct{}{},
-	"refresh_addr":   struct{}{},
-	"refresh_ts":     struct{}{},
+var userQueryColumns = map[string]int{
+	"id":             query.ColQuery | query.ColSort,
+	"email":          query.ColQuery | query.ColSort,
+	"name":           query.ColQuery | query.ColSort,
+	"added":          query.ColQuery | query.ColSort,
+	"modified":       query.ColQuery | query.ColSort,
+	"roles":          query.ColQuery,
+	"email_verified": query.ColQuery | query.ColSort,
+	"login_addr":     query.ColQuery | query.ColSort,
+	"login_ts":       query.ColQuery | query.ColSort,
+	"refresh_addr":   query.ColQuery | query.ColSort,
+	"refresh_ts":     query.ColQuery | query.ColSort,
 }
 
 func (s *Storage) GetUsers(ctx context.Context, q *query.Query) (users []*User, count int, next *query.Query, err error) {
@@ -116,15 +116,18 @@ func (s *Storage) GetUsers(ctx context.Context, q *query.Query) (users []*User, 
 		SelectExpr: "users.*, ra.roles, users." + pq.QuoteIdentifier(q.SortBy) + " AS sorted_by",
 		FromExpr:   "users LEFT JOIN (SELECT user_id, array_agg(role) AS roles FROM roles GROUP BY user_id) AS ra ON ra.user_id = users.id",
 		IDColumn:   "id",
-		ValidateColumn: func(col string) bool {
-			_, ok := userQueryColumns[col]
-			return ok
+		ColumnFlagsFunc: func(col string) int {
+			if flags, ok := userQueryColumns[col]; ok {
+				return flags
+			}
+			return 0
 		},
 	}
 
 	stmt, args, err := q.SelectStmt(&selOpt)
 	if err != nil {
 		err = &Error{err, http.StatusBadRequest}
+		return
 	}
 
 	rows, err := s.DB.QueryxContext(ctx, stmt, args...)
