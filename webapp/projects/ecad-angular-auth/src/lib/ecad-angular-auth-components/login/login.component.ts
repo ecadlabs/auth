@@ -2,7 +2,8 @@ import { Component, OnInit, Inject, Input } from '@angular/core';
 import { Router } from '@angular/router';
 import { FormBuilder, Validators, FormGroup } from '@angular/forms';
 import { ILoginService } from '../../ecad-angular-auth/interfaces/login-service.i';
-import { LOGIN_SERVICE } from '../../ecad-angular-auth/tokens';
+import { LOGIN_SERVICE, AUTH_CONFIG } from '../../ecad-angular-auth/tokens';
+import { AuthConfig } from '../../ecad-angular-auth/interfaces/auth-config.i';
 
 export interface LoginFormConfig {
   successUrlRedirect: string;
@@ -25,9 +26,11 @@ export class LoginComponent {
     private loginService: ILoginService,
     private router: Router,
     fb: FormBuilder,
+    @Inject(AUTH_CONFIG)
+    private authConfig: AuthConfig
   ) {
     this.loginForm = fb.group({
-      'username': ['', [Validators.required]],
+      'username': ['', [Validators.required, this.authConfig.emailValidationRegex || /^.+@.+\..{2,3}$/]],
       'password': ['', [Validators.required]]
     });
   }

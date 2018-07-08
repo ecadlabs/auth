@@ -1,7 +1,8 @@
 <!--The content below is only a placeholder and can be replaced.-->
 <mat-toolbar>
   <span>{{title}}</span>
-  <a [routerLink]='["protected"]'>Navigate to protected page</a>
+  <a [routerLink]='["protected"]'>Users</a>
+  <a [routerLink]='["logs"]'>Logs</a>
   <div class='splitter'></div>
   <span *authEcadPermissions="'show.is-admin'">Is Admin</span>
   <span *authEcadPermissions="'show.boo'">Boo!</span>

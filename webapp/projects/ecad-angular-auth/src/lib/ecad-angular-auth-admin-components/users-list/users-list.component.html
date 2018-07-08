@@ -1,39 +1,39 @@
 <div class="list-container">
   <button mat-raised-button color='primary' (click)='addUser()'>Invite User</button>
-  <mat-table #table [dataSource]="dataSource" matSort>
+  <table class="users-table" mat-table #table [dataSource]="dataSource" matSort>
     <ng-container matColumnDef="email">
-      <mat-header-cell class="col-lg" *matHeaderCellDef mat-sort-header i18n> Email </mat-header-cell>
-      <mat-cell class="col-lg" *matCellDef="let element"> {{element.email}} </mat-cell>
+      <th mat-header-cell class="col-lg" *matHeaderCellDef mat-sort-header i18n> Email </th>
+      <td mat-cell class="col-lg" *matCellDef="let element"> {{element.email}} </td>
     </ng-container>
 
     <ng-container matColumnDef="name">
-      <mat-header-cell class="col-lg" *matHeaderCellDef mat-sort-header i18n> Name </mat-header-cell>
-      <mat-cell class="col-lg" *matCellDef="let element"> {{element.name}} </mat-cell>
+      <th mat-header-cell class="col-lg" *matHeaderCellDef mat-sort-header i18n> Name </th>
+      <td mat-cell class="col-lg" *matCellDef="let element"> {{element.name}} </td>
     </ng-container>
 
     <ng-container matColumnDef="email_verified">
-      <mat-header-cell class="col-lg" *matHeaderCellDef mat-sort-header i18n> Verfied </mat-header-cell>
-      <mat-cell class="col-lg" *matCellDef="let element"> {{element.email_verified}} </mat-cell>
+      <th mat-header-cell class="col-lg" *matHeaderCellDef mat-sort-header i18n> Verfied </th>
+      <td mat-cell class="col-lg" *matCellDef="let element"> {{element.email_verified}} </td>
     </ng-container>
 
     <ng-container matColumnDef="added">
-      <mat-header-cell class="col-lg" *matHeaderCellDef mat-sort-header i18n> Added </mat-header-cell>
-      <mat-cell class="col-lg" *matCellDef="let element"> {{element.added | date:"dd-MM-yyyy HH:mm"}} </mat-cell>
+      <th mat-header-cell class="col-lg" *matHeaderCellDef mat-sort-header i18n> Added </th>
+      <td mat-cell class="col-lg" *matCellDef="let element"> {{element.added | date:"dd-MM-yyyy HH:mm"}} </td>
     </ng-container>
 
     <ng-container matColumnDef="modified">
-      <mat-header-cell class="col-lg" *matHeaderCellDef mat-sort-header i18n> Modified </mat-header-cell>
-      <mat-cell class="col-lg" *matCellDef="let element"> {{element.modified | date:"dd-MM-yyyy HH:mm"}} </mat-cell>
+      <th mat-header-cell class="col-lg" *matHeaderCellDef mat-sort-header i18n> Modified </th>
+      <td mat-cell class="col-lg" *matCellDef="let element"> {{element.modified | date:"dd-MM-yyyy HH:mm"}} </td>
     </ng-container>
 
     <ng-container matColumnDef="roles">
-      <mat-header-cell class="col-lg" *matHeaderCellDef mat-sort-header i18n> Roles </mat-header-cell>
-      <mat-cell class="col-lg" *matCellDef="let element"> {{getDisplayRoles(element)}} </mat-cell>
+      <th mat-header-cell class="col-lg" *matHeaderCellDef mat-sort-header i18n> Roles </th>
+      <td mat-cell class="col-lg" *matCellDef="let element"> {{getDisplayRoles(element)}} </td>
     </ng-container>
 
     <ng-container matColumnDef='actions'>
-      <mat-header-cell class="col-lg" *matHeaderCellDef></mat-header-cell>
-      <mat-cell class="col-lg" *matCellDef="let element">
+      <th mat-header-cell class="col-lg" *matHeaderCellDef></th>
+      <td mat-cell class="col-lg" *matCellDef="let element">
         <button mat-icon-button (click)='updateUser(element)' color='accent'>
           <mat-icon>edit</mat-icon>
         </button>
@@ -50,12 +50,12 @@
             </svg>
           </mat-icon>
         </button>
-      </mat-cell>
+      </td>
     </ng-container>
 
-    <mat-header-row *matHeaderRowDef="displayedColumns"></mat-header-row>
-    <mat-row *matRowDef="let row; columns: displayedColumns;"></mat-row>
-  </mat-table>
+    <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+    <tr (click)='selectUser(row)' mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+  </table>
   <mat-paginator (page)='changePage($event)' [length]="((dataSource.pageInfo$ | async) || {totalCount: 0}).totalCount" [pageSize]="20"
     [pageSizeOptions]="[20]">
   </mat-paginator>
