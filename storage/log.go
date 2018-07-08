@@ -4,9 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
-	"net/http"
 	"time"
 
+	"git.ecadlabs.com/ecad/auth/errors"
 	"git.ecadlabs.com/ecad/auth/query"
 	"github.com/lib/pq"
 	"github.com/satori/go.uuid"
@@ -72,7 +72,7 @@ func (s *Storage) GetLogs(ctx context.Context, q *query.Query) (entries []*LogEn
 
 	stmt, args, err := q.SelectStmt(&selOpt)
 	if err != nil {
-		err = &Error{err, http.StatusBadRequest}
+		err = errors.Wrap(err, errors.CodeQuerySyntax)
 	}
 
 	rows, err := s.DB.QueryxContext(ctx, stmt, args...)

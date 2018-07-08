@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"time"
 
+	"git.ecadlabs.com/ecad/auth/errors"
 	"git.ecadlabs.com/ecad/auth/handlers"
 	"git.ecadlabs.com/ecad/auth/logger"
 	"git.ecadlabs.com/ecad/auth/middleware"
@@ -115,7 +116,7 @@ func (s *Service) APIHandler() http.Handler {
 		SigningMethod:       JWTSigningMethod,
 		UserProperty:        handlers.TokenContextKey,
 		ErrorHandler: func(w http.ResponseWriter, r *http.Request, err string) {
-			utils.JSONError(w, err, http.StatusUnauthorized)
+			utils.JSONError(w, err, errors.CodeUnauthorized)
 		},
 	}
 	jwtMiddleware := jwtmiddleware.New(jwtOptions)
@@ -201,7 +202,7 @@ func (s *Service) APIHandler() http.Handler {
 	m.Methods("GET").Path("/metrics").Handler(promhttp.Handler())
 
 	m.NotFoundHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		utils.JSONError(w, "Resource not found", http.StatusNotFound)
+		utils.JSONErrorResponse(w, errors.ErrResourceNotFound)
 	})
 
 	return m

@@ -1,26 +1,11 @@
 package storage
 
 import (
-	"errors"
-	"net/http"
 	"strings"
 	"time"
 
 	"git.ecadlabs.com/ecad/auth/roles"
 	"github.com/satori/go.uuid"
-)
-
-type Error struct {
-	error
-	HTTPStatus int
-}
-
-var (
-	ErrNotFound     = &Error{errors.New("User not found"), http.StatusNotFound}
-	ErrEmail        = &Error{errors.New("Email is in use"), http.StatusConflict}
-	ErrPatchValue   = &Error{errors.New("Patch value is missed"), http.StatusBadRequest}
-	ErrRoleExists   = &Error{errors.New("Role exists"), http.StatusConflict}
-	ErrTokenExpired = &Error{errors.New("Token is expired"), http.StatusBadRequest}
 )
 
 type SortOrder int

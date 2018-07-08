@@ -1,9 +1,9 @@
 package middleware
 
 import (
-	"fmt"
 	"net/http"
 
+	"git.ecadlabs.com/ecad/auth/errors"
 	"git.ecadlabs.com/ecad/auth/utils"
 	"github.com/dgrijalva/jwt-go"
 )
@@ -21,11 +21,11 @@ func (a *Audience) Handler(h http.Handler) http.Handler {
 				h.ServeHTTP(w, r)
 				return
 			} else {
-				utils.JSONError(w, fmt.Sprintf("Wrong token audience `%v'", claims["aud"]), http.StatusForbidden)
+				utils.JSONErrorResponse(w, errors.ErrAudience)
 				return
 			}
 		}
 
-		utils.JSONError(w, http.StatusText(http.StatusForbidden), http.StatusForbidden)
+		utils.JSONError(w, "", errors.CodeForbidden)
 	})
 }
