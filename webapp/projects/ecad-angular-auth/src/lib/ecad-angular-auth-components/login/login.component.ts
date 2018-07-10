@@ -30,7 +30,7 @@ export class LoginComponent {
     private authConfig: AuthConfig
   ) {
     this.loginForm = fb.group({
-      'username': ['', [Validators.required, this.authConfig.emailValidationRegex || /^.+@.+\..{2,3}$/]],
+      'username': ['', [Validators.required]],
       'password': ['', [Validators.required]]
     });
   }
