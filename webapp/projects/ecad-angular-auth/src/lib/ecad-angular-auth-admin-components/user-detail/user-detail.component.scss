@@ -1,0 +1,37 @@
+:host {
+    width: 100%;
+
+    .property-container {
+        display: flex;
+
+        .property-label, .property-value {
+            flex:1;
+        }
+
+        .property-value {
+            min-width: 50%;
+        }
+    }
+
+    .user-detail {
+        width: 100%;
+        display: flex;
+
+        .divider+mat-card-content {
+            padding: 20px 0;
+        }
+
+        .gutter {
+            width: 20px;
+        }
+
+        .user-col {
+            flex: 3;
+            min-width: 200px;
+        }
+
+        .log-col {
+            flex: 8;
+        }
+    }
+}

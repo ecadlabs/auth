@@ -43,7 +43,7 @@ export class FilteredDatasource<T> extends DataSource<T> {
             return obs.pipe(startWith([] as FilterCondition<T>[]));
         });
         return combineLatest(...observables).pipe(
-            map((...filterConditions) => [].concat(...filterConditions))
+            map((filterConditions) => ([].concat(...filterConditions))),
         ) as Observable<FilterCondition<T>[]>;
     }
 

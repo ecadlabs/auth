@@ -9,11 +9,17 @@ import {
   MatButtonModule,
   MatSelectModule,
   MatIconModule,
-  MatSnackBarModule
+  MatSnackBarModule,
+  MatGridListModule,
+  MatDividerModule,
+  MatCardModule
 } from '@angular/material';
 import { UsersListComponent } from './users-list/users-list.component';
 import { UserEditFormComponent } from './user-edit-form/user-edit-form.component';
 import { ReactiveFormsModule } from '@angular/forms';
+import { ConfirmDialogModule } from '../confirm-dialog/confirm-dialog.module';
+import { UserDetailComponent } from './user-detail/user-detail.component';
+import { UserLogsComponent } from './user-logs/user-logs.component';
 
 @NgModule({
   imports: [
@@ -29,9 +35,12 @@ import { ReactiveFormsModule } from '@angular/forms';
     MatButtonModule,
     MatIconModule,
     MatSnackBarModule,
+    ConfirmDialogModule,
+    MatDividerModule,
+    MatCardModule
   ],
-  declarations: [UsersListComponent, UserEditFormComponent],
+  declarations: [UsersListComponent, UserEditFormComponent, UserDetailComponent, UserLogsComponent],
   entryComponents: [UserEditFormComponent],
-  exports: [UsersListComponent]
+  exports: [UsersListComponent, UserDetailComponent, UserLogsComponent]
 })
 export class EcadAngularAuthAdminComponentsModule { }
