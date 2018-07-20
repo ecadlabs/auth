@@ -5,41 +5,25 @@ import (
 	"time"
 
 	"git.ecadlabs.com/ecad/auth/storage"
-	log "github.com/sirupsen/logrus"
 )
 
 type NotificationData struct {
+	Addr        string
+	Email       string
 	CurrentUser *storage.User
 	TargetUser  *storage.User
+	To          []string
 	Token       string
 	TokenMaxAge time.Duration
 }
 
+const (
+	NotificationInvite             = "invite"
+	NotificationReset              = "reset"
+	NotificationEmailUpdateRequest = "email_update_request"
+	NotificationEmailUpdate        = "email_update"
+)
+
 type Notifier interface {
-	InviteUser(context.Context, *NotificationData) error
-	PasswordReset(context.Context, *NotificationData) error
+	Notify(context.Context, string, *NotificationData) error
 }
-
-// For debug purpose
-type Log struct{}
-
-func (l Log) InviteUser(ctx context.Context, d *NotificationData) error {
-	log.WithFields(log.Fields{
-		"id":    d.TargetUser.ID,
-		"token": d.Token,
-	}).Println("Reset token")
-
-	return nil
-}
-
-func (l Log) PasswordReset(ctx context.Context, d *NotificationData) error {
-	log.WithFields(log.Fields{
-		"id":    d.TargetUser.ID,
-		"email": d.TargetUser.Email,
-		"token": d.Token,
-	}).Println("Reset token requested")
-
-	return nil
-}
-
-var _ Notifier = Log{}

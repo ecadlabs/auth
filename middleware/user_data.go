@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 
+	"git.ecadlabs.com/ecad/auth/errors"
 	"git.ecadlabs.com/ecad/auth/storage"
 	"git.ecadlabs.com/ecad/auth/utils"
 	"github.com/dgrijalva/jwt-go"
@@ -59,7 +60,7 @@ func (t *TokenUserData) Handler(h http.Handler) http.Handler {
 			}
 		}
 
-		utils.JSONError(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		utils.JSONError(w, "", errors.CodeUnauthorized)
 	})
 }
 
@@ -98,6 +99,6 @@ func (u *UserData) Handler(h http.Handler) http.Handler {
 			log.Errorln(err)
 		}
 
-		utils.JSONError(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		utils.JSONError(w, "", errors.CodeUnauthorized)
 	})
 }

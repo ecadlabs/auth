@@ -2,9 +2,9 @@ package storage
 
 import (
 	"fmt"
-	"net/http"
 	"strings"
 
+	"git.ecadlabs.com/ecad/auth/errors"
 	"git.ecadlabs.com/ecad/auth/jsonpatch"
 )
 
@@ -15,7 +15,7 @@ type UserOps struct {
 }
 
 func errPatchOp(o *jsonpatch.Op) error {
-	return &Error{fmt.Errorf("Incorrect JSON patch op `%s' for path `%s'", o.Op, o.Path), http.StatusBadRequest}
+	return errors.Wrap(fmt.Errorf("Incorrect JSON patch op `%s' for path `%s'", o.Op, o.Path), errors.CodePatchFormat)
 }
 
 func OpsFromPatch(patch jsonpatch.Patch) (*UserOps, error) {
@@ -39,7 +39,7 @@ func OpsFromPatch(patch jsonpatch.Patch) (*UserOps, error) {
 			}
 		} else if o.Path != "" && o.Op == "replace" && o.Path[0] == '/' && strings.IndexByte(o.Path[1:], '/') < 0 {
 			if o.Value == nil {
-				return nil, ErrPatchValue
+				return nil, errors.ErrPatchValue
 			}
 
 			ret.Update[o.Path[1:]] = o.Value

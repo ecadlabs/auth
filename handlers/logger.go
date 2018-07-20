@@ -11,14 +11,16 @@ import (
 )
 
 const (
-	EvCreate       = "create"
-	EvUpdate       = "update"
-	EvAddRole      = "add_role"
-	EvRemoveRole   = "remove_role"
-	EvDelete       = "delete"
-	EvReset        = "reset"
-	EvResetRequest = "reset_request"
-	EvLogin        = "login"
+	EvCreate             = "create"
+	EvUpdate             = "update"
+	EvAddRole            = "add_role"
+	EvRemoveRole         = "remove_role"
+	EvDelete             = "delete"
+	EvReset              = "reset"
+	EvResetRequest       = "reset_request"
+	EvLogin              = "login"
+	EvEmailUpdateRequest = "email_update_request"
+	EvEmailUpdate        = "email_update"
 )
 
 func getRemoteAddr(r *http.Request) string {

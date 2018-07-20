@@ -5,9 +5,11 @@ import (
 	"net/http"
 	"time"
 
+	"git.ecadlabs.com/ecad/auth/errors"
 	"git.ecadlabs.com/ecad/auth/storage"
 	"git.ecadlabs.com/ecad/auth/utils"
 	"github.com/dgrijalva/jwt-go"
+	"github.com/satori/go.uuid"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -47,10 +49,12 @@ func (u *Users) writeUserToken(w http.ResponseWriter, user *storage.User) error 
 	}
 
 	response := struct {
-		Token      string `json:"token"`
-		RefreshURL string `json:"refresh,omitempty"`
+		Token      string    `json:"token"`
+		ID         uuid.UUID `json:"id,omitempty"`
+		RefreshURL string    `json:"refresh,omitempty"`
 	}{
 		Token:      tokenString,
+		ID:         user.ID,
 		RefreshURL: u.RefreshURL(),
 	}
 
@@ -73,47 +77,47 @@ func (u *Users) Login(w http.ResponseWriter, r *http.Request) {
 		request.Password = password
 	} else {
 		if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
-			utils.JSONError(w, err.Error(), http.StatusBadRequest)
+			utils.JSONError(w, err.Error(), errors.CodeBadRequest)
 			return
 		}
 	}
 
 	if request.Name == "" || request.Password == "" {
-		utils.JSONError(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		utils.JSONError(w, "", errors.CodeUnauthorized)
 		return
 	}
 
 	user, err := u.Storage.GetUserByEmail(u.context(r), request.Name)
 	if err != nil {
 		log.Error(err)
-		utils.JSONError(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		utils.JSONError(w, "", errors.CodeUnauthorized)
 		return
 	}
 
 	if len(user.PasswordHash) == 0 {
-		utils.JSONError(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		utils.JSONError(w, "", errors.CodeUnauthorized)
 		return
 	}
 
 	if err := bcrypt.CompareHashAndPassword(user.PasswordHash, []byte(request.Password)); err != nil {
 		log.Error(err)
-		utils.JSONError(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		utils.JSONError(w, "", errors.CodeUnauthorized)
 		return
 	}
 
 	// Don't allow unverified users to log in
 	if !user.EmailVerified {
-		utils.JSONError(w, "Email is not verified", http.StatusForbidden)
+		utils.JSONErrorResponse(w, errors.ErrEmailNotVerified)
 		return
 	}
 
 	if err := u.Storage.UpdateLoginInfo(u.context(r), user.ID, getRemoteAddr(r)); err != nil {
-		utils.JSONError(w, err.Error(), http.StatusInternalServerError)
+		utils.JSONErrorResponse(w, err)
 		return
 	}
 
 	if err := u.writeUserToken(w, user); err != nil {
-		utils.JSONError(w, err.Error(), http.StatusInternalServerError)
+		utils.JSONErrorResponse(w, err)
 		return
 	}
 
@@ -127,12 +131,12 @@ func (u *Users) Refresh(w http.ResponseWriter, r *http.Request) {
 	self := r.Context().Value(UserContextKey).(*storage.User)
 
 	if err := u.Storage.UpdateRefreshInfo(u.context(r), self.ID, getRemoteAddr(r)); err != nil {
-		utils.JSONError(w, err.Error(), http.StatusInternalServerError)
+		utils.JSONErrorResponse(w, err)
 		return
 	}
 
 	if err := u.writeUserToken(w, self); err != nil {
-		utils.JSONError(w, err.Error(), http.StatusInternalServerError)
+		utils.JSONErrorResponse(w, err)
 		return
 	}
 }

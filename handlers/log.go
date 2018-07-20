@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"net/url"
 
+	"git.ecadlabs.com/ecad/auth/errors"
 	"git.ecadlabs.com/ecad/auth/query"
 	"git.ecadlabs.com/ecad/auth/storage"
 	"git.ecadlabs.com/ecad/auth/utils"
@@ -16,14 +17,14 @@ func (u *Users) GetLogs(w http.ResponseWriter, r *http.Request) {
 
 	if err := self.Roles.Get().IsGranted(permissionLog, nil); err != nil {
 		log.Error(err)
-		utils.JSONError(w, err.Error(), http.StatusForbidden)
+		utils.JSONError(w, err.Error(), errors.CodeForbidden)
 		return
 	}
 
 	q, err := query.FromValues(r.Form)
 	if err != nil {
 		log.Error(err)
-		utils.JSONError(w, err.Error(), http.StatusBadRequest)
+		utils.JSONError(w, err.Error(), errors.CodeQuerySyntax)
 		return
 	}
 
@@ -34,7 +35,7 @@ func (u *Users) GetLogs(w http.ResponseWriter, r *http.Request) {
 	logSlice, count, nextQuery, err := u.Storage.GetLogs(u.context(r), q)
 	if err != nil {
 		log.Error(err)
-		utils.JSONError(w, err.Error(), errorHTTPStatus(err))
+		utils.JSONErrorResponse(w, err)
 		return
 	}
 
@@ -56,7 +57,7 @@ func (u *Users) GetLogs(w http.ResponseWriter, r *http.Request) {
 		nextUrl, err := url.Parse(u.LogURL())
 		if err != nil {
 			log.Error(err)
-			utils.JSONError(w, err.Error(), http.StatusInternalServerError)
+			utils.JSONErrorResponse(w, err)
 			return
 		}
 

@@ -39,19 +39,23 @@ func init() {
 
 type testNotifier chan string
 
-func (t testNotifier) InviteUser(ctx context.Context, d *notification.NotificationData) error {
+func (t testNotifier) Notify(ctx context.Context, tpl string, d *notification.NotificationData) error {
 	(chan string)(t) <- d.Token
 	return nil
 }
 
-func (t testNotifier) PasswordReset(ctx context.Context, d *notification.NotificationData) error {
-	return t.InviteUser(ctx, d)
+func genTestEmail(n int) string {
+	return fmt.Sprintf("test+χρήστης%d@екзампл.ком", n)
+}
+
+func genTestName(n int) string {
+	return fmt.Sprintf("Test Тест 日本語 ☺☻☹ %d", n)
 }
 
 func genTestUser(n int) *storage.User {
 	return &storage.User{
-		Email: fmt.Sprintf("user%d@example.com", n),
-		Name:  fmt.Sprintf("Test User %d", n),
+		Email: genTestEmail(n),
+		Name:  genTestName(n),
 	}
 }
 
@@ -280,13 +284,14 @@ func TestService(t *testing.T) {
 	var srv *httptest.Server
 
 	config := service.Config{
-		BaseURLFunc:      func() string { return srv.URL },
-		JWTSecret:        testJWTSecret,
-		SessionMaxAge:    259200,
-		ResetTokenMaxAge: 259200,
-		PostgresURL:      *dbURL,
-		DBTimeout:        10,
-		Notifier:         testNotifier(tokenCh),
+		BaseURLFunc:            func() string { return srv.URL },
+		JWTSecret:              testJWTSecret,
+		SessionMaxAge:          259200,
+		ResetTokenMaxAge:       259200,
+		EmailUpdateTokenMaxAge: 259200,
+		PostgresURL:            *dbURL,
+		DBTimeout:              10,
+		Notifier:               testNotifier(tokenCh),
 	}
 
 	svc, err := config.New()
@@ -341,7 +346,7 @@ func TestService(t *testing.T) {
 
 	// Run all other tests in parallel
 	t.Run("TestRegularUser", func(t *testing.T) {
-		code, token, refresh, err := doLogin(srv, "user0@example.com", testPassword)
+		code, token, refresh, err := doLogin(srv, genTestEmail(0), testPassword)
 		if err != nil {
 			t.Error(err)
 			return
@@ -461,7 +466,7 @@ func TestService(t *testing.T) {
 
 		t.Run("TestGetAllSuper", func(t *testing.T) {
 			for _, u := range usersList {
-				code, _, err := getUser(srv, token, u.ID)
+				code, ret, err := getUser(srv, token, u.ID)
 				if err != nil {
 					t.Error(err)
 					return
@@ -470,6 +475,18 @@ func TestService(t *testing.T) {
 				if code != http.StatusOK {
 					t.Error(code)
 					return
+				}
+
+				if ret.ID != u.ID {
+					t.Errorf("%v != %v", ret.ID, u.ID)
+				}
+
+				if ret.Email != u.Email {
+					t.Errorf("%v != %v", ret.Email, u.Email)
+				}
+
+				if ret.Name != u.Name {
+					t.Errorf("%v != %v", ret.Name, u.Name)
 				}
 			}
 		})

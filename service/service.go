@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"time"
 
+	"git.ecadlabs.com/ecad/auth/errors"
 	"git.ecadlabs.com/ecad/auth/handlers"
 	"git.ecadlabs.com/ecad/auth/logger"
 	"git.ecadlabs.com/ecad/auth/middleware"
@@ -94,15 +95,17 @@ func (s *Service) APIHandler() http.Handler {
 		},
 		JWTSigningMethod: JWTSigningMethod,
 
-		BaseURL:     baseURLFunc,
-		UsersPath:   "/users/",
-		RefreshPath: "/refresh",
-		ResetPath:   "/password_reset",
-		LogPath:     "/logs/",
-		Namespace:   s.config.Namespace(),
+		BaseURL:         baseURLFunc,
+		UsersPath:       "/users/",
+		RefreshPath:     "/refresh",
+		ResetPath:       "/password_reset",
+		LogPath:         "/logs/",
+		EmailUpdatePath: "/email_update",
+		Namespace:       s.config.Namespace(),
 
-		SessionMaxAge:    time.Duration(s.config.SessionMaxAge) * time.Second,
-		ResetTokenMaxAge: time.Duration(s.config.ResetTokenMaxAge) * time.Second,
+		SessionMaxAge:          time.Duration(s.config.SessionMaxAge) * time.Second,
+		ResetTokenMaxAge:       time.Duration(s.config.ResetTokenMaxAge) * time.Second,
+		EmailUpdateTokenMaxAge: time.Duration(s.config.EmailUpdateTokenMaxAge) * time.Second,
 
 		AuxLogger: dbLogger,
 		Notifier:  s.notifier,
@@ -113,7 +116,7 @@ func (s *Service) APIHandler() http.Handler {
 		SigningMethod:       JWTSigningMethod,
 		UserProperty:        handlers.TokenContextKey,
 		ErrorHandler: func(w http.ResponseWriter, r *http.Request, err string) {
-			utils.JSONError(w, err, http.StatusUnauthorized)
+			utils.JSONError(w, err, errors.CodeUnauthorized)
 		},
 	}
 	jwtMiddleware := jwtmiddleware.New(jwtOptions)
@@ -172,6 +175,9 @@ func (s *Service) APIHandler() http.Handler {
 	m.Methods("GET").Path("/refresh").Handler(jwtMiddleware.Handler(aud.Handler(userdata.Handler(http.HandlerFunc(usersHandler.Refresh)))))
 
 	// Users API
+	m.Methods("POST").Path("/request_email_update").Handler(jwtMiddleware.Handler(aud.Handler(userdata.Handler(http.HandlerFunc(usersHandler.SendUpdateEmailRequest)))))
+	m.Methods("POST").Path("/email_update").HandlerFunc(usersHandler.UpdateEmail)
+
 	umux := m.PathPrefix("/users").Subrouter()
 	umux.Use(jwtMiddleware.Handler)
 	umux.Use(aud.Handler)
@@ -196,7 +202,7 @@ func (s *Service) APIHandler() http.Handler {
 	m.Methods("GET").Path("/metrics").Handler(promhttp.Handler())
 
 	m.NotFoundHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		utils.JSONError(w, "Resource not found", http.StatusNotFound)
+		utils.JSONErrorResponse(w, errors.ErrResourceNotFound)
 	})
 
 	return m

@@ -337,6 +337,56 @@ paths:
           $ref: '#/components/responses/Error'
       security:
         - jwtAuth: []
+  /request_email_update:
+    post:
+      tags:
+        - users
+      summary: Request email update for specified id
+      operationId: requestEmailUpdate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - id
+              properties:
+                email:
+                  type: string
+                id:
+                  type: string
+                  format: uuid
+      responses:
+        '204':
+          description: Empty response
+        default:
+          $ref: '#/components/responses/Error'
+      security:
+        - jwtAuth: []
+  /email_update:
+    post:
+      tags:
+        - users
+      summary: Update email with given token
+      operationId: updateEmail
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - token
+              properties:
+                token:
+                  type: string
+      responses:
+        '204':
+          description: Empty response
+        default:
+          $ref: '#/components/responses/Error'
   /logs/:
     get:
       tags:
@@ -454,13 +504,39 @@ components:
         refresh:
           type: string
           format: uri
+        id:
+          type: string
+          format: uuid
     Error:
       type: object
       required:
         - error
+        - code
       properties:
         error:
           type: string
+        code:
+          type: string
+          enum:
+            - unknown
+            - user_not_found
+            - resource_not_found
+            - email_in_use
+            - patch_format
+            - role_exists
+            - token_expired
+            - bad_request
+            - query_syntax
+            - forbidden
+            - email_format
+            - unauthorized
+            - empty_email
+            - empty_password
+            - empty_token
+            - invalid_token
+            - nvalid_token_fmt
+            - invalid_audience
+            - email_not_verified
     Paginated:
       type: object
       required:

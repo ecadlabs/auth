@@ -4,9 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
-	"net/http"
 	"time"
 
+	"git.ecadlabs.com/ecad/auth/errors"
 	"git.ecadlabs.com/ecad/auth/query"
 	"github.com/lib/pq"
 	"github.com/satori/go.uuid"
@@ -45,12 +45,12 @@ func (l *logEntryModel) toLogEntry() *LogEntry {
 	return ret
 }
 
-var logQueryColumns = map[string]struct{}{
-	"ts":        struct{}{},
-	"event":     struct{}{},
-	"user_id":   struct{}{},
-	"target_id": struct{}{},
-	"addr":      struct{}{},
+var logQueryColumns = map[string]int{
+	"ts":        query.ColQuery | query.ColSort,
+	"event":     query.ColQuery | query.ColSort,
+	"user_id":   query.ColQuery | query.ColSort,
+	"target_id": query.ColQuery | query.ColSort,
+	"addr":      query.ColQuery | query.ColSort,
 }
 
 func (s *Storage) GetLogs(ctx context.Context, q *query.Query) (entries []*LogEntry, count int, next *query.Query, err error) {
@@ -62,15 +62,17 @@ func (s *Storage) GetLogs(ctx context.Context, q *query.Query) (entries []*LogEn
 		SelectExpr: "*, " + pq.QuoteIdentifier(q.SortBy) + " AS sorted_by",
 		FromExpr:   "log",
 		IDColumn:   "id",
-		ValidateColumn: func(col string) bool {
-			_, ok := logQueryColumns[col]
-			return ok
+		ColumnFlagsFunc: func(col string) int {
+			if flags, ok := logQueryColumns[col]; ok {
+				return flags
+			}
+			return 0
 		},
 	}
 
 	stmt, args, err := q.SelectStmt(&selOpt)
 	if err != nil {
-		err = &Error{err, http.StatusBadRequest}
+		err = errors.Wrap(err, errors.CodeQuerySyntax)
 	}
 
 	rows, err := s.DB.QueryxContext(ctx, stmt, args...)

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"net/smtp"
+	"strings"
 )
 
 type SMTPDriver struct {
@@ -26,19 +27,23 @@ func (s *SMTPDriver) SendMessage(msg *Message) error {
 		auth = smtp.PlainAuth("", s.Username, s.Password, s.host())
 	}
 
+	toHeaderList := make([]string, len(msg.To))
+	toList := make([]string, len(msg.To))
+
+	for i, a := range msg.To {
+		toHeaderList[i] = a.String()
+		toList[i] = a.Address
+	}
+
 	var body bytes.Buffer
 
 	fmt.Fprintf(&body, "From: %s\n", msg.From.String())
-	fmt.Fprintf(&body, "To: %s\n", msg.To.String())
+	fmt.Fprintf(&body, "To: %s\n", strings.Join(toHeaderList, ", "))
 	fmt.Fprintf(&body, "Subject: %s\n", msg.Subject)
 	body.WriteString("Mime-Version: 1.0\nContent-Type: text/plain; charset=UTF-8\n\n")
 	body.Write(msg.Body)
 
-	return smtp.SendMail(s.Address,
-		auth,
-		msg.From.Address,
-		[]string{msg.To.Address},
-		body.Bytes())
+	return smtp.SendMail(s.Address, auth, msg.From.Address, toList, body.Bytes())
 }
 
 func newSMTPDriver(data json.RawMessage) (MailDriver, error) {
