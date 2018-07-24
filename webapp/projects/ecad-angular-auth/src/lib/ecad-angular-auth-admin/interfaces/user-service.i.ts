@@ -10,6 +10,7 @@ export interface IUsersService {
         displayValue: string;
     }[];
     create(payload: CreateUser): Observable<User>;
+    updateEmail(id: string, email: string): Observable<void>;
 
     update(payload: UpdateUser, addedRoles?: string[], deletedRoles?: string[]): Observable<User>;
 

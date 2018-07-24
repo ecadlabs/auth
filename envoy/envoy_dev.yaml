@@ -36,6 +36,10 @@ static_resources:
                 route: { host_rewrite: auth, cluster: service_auth, prefix_rewrite: "/password_reset"  }
               - match: { prefix: "/api/v1/request_password_reset" }
                 route: { host_rewrite: auth, cluster: service_auth, prefix_rewrite: "/request_password_reset"  }
+              - match: { prefix: "/api/v1/request_email_update" }
+                route: { host_rewrite: auth, cluster: service_auth, prefix_rewrite: "/request_email_update"  }
+              - match: { prefix: "/api/v1/email_update" }
+                route: { host_rewrite: auth, cluster: service_auth, prefix_rewrite: "/email_update"  }
               - match: { prefix: "/api/v1/refresh" }
                 route: { host_rewrite: auth, cluster: service_auth, prefix_rewrite: "/refresh"  }
               - match: { prefix: "/apidocs" }

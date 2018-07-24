@@ -80,12 +80,14 @@ export class UsersListComponent implements OnInit {
       .filter(({ value }) => Object.keys(user.roles).includes(value))
       .map(({ displayValue }) => displayValue);
   }
-  async resetPassword(user: User) {
+  async resetPassword($event: Event, user: User) {
+    $event.stopPropagation();
     await this.passwordReset.sendResetEmail(user.email).toPromise();
     this.snackBar.open('Reset password email sent', undefined, { duration: 2000, horizontalPosition: 'end' });
   }
 
-  updateUser(user: User) {
+  updateUser($event: Event, user: User) {
+    $event.stopPropagation();
     this.dialog.open(UserEditFormComponent, { data: user, width: '500px' })
       .afterClosed()
       .subscribe(() => {
@@ -101,7 +103,8 @@ export class UsersListComponent implements OnInit {
       });
   }
 
-  delete(user: User) {
+  delete($event: Event, user: User) {
+    $event.stopPropagation();
     this.confirmDialog.confirm(
       'This will delete the user permanently. Do you wish to continue?'
     ).subscribe((confirmed) => {

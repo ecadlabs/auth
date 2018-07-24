@@ -34,13 +34,13 @@
     <ng-container matColumnDef='actions'>
       <th mat-header-cell class="col-lg" *matHeaderCellDef></th>
       <td mat-cell class="col-lg" *matCellDef="let element">
-        <button mat-icon-button (click)='updateUser(element)' color='accent'>
+        <button mat-icon-button (click)='updateUser($event, element)' color='accent'>
           <mat-icon>edit</mat-icon>
         </button>
-        <button mat-icon-button (click)='delete(element)' color='accent'>
+        <button mat-icon-button (click)='delete($event, element)' color='accent'>
           <mat-icon>archive</mat-icon>
         </button>
-        <button mat-icon-button (click)='resetPassword(element)' color='accent'>
+        <button mat-icon-button (click)='resetPassword($event, element)' color='accent'>
           <mat-icon>
             <svg xmlns="https://www.w3.org/2000/svg" width="24px" height="24px" class="n5kzDf ShoKeb" viewBox="0 -4 48 48">
               <g>
