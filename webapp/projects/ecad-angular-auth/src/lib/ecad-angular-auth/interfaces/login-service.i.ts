@@ -10,4 +10,6 @@ export interface ILoginService<T = {}> {
     login(credentials: Credentials): Observable<LoginResult>;
     logout(): Observable<Boolean>;
     hasPermissions(permissions: string[]): Observable<boolean>;
+    updateEmail(id: string, email: string): Observable<void>;
+    validateEmailChange(token: string): Observable<void>;
 }

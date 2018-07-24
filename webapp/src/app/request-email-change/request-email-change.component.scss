@@ -1,0 +1,10 @@
+:host {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    justify-content: center;
+
+    .request-email-change {
+        min-width: 500px;
+    }
+}

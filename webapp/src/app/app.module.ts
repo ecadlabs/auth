@@ -20,6 +20,7 @@ import { ResetPasswordEmailComponent } from './reset-password-email/reset-passwo
 import { ProtectedComponent } from './protected/protected.component';
 import { UserDetailPageComponent } from './user-detail-page/user-detail-page.component';
 import { UserLogsComponent } from './user-logs/user-logs.component';
+import { RequestEmailChangeComponent } from './request-email-change/request-email-change.component';
 
 export function tokenGetter() { return localStorage.getItem('token'); }
 export function tokenSetter(value: string) { localStorage.setItem('token', value); }
@@ -33,6 +34,7 @@ export function tokenSetter(value: string) { localStorage.setItem('token', value
     ProtectedComponent,
     UserDetailPageComponent,
     UserLogsComponent,
+    RequestEmailChangeComponent,
   ],
   imports: [
     EcadAngularAuthModule.forRoot({
@@ -48,6 +50,8 @@ export function tokenSetter(value: string) { localStorage.setItem('token', value
       rolesPermissionsMapping: {
         'com.ecadlabs.auth.admin': ['show.is-admin']
       },
+      emailChangeValidationUrl: '/api/v1/email_update',
+      emailUpdateUrl: '/api/v1/request_email_update'
     }),
     EcadAngularAuthComponentsModule,
     EcadAngularAuthAdminComponentsModule,
@@ -56,7 +60,8 @@ export function tokenSetter(value: string) { localStorage.setItem('token', value
         { value: 'com.ecadlabs.auth.regular', displayValue: 'Regular' },
         { value: 'com.ecadlabs.auth.admin', displayValue: 'Admin' }
       ],
-      apiEndpoint: '/api/v1/users'
+      apiEndpoint: '/api/v1/users',
+      emailUpdateUrl: '/api/v1/request_email_update'
     }),
     BrowserModule,
     BrowserAnimationsModule,
@@ -64,6 +69,7 @@ export function tokenSetter(value: string) { localStorage.setItem('token', value
       { path: '', pathMatch: 'full', component: LoginComponent },
       { path: 'reset-password', component: ResetPasswordComponent },
       { path: 'reset-password-email', component: ResetPasswordEmailComponent },
+      { path: 'request-email-change', component: RequestEmailChangeComponent },
       {
         path: 'protected',
         component: ProtectedComponent,

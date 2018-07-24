@@ -1,0 +1,14 @@
+<form [formGroup]='requestEmailChangeForm' (ngSubmit)="onSubmit()">
+  <mat-card>
+    <mat-card-title i18n>Enter your new email</mat-card-title>
+    <auth-alert *ngIf='success' i18n>You will receive a confirmation link by email</auth-alert>
+    <br>
+    <mat-form-field>
+      <input formControlName='email' name="email" matInput type='text' placeholder="Email">
+    </mat-form-field>
+    <br>
+    <div>
+      <button type="submit" [disabled]='success || !requestEmailChangeForm.valid' mat-raised-button color="primary">Submit</button>
+    </div>
+  </mat-card>
+</form>
