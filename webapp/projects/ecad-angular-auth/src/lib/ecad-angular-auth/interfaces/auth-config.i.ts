@@ -12,4 +12,6 @@ export interface AuthConfig {
         [key: string]: string[]
     };
     emailValidationRegex?: RegExp;
+    emailUpdateUrl: string;
+    emailChangeValidationUrl: string;
 }

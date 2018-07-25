@@ -109,6 +109,20 @@ export class StandardLoginService implements ILoginService {
       catchError((err, response) => observableOf(false)));
   }
 
+
+  public updateEmail(id: string, email: string) {
+    return this.httpClient.post<void>(this.config.emailUpdateUrl, {
+      id,
+      email
+    });
+  }
+
+  public validateEmailChange(token: string) {
+    return this.httpClient.post<void>(this.config.emailChangeValidationUrl, {
+      token,
+    });
+  }
+
   public hasPermissions(permissions: string[]): Observable<boolean> {
     return this.user.pipe(
       map((user) => {
