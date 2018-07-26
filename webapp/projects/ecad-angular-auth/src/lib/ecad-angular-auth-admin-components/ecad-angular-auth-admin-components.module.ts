@@ -10,16 +10,16 @@ import {
   MatSelectModule,
   MatIconModule,
   MatSnackBarModule,
-  MatGridListModule,
   MatDividerModule,
-  MatCardModule
+  MatCardModule,
+  MatTooltipModule
 } from '@angular/material';
 import { UsersListComponent } from './users-list/users-list.component';
 import { UserEditFormComponent } from './user-edit-form/user-edit-form.component';
 import { ReactiveFormsModule } from '@angular/forms';
-import { ConfirmDialogModule } from '../confirm-dialog/confirm-dialog.module';
 import { UserDetailComponent } from './user-detail/user-detail.component';
 import { UserLogsComponent } from './user-logs/user-logs.component';
+import { ConfirmDialogModule } from '../confirm-dialog/confirm-dialog.module';
 
 @NgModule({
   imports: [
@@ -36,6 +36,7 @@ import { UserLogsComponent } from './user-logs/user-logs.component';
     MatIconModule,
     MatSnackBarModule,
     ConfirmDialogModule,
+    MatTooltipModule,
     MatDividerModule,
     MatCardModule
   ],
