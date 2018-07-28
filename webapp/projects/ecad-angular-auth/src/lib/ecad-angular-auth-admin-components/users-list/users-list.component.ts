@@ -82,8 +82,12 @@ export class UsersListComponent implements OnInit {
   }
   async resetPassword($event: Event, user: User) {
     $event.stopPropagation();
-    await this.passwordReset.sendResetEmail(user.email).toPromise();
-    this.snackBar.open('Reset password email sent', undefined, { duration: 2000, horizontalPosition: 'end' });
+    this.confirmDialog.confirm('You are about to reset this user password. Do you wish to continue?').subscribe(async (confirmed) => {
+      if (confirmed) {
+        await this.passwordReset.sendResetEmail(user.email).toPromise();
+        this.snackBar.open('Reset password email sent', undefined, { duration: 2000, horizontalPosition: 'end' });
+      }
+    });
   }
 
   updateUser($event: Event, user: User) {
