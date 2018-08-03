@@ -41,6 +41,7 @@ export class StandardLoginService implements ILoginService {
     private httpClient: HttpClient,
     private jwtHelper: JwtHelperService
   ) {
+    this.logoutIfExpired();
     this.initAutoRefresh();
   }
 
@@ -73,7 +74,15 @@ export class StandardLoginService implements ILoginService {
     return token[`${this.config.tokenPropertyPrefix || this.DEFAULT_PREFIX}.${propName}`];
   }
 
+  private logoutIfExpired() {
+    const token = this.config.tokenGetter();
+    if (token && this.jwtHelper.isTokenExpired(token)) {
+      return this.logout().subscribe();
+    }
+  }
+
   private get token(): UserToken {
+    this.logoutIfExpired();
     const token = this.config.tokenGetter();
     if (token) {
       const decodedToken = this.jwtHelper.decodeToken(token);
