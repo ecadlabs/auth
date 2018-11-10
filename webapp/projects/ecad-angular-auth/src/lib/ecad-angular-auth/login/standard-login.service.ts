@@ -1,8 +1,8 @@
 import { Injectable, Optional, Inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 
-import { map, catchError, tap, filter, switchMap, distinctUntilChanged } from 'rxjs/operators';
-import { of as observableOf, Observable, Observer, BehaviorSubject, interval } from 'rxjs';
+import { map, catchError, tap, filter, switchMap } from 'rxjs/operators';
+import { of as observableOf, Observable, Observer, BehaviorSubject, interval, MonoTypeOperatorFunction } from 'rxjs';
 import { AUTH_CONFIG } from '../tokens';
 import { ILoginService } from '../interfaces/login-service.i';
 import { UserToken } from '../interfaces/user-token.i';
@@ -19,12 +19,6 @@ export class StandardLoginService implements ILoginService {
   private readonly AUTO_REFRESH_INTERVAL = (this.config && this.config.autoRefreshInterval) || 60000;
   public user: BehaviorSubject<UserToken> = new BehaviorSubject(this.token);
 
-  private readonly postLoginOperations = [
-    tap((result: { token: string }) => this.config.tokenSetter(result.token)),
-    tap((result: { refresh: string }) => localStorage.setItem('refreshTokenUrl', result.refresh)),
-    tap(() => this.user.next(this.token))
-  ];
-
   public isLoggedIn: Observable<Boolean> = this.user.pipe(
     map(() => {
       const rawToken = this.config.tokenGetter() || null;
@@ -33,6 +27,13 @@ export class StandardLoginService implements ILoginService {
   );
 
   private readonly DEFAULT_PREFIX = 'com.ecadlabs.auth';
+  private readonly postLoginOperations: MonoTypeOperatorFunction<LoginResult> = (obserbable: Observable<LoginResult>) => {
+    return obserbable.pipe(
+      tap((result) => this.config.tokenSetter(result.token)),
+      tap((result) => localStorage.setItem('refreshTokenUrl', result.refresh)),
+      tap(() => this.user.next(this.token))
+    );
+  }
 
   constructor(
     @Optional()
@@ -101,7 +102,7 @@ export class StandardLoginService implements ILoginService {
   public login(credential: Credentials): Observable<LoginResult> {
     const requestOptions = this.createRequestOptions(credential);
     return this.httpClient.get<LoginResult>(this.config.loginUrl, requestOptions).pipe(
-      ...this.postLoginOperations
+      this.postLoginOperations
     );
   }
 
@@ -166,7 +167,7 @@ export class StandardLoginService implements ILoginService {
     return this.httpClient
       .get(localStorage.getItem('refreshTokenUrl'))
       .pipe(
-        ...this.postLoginOperations,
+        this.postLoginOperations,
         map(() => true)
       );
   }
