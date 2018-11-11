@@ -1,6 +1,6 @@
 version: 2
 jobs:
-  build:
+  test:
     working_directory: ~/webapp
     docker:
       - image: circleci/node:6-browsers
@@ -16,8 +16,10 @@ jobs:
           paths:
             - ./node_modules
       - run:
-          name: build
-          command: npm run build-prod
-      - run:
           name: test
           command: npm run test-ci
+workflows:
+  version: 2
+  test:
+    jobs:
+      - test
