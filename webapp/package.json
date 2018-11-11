@@ -9,6 +9,7 @@
     "build": "ng build",
     "build-prod": "ng build --prod ecad-angular-auth && ng build",
     "test": "ng test && ng test ecad-angular-auth",
+    "test-ci": "ng test --watch=false --no-progress && ng test ecad-angular-auth --watch=false --no-progress",
     "lint": "ng lint",
     "e2e": "ng e2e",
     "compodoc:serve": "./node_modules/.bin/compodoc . -s",
