@@ -8,7 +8,7 @@
     "start": "ng build --prod ecad-angular-auth && ng serve --host 0.0.0.0",
     "build": "ng build",
     "build-prod": "ng build --prod ecad-angular-auth && ng build",
-    "test": "ng test",
+    "test": "ng test && ng test ecad-angular-auth",
     "lint": "ng lint",
     "e2e": "ng e2e",
     "compodoc:serve": "./node_modules/.bin/compodoc . -s",

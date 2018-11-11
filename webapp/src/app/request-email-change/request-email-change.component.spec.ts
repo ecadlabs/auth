@@ -1,6 +1,7 @@
 import { async, ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { RequestEmailChangeComponent } from './request-email-change.component';
+import { ecadAngularAuth } from 'src/testing/fixture';
 
 describe('RequestEmailChangeComponent', () => {
   let component: RequestEmailChangeComponent;
@@ -8,9 +9,12 @@ describe('RequestEmailChangeComponent', () => {
 
   beforeEach(async(() => {
     TestBed.configureTestingModule({
-      declarations: [ RequestEmailChangeComponent ]
+      imports: [
+        ...ecadAngularAuth
+      ],
+      declarations: [RequestEmailChangeComponent]
     })
-    .compileComponents();
+      .compileComponents();
   }));
 
   beforeEach(() => {

@@ -1,6 +1,7 @@
 import { async, ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { UserLogsComponent } from './user-logs.component';
+import { ecadAngularAuth } from 'src/testing/fixture';
 
 describe('UserLogsComponent', () => {
   let component: UserLogsComponent;
@@ -8,9 +9,12 @@ describe('UserLogsComponent', () => {
 
   beforeEach(async(() => {
     TestBed.configureTestingModule({
-      declarations: [ UserLogsComponent ]
+      imports: [
+        ...ecadAngularAuth
+      ],
+      declarations: [UserLogsComponent]
     })
-    .compileComponents();
+      .compileComponents();
   }));
 
   beforeEach(() => {
