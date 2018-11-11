@@ -243,34 +243,43 @@ func (u *Users) NewUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check write access
-	granted, err := role.IsAnyGranted(permissionFull, permissionWrite)
+	fullGranted, err := role.IsAnyGranted(permissionFull)
 	if err != nil {
 		log.Error(err)
 		utils.JSONErrorResponse(w, err)
 		return
 	}
 
-	if !granted {
+	writeGranted, err := role.IsAnyGranted(permissionWrite)
+	if err != nil {
+		log.Error(err)
+		utils.JSONErrorResponse(w, err)
+		return
+	}
+
+	if !fullGranted && !writeGranted {
 		utils.JSONErrorResponse(w, errors.ErrForbidden)
 		return
 	}
 
 	// Check delegating access
-	delegate := make([]string, 0, len(user.Roles))
-	for r := range user.Roles {
-		delegate = append(delegate, permissionDelegatePrefix+r)
-	}
+	if !fullGranted {
+		delegate := make([]string, 0, len(user.Roles))
+		for r := range user.Roles {
+			delegate = append(delegate, permissionDelegatePrefix+r)
+		}
 
-	granted, err = role.IsAllGranted(delegate...)
-	if err != nil {
-		log.Error(err)
-		utils.JSONErrorResponse(w, err)
-		return
-	}
+		granted, err := role.IsAllGranted(delegate...)
+		if err != nil {
+			log.Error(err)
+			utils.JSONErrorResponse(w, err)
+			return
+		}
 
-	if !granted {
-		utils.JSONErrorResponse(w, errors.ErrForbidden)
-		return
+		if !granted {
+			utils.JSONErrorResponse(w, errors.ErrForbidden)
+			return
+		}
 	}
 
 	user.EmailVerified = false
