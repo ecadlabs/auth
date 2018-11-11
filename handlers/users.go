@@ -11,6 +11,7 @@ import (
 	"git.ecadlabs.com/ecad/auth/jsonpatch"
 	"git.ecadlabs.com/ecad/auth/notification"
 	"git.ecadlabs.com/ecad/auth/query"
+	"git.ecadlabs.com/ecad/auth/rbac"
 	"git.ecadlabs.com/ecad/auth/storage"
 	"git.ecadlabs.com/ecad/auth/utils"
 	"github.com/auth0/go-jwt-middleware"
@@ -45,6 +46,8 @@ type Users struct {
 	Notifier               notification.Notifier
 	ResetTokenMaxAge       time.Duration
 	EmailUpdateTokenMaxAge time.Duration
+
+	Enforcer rbac.Enforcer
 
 	AuxLogger *log.Logger
 }
@@ -86,12 +89,27 @@ func (u *Users) GetUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err = self.Roles.Get().IsGranted(permissionGet, map[string]interface{}{
-		"self": self.ID,
-		"id":   uid,
-	}); err != nil {
+	role, err := u.Enforcer.GetRole(u.context(r), self.Roles.Get()...)
+	if err != nil {
 		log.Error(err)
-		utils.JSONError(w, err.Error(), errors.CodeForbidden)
+		utils.JSONErrorResponse(w, err)
+		return
+	}
+
+	perm := []string{permissionFull, permissionRead}
+	if self.ID == uid {
+		perm = append(perm, permissionReadSelf)
+	}
+
+	granted, err := role.IsAnyGranted(perm...)
+	if err != nil {
+		log.Error(err)
+		utils.JSONErrorResponse(w, err)
+		return
+	}
+
+	if !granted {
+		utils.JSONErrorResponse(w, errors.ErrForbidden)
 		return
 	}
 
@@ -109,9 +127,22 @@ func (u *Users) GetUsers(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	self := r.Context().Value(UserContextKey).(*storage.User)
 
-	if err := self.Roles.Get().IsGranted(permissionList, nil); err != nil {
+	role, err := u.Enforcer.GetRole(u.context(r), self.Roles.Get()...)
+	if err != nil {
 		log.Error(err)
-		utils.JSONError(w, err.Error(), errors.CodeForbidden)
+		utils.JSONErrorResponse(w, err)
+		return
+	}
+
+	granted, err := role.IsAnyGranted(permissionFull, permissionRead)
+	if err != nil {
+		log.Error(err)
+		utils.JSONErrorResponse(w, err)
+		return
+	}
+
+	if !granted {
+		utils.JSONErrorResponse(w, errors.ErrForbidden)
 		return
 	}
 
@@ -166,11 +197,11 @@ func (u *Users) resetToken(user *storage.User) (string, error) {
 	now := time.Now()
 
 	claims := jwt.MapClaims{
-		"sub": user.ID,
-		"exp": now.Add(u.ResetTokenMaxAge).Unix(),
-		"iat": now.Unix(),
-		"iss": u.BaseURL(),
-		"aud": u.ResetURL(),
+		"sub":                             user.ID,
+		"exp":                             now.Add(u.ResetTokenMaxAge).Unix(),
+		"iat":                             now.Unix(),
+		"iss":                             u.BaseURL(),
+		"aud":                             u.ResetURL(),
 		utils.NSClaim(u.Namespace, "gen"): user.PasswordGen,
 	}
 
@@ -199,18 +230,51 @@ func (u *Users) NewUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user.EmailVerified = false
-	user.PasswordHash = nil
-
-	if !user.Roles.HasPrefix(RolePrefix) {
-		user.Roles.Add(RoleRegular)
-	}
-
-	if err := self.Roles.Get().IsGranted(permissionCreate, map[string]interface{}{"user": &user}); err != nil {
-		log.Error(err)
-		utils.JSONError(w, err.Error(), errors.CodeForbidden)
+	if len(user.Roles) == 0 {
+		utils.JSONErrorResponse(w, errors.ErrRolesEmpty)
 		return
 	}
+
+	role, err := u.Enforcer.GetRole(u.context(r), self.Roles.Get()...)
+	if err != nil {
+		log.Error(err)
+		utils.JSONErrorResponse(w, err)
+		return
+	}
+
+	// Check write access
+	granted, err := role.IsAnyGranted(permissionFull, permissionWrite)
+	if err != nil {
+		log.Error(err)
+		utils.JSONErrorResponse(w, err)
+		return
+	}
+
+	if !granted {
+		utils.JSONErrorResponse(w, errors.ErrForbidden)
+		return
+	}
+
+	// Check delegating access
+	delegate := make([]string, 0, len(user.Roles))
+	for r := range user.Roles {
+		delegate = append(delegate, permissionDelegatePrefix+r)
+	}
+
+	granted, err = role.IsAllGranted(delegate...)
+	if err != nil {
+		log.Error(err)
+		utils.JSONErrorResponse(w, err)
+		return
+	}
+
+	if !granted {
+		utils.JSONErrorResponse(w, errors.ErrForbidden)
+		return
+	}
+
+	user.EmailVerified = false
+	user.PasswordHash = nil
 
 	ret, err := u.Storage.NewUser(u.context(r), &user)
 	if err != nil {
@@ -302,29 +366,56 @@ func (u *Users) PatchUser(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	userRoles := self.Roles.Get()
-
-	if err = userRoles.IsGranted(permissionModify, map[string]interface{}{
-		"self": self.ID,
-		"id":   uid,
-	}); err != nil {
+	role, err := u.Enforcer.GetRole(u.context(r), self.Roles.Get()...)
+	if err != nil {
 		log.Error(err)
-		utils.JSONError(w, err.Error(), errors.CodeForbidden)
+		utils.JSONErrorResponse(w, err)
 		return
 	}
 
-	for _, r := range ops.AddRoles {
-		if err := userRoles.IsGranted(permissionAddRole, map[string]interface{}{"role": r}); err != nil {
-			log.Error(err)
-			utils.JSONError(w, err.Error(), errors.CodeForbidden)
-			return
-		}
+	perm := []string{permissionFull, permissionWrite}
+	if self.ID == uid {
+		perm = append(perm, permissionWriteSelf)
 	}
 
-	for _, r := range ops.RemoveRoles {
-		if err := userRoles.IsGranted(permissionDeleteRole, map[string]interface{}{"role": r}); err != nil {
+	granted, err := role.IsAnyGranted(perm...)
+	if err != nil {
+		log.Error(err)
+		utils.JSONErrorResponse(w, err)
+		return
+	}
+
+	if !granted {
+		utils.JSONErrorResponse(w, errors.ErrForbidden)
+		return
+	}
+
+	// Check role manipulation permissions
+	if len(ops.AddRoles) != 0 || len(ops.RemoveRoles) != 0 {
+		tmp := make(map[string]struct{}, len(ops.AddRoles)+len(ops.RemoveRoles))
+
+		for _, r := range ops.AddRoles {
+			tmp[permissionDelegatePrefix+r] = struct{}{}
+		}
+
+		for _, r := range ops.RemoveRoles {
+			tmp[permissionDelegatePrefix+r] = struct{}{}
+		}
+
+		perm := make([]string, 0, len(tmp))
+		for r := range tmp {
+			perm = append(perm, r)
+		}
+
+		granted, err := role.IsAllGranted(perm...)
+		if err != nil {
 			log.Error(err)
-			utils.JSONError(w, err.Error(), errors.CodeForbidden)
+			utils.JSONErrorResponse(w, err)
+			return
+		}
+
+		if !granted {
+			utils.JSONErrorResponse(w, errors.ErrForbidden)
 			return
 		}
 	}
@@ -363,12 +454,27 @@ func (u *Users) DeleteUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err = self.Roles.Get().IsGranted(permissionDelete, map[string]interface{}{
-		"self": self.ID,
-		"id":   uid,
-	}); err != nil {
+	role, err := u.Enforcer.GetRole(u.context(r), self.Roles.Get()...)
+	if err != nil {
 		log.Error(err)
-		utils.JSONError(w, err.Error(), errors.CodeForbidden)
+		utils.JSONErrorResponse(w, err)
+		return
+	}
+
+	perm := []string{permissionFull, permissionWrite}
+	if self.ID == uid {
+		perm = append(perm, permissionWriteSelf)
+	}
+
+	granted, err := role.IsAnyGranted(perm...)
+	if err != nil {
+		log.Error(err)
+		utils.JSONErrorResponse(w, err)
+		return
+	}
+
+	if !granted {
+		utils.JSONErrorResponse(w, errors.ErrForbidden)
 		return
 	}
 
@@ -563,13 +669,27 @@ func (u *Users) SendUpdateEmailRequest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userRoles := self.Roles.Get()
-	if err := userRoles.IsGranted(permissionModify, map[string]interface{}{
-		"self": self.ID,
-		"id":   request.ID,
-	}); err != nil {
+	role, err := u.Enforcer.GetRole(u.context(r), self.Roles.Get()...)
+	if err != nil {
 		log.Error(err)
-		utils.JSONError(w, err.Error(), errors.CodeForbidden)
+		utils.JSONErrorResponse(w, err)
+		return
+	}
+
+	perm := []string{permissionFull, permissionWrite}
+	if self.ID == request.ID {
+		perm = append(perm, permissionWriteSelf)
+	}
+
+	granted, err := role.IsAnyGranted(perm...)
+	if err != nil {
+		log.Error(err)
+		utils.JSONErrorResponse(w, err)
+		return
+	}
+
+	if !granted {
+		utils.JSONErrorResponse(w, errors.ErrForbidden)
 		return
 	}
 
@@ -584,11 +704,11 @@ func (u *Users) SendUpdateEmailRequest(w http.ResponseWriter, r *http.Request) {
 	now := time.Now()
 
 	claims := jwt.MapClaims{
-		"sub": user.ID,
-		"exp": now.Add(u.EmailUpdateTokenMaxAge).Unix(),
-		"iat": now.Unix(),
-		"iss": u.BaseURL(),
-		"aud": u.EmailUpdateURL(),
+		"sub":                               user.ID,
+		"exp":                               now.Add(u.EmailUpdateTokenMaxAge).Unix(),
+		"iat":                               now.Unix(),
+		"iss":                               u.BaseURL(),
+		"aud":                               u.EmailUpdateURL(),
 		utils.NSClaim(u.Namespace, "email"): request.Email,
 		utils.NSClaim(u.Namespace, "gen"):   user.EmailGen,
 	}

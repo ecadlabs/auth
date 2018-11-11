@@ -7,13 +7,13 @@ import (
 type PermissionDesc struct {
 	Name        string   `json:"name"`
 	Description string   `json:"description"`
-	Roles       []string `json:"roles"`
+	Roles       []string `json:"roles,omitempty"`
 }
 
 type RoleDesc struct {
 	Name        string   `json:"name"`
 	Description string   `json:"description"`
-	Permissions []string `json:"permissions"`
+	Permissions []string `json:"permissions,omitempty"`
 }
 
 type RoleDB interface {

@@ -2,17 +2,18 @@ package notification
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"net"
 	"net/smtp"
 	"strings"
+
+	"git.ecadlabs.com/ecad/auth/utils"
 )
 
 type SMTPDriver struct {
-	Address  string `json:"address"`
-	Username string `json:"user"`
-	Password string `json:"password"`
+	Address  string
+	Username string
+	Password string
 }
 
 func (s *SMTPDriver) host() string {
@@ -46,11 +47,11 @@ func (s *SMTPDriver) SendMessage(msg *Message) error {
 	return smtp.SendMail(s.Address, auth, msg.From.Address, toList, body.Bytes())
 }
 
-func newSMTPDriver(data json.RawMessage) (MailDriver, error) {
+func newSMTPDriver(opt utils.Options) (MailDriver, error) {
 	var d SMTPDriver
-	if err := json.Unmarshal(data, &d); err != nil {
-		return nil, err
-	}
+	d.Address, _ = opt.GetString("address")
+	d.Username, _ = opt.GetString("user")
+	d.Password, _ = opt.GetString("password")
 
 	return &d, nil
 }

@@ -2,11 +2,9 @@ package service
 
 import (
 	"database/sql"
-	"log"
 	"net/http"
 	"net/mail"
 	"net/url"
-	"os"
 	"strconv"
 	"time"
 
@@ -15,6 +13,7 @@ import (
 	"git.ecadlabs.com/ecad/auth/logger"
 	"git.ecadlabs.com/ecad/auth/middleware"
 	"git.ecadlabs.com/ecad/auth/notification"
+	"git.ecadlabs.com/ecad/auth/rbac"
 	"git.ecadlabs.com/ecad/auth/storage"
 	"git.ecadlabs.com/ecad/auth/utils"
 	"github.com/auth0/go-jwt-middleware"
@@ -37,9 +36,10 @@ type Service struct {
 	storage  *storage.Storage
 	notifier notification.Notifier
 	DB       *sql.DB
+	ac       rbac.RBAC
 }
 
-func (c *Config) New() (*Service, error) {
+func New(c *Config, ac rbac.RBAC) (*Service, error) {
 	url, err := url.Parse(c.PostgresURL)
 	if err != nil {
 		return nil, err
@@ -75,6 +75,7 @@ func (c *Config) New() (*Service, error) {
 		storage:  &storage.Storage{DB: sqlx.NewDb(db, "postgres")},
 		DB:       db,
 		notifier: notifier,
+		ac:       ac,
 	}, nil
 }
 
@@ -86,7 +87,7 @@ func (s *Service) APIHandler() http.Handler {
 		DB: s.DB,
 	})
 
-	usersHandler := handlers.Users{
+	usersHandler := &handlers.Users{
 		Storage: s.storage,
 		Timeout: time.Duration(s.config.DBTimeout) * time.Second,
 
@@ -102,6 +103,8 @@ func (s *Service) APIHandler() http.Handler {
 		LogPath:         "/logs/",
 		EmailUpdatePath: "/email_update",
 		Namespace:       s.config.Namespace(),
+
+		Enforcer: s.ac,
 
 		SessionMaxAge:          time.Duration(s.config.SessionMaxAge) * time.Second,
 		ResetTokenMaxAge:       time.Duration(s.config.ResetTokenMaxAge) * time.Second,
@@ -122,7 +125,7 @@ func (s *Service) APIHandler() http.Handler {
 	jwtMiddleware := jwtmiddleware.New(jwtOptions)
 
 	// Check audience
-	aud := middleware.Audience{
+	aud := &middleware.Audience{
 		Value:           baseURLFunc,
 		TokenContextKey: handlers.TokenContextKey,
 	}
@@ -138,35 +141,7 @@ func (s *Service) APIHandler() http.Handler {
 	m.Methods("GET", "POST").Path("/request_password_reset").HandlerFunc(usersHandler.SendResetRequest)
 	m.Methods("GET", "POST").Path("/login").HandlerFunc(usersHandler.Login)
 
-	//TODO replace this "feature" with "ServiceAccount" concept.
-	//Visitors can "log in" using their source IP address alone, and will get a
-	//JWT token in return
-	//
-	// See gitlab issue ecad/auth#29
-	ipCheckMiddleware, err := middleware.NewIPAccessChecker([]string{
-		"10.60.58.5/32",
-		"208.92.18.70/32",    //Simon montreal
-		"216.232.49.35/32",   //ECADLabs vancouver
-		"217.194.176.242/32", //NOC
-		"217.194.176.254/32", //NOC
-		"217.194.177.209/32", //VPN from vancouver
-		// "172.19.0.0/24",      //Docker default class C for dev
-	})
-
-	if err != nil {
-		log.Printf("Error setting up IP Access Checker middleware %e", err)
-		os.Exit(1)
-	}
-
-	// /checkip checks if the RequestIP is in our access list
-	m.Methods("GET").
-		Path("/checkip").
-		Handler(ipCheckMiddleware.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.WriteHeader(http.StatusOK)
-			return
-		})))
-
-	userdata := middleware.UserData{
+	userdata := &middleware.UserData{
 		TokenContextKey: handlers.TokenContextKey,
 		UserContextKey:  handlers.UserContextKey,
 		Storage:         s.storage,
@@ -196,6 +171,20 @@ func (s *Service) APIHandler() http.Handler {
 	lmux.Use(userdata.Handler)
 
 	lmux.Methods("GET").Path("/").HandlerFunc(usersHandler.GetLogs)
+
+	// Roles API
+	rbacHandler := &handlers.RolesHandler{
+		DB:      s.ac,
+		Timeout: time.Duration(s.config.DBTimeout) * time.Second,
+	}
+
+	rmux := m.PathPrefix("/rbac").Subrouter()
+	rmux.Use(jwtMiddleware.Handler)
+
+	rmux.Methods("GET").Path("/roles/").HandlerFunc(rbacHandler.GetRoles)
+	rmux.Methods("GET").Path("/roles/{id}").HandlerFunc(rbacHandler.GetRole)
+	rmux.Methods("GET").Path("/permissions/").HandlerFunc(rbacHandler.GetPermissions)
+	rmux.Methods("GET").Path("/permissions/{id}").HandlerFunc(rbacHandler.GetPermission)
 
 	// Miscellaneous
 	m.Methods("GET").Path("/version").Handler(handlers.VersionHandler(version))

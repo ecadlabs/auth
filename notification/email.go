@@ -3,11 +3,11 @@ package notification
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/mail"
 	"time"
 
+	"git.ecadlabs.com/ecad/auth/utils"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -36,7 +36,7 @@ type EmailNotifier struct {
 	data   *EmailTemplateData
 }
 
-type DriverFunc func(json.RawMessage) (MailDriver, error)
+type DriverFunc func(utils.Options) (MailDriver, error)
 
 var driverRegistry = make(map[string]DriverFunc)
 
@@ -44,7 +44,7 @@ func RegisterDriver(name string, f DriverFunc) {
 	driverRegistry[name] = f
 }
 
-func NewEmailNotifier(from *mail.Address, templateData *EmailTemplateData, driver string, data json.RawMessage) (*EmailNotifier, error) {
+func NewEmailNotifier(from *mail.Address, templateData *EmailTemplateData, driver string, data utils.Options) (*EmailNotifier, error) {
 	driverFunc, ok := driverRegistry[driver]
 	if !ok {
 		return nil, fmt.Errorf("Unknown driver `%s'", driver)

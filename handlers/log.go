@@ -15,9 +15,22 @@ func (u *Users) GetLogs(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	self := r.Context().Value(UserContextKey).(*storage.User)
 
-	if err := self.Roles.Get().IsGranted(permissionLog, nil); err != nil {
+	role, err := u.Enforcer.GetRole(u.context(r), self.Roles.Get()...)
+	if err != nil {
 		log.Error(err)
-		utils.JSONError(w, err.Error(), errors.CodeForbidden)
+		utils.JSONErrorResponse(w, err)
+		return
+	}
+
+	granted, err := role.IsAnyGranted(permissionLogs, permissionFull)
+	if err != nil {
+		log.Error(err)
+		utils.JSONErrorResponse(w, err)
+		return
+	}
+
+	if !granted {
+		utils.JSONErrorResponse(w, errors.ErrForbidden)
 		return
 	}
 

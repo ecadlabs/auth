@@ -5,8 +5,8 @@ import (
 	"database/sql"
 	"errors"
 	"os"
+	"strings"
 
-	"git.ecadlabs.com/ecad/auth/handlers"
 	"git.ecadlabs.com/ecad/auth/storage"
 	"github.com/jmoiron/sqlx"
 	"golang.org/x/crypto/bcrypt"
@@ -15,11 +15,13 @@ import (
 const (
 	envAdminEmail    = "AUTH_ADMIN_EMAIL"
 	envAdminPassword = "AUTH_ADMIN_PASSWORD"
+	envAdminRoles    = "AUTH_ADMIN_ROLES"
 )
 
 const (
 	defaultAdminEmail    = "admin@admin"
 	defaultAdminPassword = "admin"
+	defaultAdminRoles    = "admin"
 )
 
 var ErrNoBootstrap = errors.New("No bootstrapping")
@@ -59,15 +61,23 @@ func (s *Service) Bootstrap() (user *storage.User, err error) {
 		password = defaultAdminPassword
 	}
 
+	rolesList := os.Getenv(envAdminRoles)
+	if rolesList == "" {
+		rolesList = defaultAdminRoles
+	}
+
+	roles := make(storage.Roles)
+	for _, r := range strings.Split(rolesList, ":") {
+		roles[r] = struct{}{}
+	}
+
 	hash, _ := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 
 	u := storage.User{
 		Email:         email,
 		PasswordHash:  hash,
 		EmailVerified: true, // Allow logging in !!!
-		Roles: storage.Roles{
-			handlers.RoleAdmin: struct{}{},
-		},
+		Roles:         roles,
 	}
 
 	user, err = storage.NewUserInt(context.Background(), tx, &u)
