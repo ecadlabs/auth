@@ -25,6 +25,7 @@ services:
     environment:
       - AUTH_ADMIN_EMAIL=admin@admin
       - AUTH_ADMIN_PASSWORD=admin
+      - AUTH_ADMIN_ROLES=admin
     entrypoint: /app/auth
     command:
       - -db
@@ -35,15 +36,17 @@ services:
       - -namespace
       - com.ecadlabs.auth
       - -c
-      - /app/config.json
+      - /app/config.yaml
+      - -r
+      - /app/rbac.yaml
     volumes:
-      - ./config.example.json:/app/config.json
+      - ./config.example.yaml:/app/config.yaml
 
   apidocs:
     build:
       context: apidocs/
     depends_on:
-      - envoy 
+      - envoy
     command: /bin/bash -c "nginx -g 'daemon off;'"
 
   webapp:
