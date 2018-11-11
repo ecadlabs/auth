@@ -35,6 +35,11 @@ func (r *RolesHandler) GetRoles(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	if len(desc) == 0 {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
 	utils.JSONResponse(w, http.StatusOK, desc)
 }
 
@@ -59,6 +64,11 @@ func (r *RolesHandler) GetPermissions(w http.ResponseWriter, req *http.Request) 
 	if err != nil {
 		log.Error(err)
 		utils.JSONErrorResponse(w, err)
+		return
+	}
+
+	if len(desc) == 0 {
+		w.WriteHeader(http.StatusNoContent)
 		return
 	}
 

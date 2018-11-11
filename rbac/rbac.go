@@ -155,10 +155,6 @@ RolesLoop:
 		roles = append(roles, &desc)
 	}
 
-	if len(roles) == 0 {
-		return nil, errors.ErrRoleNotFound
-	}
-
 	sort.Slice(roles, func(i int, j int) bool {
 		return roles[i].Name < roles[j].Name
 	})
@@ -199,10 +195,6 @@ PermissionsLoop:
 		sort.Strings(desc.Roles)
 
 		perms = append(perms, &desc)
-	}
-
-	if len(perms) == 0 {
-		return nil, errors.ErrPermissionNotFound
 	}
 
 	sort.Slice(perms, func(i int, j int) bool {
