@@ -5,7 +5,7 @@ info:
   title: Auth and Users Service
   contact:
     url: 'https://git.ecadlabs.com/ecad/auth'
-    email: e.asphyx@gmail.com
+    email: support@ecadlabs.com
 tags:
   - name: auth
     description: Authentication and JWT token management

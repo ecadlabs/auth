@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
-import { Observable } from 'rxjs';
+import { Observable, throwError, Subject } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
-import { map, catchError } from 'rxjs/operators';
+import { map, catchError, publishReplay, tap, first, shareReplay, groupBy, debounceTime, partition, mergeMap, pluck } from 'rxjs/operators';
 
 import { of as observableOf } from 'rxjs';
 
@@ -26,9 +26,25 @@ export interface PatchPayload<T> {
 })
 export class ResourcesService<T, U> {
 
+  private cache = new Map<string, Observable<any>>();
+  private cacheTimer = new Subject<string>();
+
   constructor(
     private httpClient: HttpClient
-  ) { }
+  ) {
+    this.cacheTimer
+      .pipe(
+        groupBy(url => url),
+        mergeMap(
+          (group) => group
+            .pipe(
+              debounceTime(20000)
+            )
+        ),
+    ).subscribe((url) => {
+      this.cache.delete(url);
+    });
+  }
 
   private previousMap = new Map();
 
@@ -97,7 +113,21 @@ export class ResourcesService<T, U> {
       );
   }
 
+  private execCache<C>(url: string, obsFactory: () => Observable<C>, cacheDuration = 2000) {
+    if (!this.cache.has(url)) {
+      this.cache.set(url, obsFactory().pipe(
+        shareReplay(1)
+      ));
+    }
+    this.cacheTimer.next(url);
+    return this.cache.get(url) as Observable<C>;
+  }
+
   find(resourceUrl: string, id: string): Observable<T> {
-    return this.httpClient.get<T>(`${resourceUrl}/${id}`);
+    const url = `${resourceUrl}/${id}`;
+    return this.execCache(
+      url,
+      () => this.httpClient.get<T>(url)
+    );
   }
 }

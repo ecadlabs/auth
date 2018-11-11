@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild, Inject } from '@angular/core';
+import { Component, OnInit, ViewChild, Inject, EventEmitter, Output } from '@angular/core';
 import { FilteredDatasource } from '../../filterable-datasource/filtered-datasource';
 import { Subject } from 'rxjs';
 import { UserEditFormComponent } from '../user-edit-form/user-edit-form.component';
@@ -9,6 +9,7 @@ import { MatSort, MatDialog, MatSnackBar } from '@angular/material';
 import { IUsersService } from '../../ecad-angular-auth-admin/interfaces/user-service.i';
 import { USERS_SERVICE } from '../../ecad-angular-auth-admin/tokens';
 import { first } from 'rxjs/operators';
+import { ConfirmDialogService } from '../../confirm-dialog/confirm-dialog.service';
 
 @Component({
   selector: 'auth-users-list',
@@ -16,6 +17,9 @@ import { first } from 'rxjs/operators';
   styleUrls: ['./users-list.component.scss']
 })
 export class UsersListComponent implements OnInit {
+
+  @Output()
+  userClicked: EventEmitter<User> = new EventEmitter();
 
   @ViewChild(MatSort) sort: MatSort;
   public dataSource: FilteredDatasource<User>;
@@ -38,7 +42,8 @@ export class UsersListComponent implements OnInit {
     private dialog: MatDialog,
     @Inject(PASSWORD_RESET)
     private passwordReset: IPasswordReset,
-    private snackBar: MatSnackBar
+    private snackBar: MatSnackBar,
+    private confirmDialog: ConfirmDialogService,
   ) { }
 
   getRoles(user: User) {
@@ -66,17 +71,27 @@ export class UsersListComponent implements OnInit {
     );
   }
 
+  selectUser(user: User) {
+    this.userClicked.next(user);
+  }
+
   getDisplayRoles(user: User) {
     return this.userService.getRoles()
       .filter(({ value }) => Object.keys(user.roles).includes(value))
       .map(({ displayValue }) => displayValue);
   }
-  async resetPassword(user: User) {
-    await this.passwordReset.sendResetEmail(user.email).toPromise();
-    this.snackBar.open('Reset password email sent', undefined, { duration: 2000, horizontalPosition: 'end' });
+  async resetPassword($event: Event, user: User) {
+    $event.stopPropagation();
+    this.confirmDialog.confirm('You are about to reset this user password. Do you wish to continue?').subscribe(async (confirmed) => {
+      if (confirmed) {
+        await this.passwordReset.sendResetEmail(user.email).toPromise();
+        this.snackBar.open('Reset password email sent', undefined, { duration: 2000, horizontalPosition: 'end' });
+      }
+    });
   }
 
-  updateUser(user: User) {
+  updateUser($event: Event, user: User) {
+    $event.stopPropagation();
     this.dialog.open(UserEditFormComponent, { data: user, width: '500px' })
       .afterClosed()
       .subscribe(() => {
@@ -92,10 +107,17 @@ export class UsersListComponent implements OnInit {
       });
   }
 
-  delete(user: User) {
-    this.userService.delete(user.id)
-      .subscribe(() => {
-        this.dataSource.refresh();
-      });
+  delete($event: Event, user: User) {
+    $event.stopPropagation();
+    this.confirmDialog.confirm(
+      'This will delete the user permanently. Do you wish to continue?'
+    ).subscribe((confirmed) => {
+      if (confirmed) {
+        this.userService.delete(user.id)
+          .subscribe(() => {
+            this.dataSource.refresh();
+          });
+      }
+    });
   }
 }

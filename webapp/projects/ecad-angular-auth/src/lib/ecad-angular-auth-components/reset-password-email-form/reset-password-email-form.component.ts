@@ -1,8 +1,9 @@
 import { Component, OnInit, Inject } from '@angular/core';
 import { FormGroup, FormBuilder, Validators } from '@angular/forms';
-import { PASSWORD_RESET } from '../../ecad-angular-auth/tokens';
+import { PASSWORD_RESET, AUTH_CONFIG } from '../../ecad-angular-auth/tokens';
 import { IPasswordReset } from '../../ecad-angular-auth/interfaces/password-reset.i';
 import { Router } from '@angular/router';
+import { AuthConfig } from '../../ecad-angular-auth/interfaces/auth-config.i';
 
 @Component({
   selector: 'auth-reset-password-email-form',
@@ -20,9 +21,13 @@ export class ResetPasswordEmailFormComponent {
     private resetPassword: IPasswordReset,
     private router: Router,
     fb: FormBuilder,
+    @Inject(AUTH_CONFIG)
+    private authConfig: AuthConfig
   ) {
     this.resetPasswordEmailForm = fb.group({
-      'email': ['', [Validators.required]],
+      'email': ['', [Validators.required, Validators.pattern(
+        this.authConfig.emailValidationRegex || /^.+@.+\..{2,3}$/
+      )]],
     });
   }
 

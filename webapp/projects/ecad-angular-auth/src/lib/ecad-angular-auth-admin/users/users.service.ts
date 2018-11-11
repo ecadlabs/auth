@@ -7,6 +7,7 @@ import { User } from '../interfaces/user.i';
 import { AUTH_ADMIN_CONFIG } from '../tokens';
 import { Observable } from 'rxjs';
 import { IUsersService } from '../interfaces/user-service.i';
+import { HttpClient } from '@angular/common/http';
 
 @Injectable({
   providedIn: 'root'
@@ -16,7 +17,8 @@ export class UsersService implements IUsersService {
   constructor(
     private resourcesService: ResourcesService<User, CreateUser>,
     @Inject(AUTH_ADMIN_CONFIG)
-    private authAdminConfigVal: AuthAdminConfig
+    private authAdminConfigVal: AuthAdminConfig,
+    private httpClient: HttpClient
   ) { }
 
   private get apiEndpoint() {
@@ -31,15 +33,22 @@ export class UsersService implements IUsersService {
     return this.resourcesService.create(this.apiEndpoint + '/', payload);
   }
 
+  updateEmail(id: string, email: string) {
+    return this.httpClient.post<void>(this.authAdminConfigVal.emailUpdateUrl, {
+      id,
+      email
+    });
+  }
+
   update(payload: UpdateUser, addedRoles: string[] = [], deletedRoles: string[] = []): Observable<User> {
-    const allowedKeyForReplace: (keyof User)[] = ['email', 'name'];
+    const allowedKeyForReplace: (keyof User)[] = ['name'];
     let operations = (Object.keys(payload) as (keyof User)[])
       .filter(key => allowedKeyForReplace.includes(key))
       .reduce((prev, key) => {
         return [...prev, {
           op: 'replace',
           path: `/${key}`,
-          value: payload[key]
+          value: payload[key] || ''
         }];
       }, []);
     operations = addedRoles.reduce((prev, role) => {

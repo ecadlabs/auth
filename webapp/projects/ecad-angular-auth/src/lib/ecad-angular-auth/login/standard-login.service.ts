@@ -1,6 +1,5 @@
 import { Injectable, Optional, Inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { JwtHelperService } from '@auth0/angular-jwt';
 
 import { map, catchError, tap, filter, switchMap, distinctUntilChanged } from 'rxjs/operators';
 import { of as observableOf, Observable, Observer, BehaviorSubject, interval } from 'rxjs';
@@ -10,6 +9,7 @@ import { UserToken } from '../interfaces/user-token.i';
 import { AuthConfig } from '../interfaces/auth-config.i';
 import { Credentials } from '../interfaces/credentials.i';
 import { LoginResult } from '../interfaces/loginResult.i';
+import { JwtHelperService } from '../jwt-helper.service';
 
 @Injectable({
   providedIn: 'root'
@@ -41,6 +41,7 @@ export class StandardLoginService implements ILoginService {
     private httpClient: HttpClient,
     private jwtHelper: JwtHelperService
   ) {
+    this.logoutIfExpired();
     this.initAutoRefresh();
   }
 
@@ -73,7 +74,15 @@ export class StandardLoginService implements ILoginService {
     return token[`${this.config.tokenPropertyPrefix || this.DEFAULT_PREFIX}.${propName}`];
   }
 
+  private logoutIfExpired() {
+    const token = this.config.tokenGetter();
+    if (token && this.jwtHelper.isTokenExpired(token)) {
+      return this.logout().subscribe();
+    }
+  }
+
   private get token(): UserToken {
+    this.logoutIfExpired();
     const token = this.config.tokenGetter();
     if (token) {
       const decodedToken = this.jwtHelper.decodeToken(token);
@@ -107,6 +116,20 @@ export class StandardLoginService implements ILoginService {
     return this.httpClient.get(this.config.whiteListUrl, { observe: 'response' }).pipe(
       map((response) => String(response.status) === '200'),
       catchError((err, response) => observableOf(false)));
+  }
+
+
+  public updateEmail(id: string, email: string) {
+    return this.httpClient.post<void>(this.config.emailUpdateUrl, {
+      id,
+      email
+    });
+  }
+
+  public validateEmailChange(token: string) {
+    return this.httpClient.post<void>(this.config.emailChangeValidationUrl, {
+      token,
+    });
   }
 
   public hasPermissions(permissions: string[]): Observable<boolean> {

@@ -56,6 +56,10 @@ export class UserEditFormComponent implements OnInit {
     }
   }
 
+  private get isEmailUpdated() {
+    return this.dialogData.email !== this.userForm.value.email;
+  }
+
   async submit() {
     try {
       if (!this.dialogData) {
@@ -64,6 +68,9 @@ export class UserEditFormComponent implements OnInit {
         await this.userService.create(createUserPayload).toPromise();
       } else {
         const payload = this.userForm.value;
+        if (this.isEmailUpdated) {
+          await this.userService.updateEmail(this.dialogData.id, this.userForm.value.email).toPromise();
+        }
         const remove = this.getDeletedRole(Object.keys(this.dialogData.roles), this.userForm.value.roles);
         const added = this.getAddedRole(Object.keys(this.dialogData.roles), this.userForm.value.roles);
         await this.userService.update(Object.assign(payload, { id: this.dialogData.id }), added, remove).toPromise();
