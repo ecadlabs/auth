@@ -20,7 +20,7 @@ test-auth:
     - mkdir -p /go/src/git.ecadlabs.com/ecad/auth
     - cp -r * /go/src/git.ecadlabs.com/ecad/auth
     - cd /go/src/git.ecadlabs.com/ecad/auth/intergationtesting
-    - go test -db "postgres://postgres@postgres/postgres?connect_timeout=10&sslmode=disable"
+    - CGO_ENABLED=0 go test -db "postgres://postgres@postgres/postgres?connect_timeout=10&sslmode=disable"
 
 docker-build-auth:
   stage: build
@@ -30,9 +30,9 @@ docker-build-auth:
   script:
     - echo ${GOOGLE_GCR_KEY} | docker login -u _json_key --password-stdin ${DOCKER_REGISTRY}
     - >
-      docker build 
-      -t "${DOCKER_REGISTRY_URL}/auth:${CI_COMMIT_REF_NAME}" 
-      -t "${DOCKER_REGISTRY_URL}/auth:latest" 
+      docker build
+      -t "${DOCKER_REGISTRY_URL}/auth:${CI_COMMIT_REF_NAME}"
+      -t "${DOCKER_REGISTRY_URL}/auth:latest"
       .
     - docker push "${DOCKER_REGISTRY_URL}/auth:${CI_COMMIT_REF_NAME}"
     - docker push "${DOCKER_REGISTRY_URL}/auth:latest"
@@ -46,9 +46,9 @@ build-auth-api-docs:
     - echo ${GOOGLE_GCR_KEY} | docker login -u _json_key --password-stdin ${DOCKER_REGISTRY}
     - cd apidocs
     - >
-      docker build 
-      -t "${DOCKER_REGISTRY_URL}/auth_api_docs:${CI_COMMIT_REF_NAME}" 
-      -t "${DOCKER_REGISTRY_URL}/auth_api_docs:latest" 
+      docker build
+      -t "${DOCKER_REGISTRY_URL}/auth_api_docs:${CI_COMMIT_REF_NAME}"
+      -t "${DOCKER_REGISTRY_URL}/auth_api_docs:latest"
       .
     - docker push "${DOCKER_REGISTRY_URL}/auth_api_docs:${CI_COMMIT_REF_NAME}"
     - docker push "${DOCKER_REGISTRY_URL}/auth_api_docs:latest"
@@ -67,9 +67,9 @@ build-auth-webapp-packages:
     - cd dist/ecad-angular-auth
     - mv package.json package_bak.json
     - npm show ecad-angular-auth version --registry http://npm.ecadlabs.com
-    - > 
-      cat package_bak.json | 
-      jq -M ".version=\"$(npm show ecad-angular-auth version --registry http://npm.ecadlabs.com)\"" 
+    - >
+      cat package_bak.json |
+      jq -M ".version=\"$(npm show ecad-angular-auth version --registry http://npm.ecadlabs.com)\""
       > package.json
     - npm version patch
     - npm publish --registry http://npm.ecadlabs.com
@@ -86,9 +86,9 @@ build-auth-webapp:
     - echo ${GOOGLE_GCR_KEY} | docker login -u _json_key --password-stdin ${DOCKER_REGISTRY}
     - cd webapp
     - >
-      docker build 
-      -t "${DOCKER_REGISTRY_URL}/auth_webapp:${CI_COMMIT_REF_NAME}" 
-      -t "${DOCKER_REGISTRY_URL}/auth_webapp:latest" 
+      docker build
+      -t "${DOCKER_REGISTRY_URL}/auth_webapp:${CI_COMMIT_REF_NAME}"
+      -t "${DOCKER_REGISTRY_URL}/auth_webapp:latest"
       .
     - docker push "${DOCKER_REGISTRY_URL}/auth_webapp:${CI_COMMIT_REF_NAME}"
     - docker push "${DOCKER_REGISTRY_URL}/auth_webapp:latest"
