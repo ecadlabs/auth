@@ -17,7 +17,7 @@ jobs:
             - ./webapp/node_modules
       - run:
           name: lint
-          command: npm run lint
+          command: cd webapp && npm run lint
       - run:
           name: build
           command: cd webapp && npm run build
