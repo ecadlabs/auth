@@ -6,7 +6,7 @@
   "scripts": {
     "ng": "ng",
     "start": "ng build --prod ecad-angular-auth && ng serve --host 0.0.0.0",
-    "build": "ng build",
+    "build": "ng build ecad-angular-auth && ng build",
     "build-prod": "ng build --prod ecad-angular-auth && ng build",
     "test": "ng test && ng test ecad-angular-auth",
     "test-webapp": "ng test webapp --watch=false --browsers=ChromeHeadless --no-progress",
