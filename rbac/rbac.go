@@ -5,7 +5,7 @@ import (
 	"sort"
 	"strings"
 
-	"git.ecadlabs.com/ecad/auth/errors"
+	"github.com/ecadlabs/auth/errors"
 )
 
 type Role interface {

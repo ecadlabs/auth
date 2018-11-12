@@ -14,10 +14,10 @@ import (
 	"syscall"
 	"time"
 
-	"git.ecadlabs.com/ecad/auth/migrations"
-	"git.ecadlabs.com/ecad/auth/rbac"
-	"git.ecadlabs.com/ecad/auth/service"
 	"github.com/dgrijalva/jwt-go"
+	"github.com/ecadlabs/auth/migrations"
+	"github.com/ecadlabs/auth/rbac"
+	"github.com/ecadlabs/auth/service"
 	"github.com/golang-migrate/migrate"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"

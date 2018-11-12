@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"time"
 
-	"git.ecadlabs.com/ecad/auth/rbac"
-	"git.ecadlabs.com/ecad/auth/utils"
+	"github.com/ecadlabs/auth/rbac"
+	"github.com/ecadlabs/auth/utils"
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 )

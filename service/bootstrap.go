@@ -7,7 +7,7 @@ import (
 	"os"
 	"strings"
 
-	"git.ecadlabs.com/ecad/auth/storage"
+	"github.com/ecadlabs/auth/storage"
 	"github.com/jmoiron/sqlx"
 	"golang.org/x/crypto/bcrypt"
 )

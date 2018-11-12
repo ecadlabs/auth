@@ -4,10 +4,10 @@ import (
 	"net/http"
 	"net/url"
 
-	"git.ecadlabs.com/ecad/auth/errors"
-	"git.ecadlabs.com/ecad/auth/query"
-	"git.ecadlabs.com/ecad/auth/storage"
-	"git.ecadlabs.com/ecad/auth/utils"
+	"github.com/ecadlabs/auth/errors"
+	"github.com/ecadlabs/auth/query"
+	"github.com/ecadlabs/auth/storage"
+	"github.com/ecadlabs/auth/utils"
 	log "github.com/sirupsen/logrus"
 )
 

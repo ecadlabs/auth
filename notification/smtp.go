@@ -7,7 +7,7 @@ import (
 	"net/smtp"
 	"strings"
 
-	"git.ecadlabs.com/ecad/auth/utils"
+	"github.com/ecadlabs/auth/utils"
 )
 
 type SMTPDriver struct {

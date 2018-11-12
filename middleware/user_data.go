@@ -4,9 +4,9 @@ import (
 	"context"
 	"net/http"
 
-	"git.ecadlabs.com/ecad/auth/errors"
-	"git.ecadlabs.com/ecad/auth/storage"
-	"git.ecadlabs.com/ecad/auth/utils"
+	"github.com/ecadlabs/auth/errors"
+	"github.com/ecadlabs/auth/storage"
+	"github.com/ecadlabs/auth/utils"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/satori/go.uuid"
 	log "github.com/sirupsen/logrus"

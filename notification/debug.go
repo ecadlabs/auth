@@ -3,7 +3,7 @@ package notification
 import (
 	"fmt"
 
-	"git.ecadlabs.com/ecad/auth/utils"
+	"github.com/ecadlabs/auth/utils"
 )
 
 type debugDriver struct{}

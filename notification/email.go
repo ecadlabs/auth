@@ -7,7 +7,7 @@ import (
 	"net/mail"
 	"time"
 
-	"git.ecadlabs.com/ecad/auth/utils"
+	"github.com/ecadlabs/auth/utils"
 	log "github.com/sirupsen/logrus"
 )
 

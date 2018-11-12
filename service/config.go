@@ -3,8 +3,8 @@ package service
 import (
 	"io/ioutil"
 
-	"git.ecadlabs.com/ecad/auth/notification"
-	"git.ecadlabs.com/ecad/auth/utils"
+	"github.com/ecadlabs/auth/notification"
+	"github.com/ecadlabs/auth/utils"
 	"gopkg.in/yaml.v2"
 )
 
