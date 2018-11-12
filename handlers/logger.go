@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strings"
 
-	"git.ecadlabs.com/ecad/auth/logger"
+	"github.com/ecadlabs/auth/logger"
 	"github.com/satori/go.uuid"
 	"github.com/sirupsen/logrus"
 )

@@ -1,42 +1,43 @@
 package service
 
 import (
-	"encoding/json"
 	"io/ioutil"
 
-	"git.ecadlabs.com/ecad/auth/notification"
+	"github.com/ecadlabs/auth/notification"
+	"github.com/ecadlabs/auth/utils"
+	"gopkg.in/yaml.v2"
 )
 
 const DefaultNamespace = "com.ecadlabs.auth"
 
 type EmailConfig struct {
-	FromAddress  string                         `json:"from_address"`
-	FromName     string                         `json:"from_name"`
-	Driver       string                         `json:"driver"`
-	Config       json.RawMessage                `json:"config"`
-	TemplateData notification.EmailTemplateData `json:"template"`
+	FromAddress  string                         `yaml:"from_address"`
+	FromName     string                         `yaml:"from_name"`
+	Driver       string                         `yaml:"driver"`
+	Config       utils.Options                  `yaml:"config"`
+	TemplateData notification.EmailTemplateData `yaml:"template"`
 }
 
 type Config struct {
-	BaseURL                string                `json:"base_url"`
-	TLS                    bool                  `json:"tls"`
-	TLSCert                string                `json:"tls_cert"`
-	TLSKey                 string                `json:"tls_key"`
-	JWTSecret              string                `json:"jwt_secret"`
-	JWTSecretFile          string                `json:"jwt_secret_file"`
-	JWTNamespace           string                `json:"jwt_namespace"`
-	SessionMaxAge          int                   `json:"session_max_age"`
-	ResetTokenMaxAge       int                   `json:"reset_token_max_age"`
-	EmailUpdateTokenMaxAge int                   `json:"email_token_max_age"`
-	PostgresURL            string                `json:"db_url"`
-	PostgresRetriesNum     int                   `json:"db_retries_num"`
-	PostgresRetryDelay     int                   `json:"db_retry_delay"`
-	Address                string                `json:"address"`
-	HealthAddress          string                `json:"health_address"`
-	DBTimeout              int                   `json:"db_timeout"`
-	Email                  EmailConfig           `json:"email"`
-	BaseURLFunc            func() string         `json:"-"` // Testing only
-	Notifier               notification.Notifier `json:"-"` // Testing only
+	BaseURL                string                `yaml:"base_url"`
+	TLS                    bool                  `yaml:"tls"`
+	TLSCert                string                `yaml:"tls_cert"`
+	TLSKey                 string                `yaml:"tls_key"`
+	JWTSecret              string                `yaml:"jwt_secret"`
+	JWTSecretFile          string                `yaml:"jwt_secret_file"`
+	JWTNamespace           string                `yaml:"jwt_namespace"`
+	SessionMaxAge          int                   `yaml:"session_max_age"`
+	ResetTokenMaxAge       int                   `yaml:"reset_token_max_age"`
+	EmailUpdateTokenMaxAge int                   `yaml:"email_token_max_age"`
+	PostgresURL            string                `yaml:"db_url"`
+	PostgresRetriesNum     int                   `yaml:"db_retries_num"`
+	PostgresRetryDelay     int                   `yaml:"db_retry_delay"`
+	Address                string                `yaml:"address"`
+	HealthAddress          string                `yaml:"health_address"`
+	DBTimeout              int                   `yaml:"db_timeout"`
+	Email                  EmailConfig           `yaml:"email"`
+	BaseURLFunc            func() string         `yaml:"-"` // Testing only
+	Notifier               notification.Notifier `yaml:"-"` // Testing only
 }
 
 func (c *Config) GetBaseURLFunc() func() string {
@@ -53,7 +54,7 @@ func (c *Config) Load(name string) error {
 		return err
 	}
 
-	if err := json.Unmarshal(buf, c); err != nil {
+	if err := yaml.Unmarshal(buf, c); err != nil {
 		return err
 	}
 

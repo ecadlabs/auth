@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"git.ecadlabs.com/ecad/auth/errors"
-	"git.ecadlabs.com/ecad/auth/query"
+	"github.com/ecadlabs/auth/errors"
+	"github.com/ecadlabs/auth/query"
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
 	"github.com/satori/go.uuid"

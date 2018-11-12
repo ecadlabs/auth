@@ -6,8 +6,8 @@ import (
 	"encoding/json"
 	"time"
 
-	"git.ecadlabs.com/ecad/auth/errors"
-	"git.ecadlabs.com/ecad/auth/query"
+	"github.com/ecadlabs/auth/errors"
+	"github.com/ecadlabs/auth/query"
 	"github.com/lib/pq"
 	"github.com/satori/go.uuid"
 	log "github.com/sirupsen/logrus"

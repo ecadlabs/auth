@@ -1,8 +1,9 @@
 package notification
 
 import (
-	"encoding/json"
 	"fmt"
+
+	"github.com/ecadlabs/auth/utils"
 )
 
 type debugDriver struct{}
@@ -14,7 +15,7 @@ func (d debugDriver) SendMessage(msg *Message) error {
 	return nil
 }
 
-func newDebugDriver(data json.RawMessage) (MailDriver, error) {
+func newDebugDriver(data utils.Options) (MailDriver, error) {
 	return debugDriver{}, nil
 }
 

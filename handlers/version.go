@@ -3,7 +3,7 @@ package handlers
 import (
 	"net/http"
 
-	"git.ecadlabs.com/ecad/auth/utils"
+	"github.com/ecadlabs/auth/utils"
 )
 
 type VersionHandler string

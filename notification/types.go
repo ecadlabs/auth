@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"git.ecadlabs.com/ecad/auth/storage"
+	"github.com/ecadlabs/auth/storage"
 )
 
 type NotificationData struct {

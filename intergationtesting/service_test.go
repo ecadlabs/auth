@@ -11,10 +11,11 @@ import (
 	"net/url"
 	"testing"
 
-	"git.ecadlabs.com/ecad/auth/migrations"
-	"git.ecadlabs.com/ecad/auth/notification"
-	"git.ecadlabs.com/ecad/auth/service"
-	"git.ecadlabs.com/ecad/auth/storage"
+	"github.com/ecadlabs/auth/migrations"
+	"github.com/ecadlabs/auth/notification"
+	"github.com/ecadlabs/auth/rbac"
+	"github.com/ecadlabs/auth/service"
+	"github.com/ecadlabs/auth/storage"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/golang-migrate/migrate"
 	"github.com/jmoiron/sqlx"
@@ -56,6 +57,9 @@ func genTestUser(n int) *storage.User {
 	return &storage.User{
 		Email: genTestEmail(n),
 		Name:  genTestName(n),
+		Roles: storage.Roles{
+			"regular": struct{}{},
+		},
 	}
 }
 
@@ -251,6 +255,40 @@ func getList(srv *httptest.Server, token string, query url.Values) (int, []*stor
 	return http.StatusOK, result, nil
 }
 
+var testRBAC = rbac.StaticRBAC{
+	Roles: map[string]*rbac.StaticRole{
+		"admin": &rbac.StaticRole{
+			RoleName:    "admin",
+			Description: "A super user that has all access",
+			Permissions: map[string]struct{}{
+				"com.ecadlabs.users.delegate:admin": struct{}{},
+				"com.ecadlabs.users.delegate:noc":   struct{}{},
+				"com.ecadlabs.users.delegate:ops":   struct{}{},
+				"com.ecadlabs.users.full_control":   struct{}{},
+			},
+		},
+		"regular": &rbac.StaticRole{
+			RoleName:    "regular",
+			Description: "Network Operation Staff",
+			Permissions: map[string]struct{}{
+				"com.ecadlabs.users.read_self":  struct{}{},
+				"com.ecadlabs.users.write_self": struct{}{},
+			},
+		},
+	},
+	Permissions: map[string]string{
+		"com.ecadlabs.users.delegate:admin": "Assign `admin' role",
+		"com.ecadlabs.users.delegate:noc":   "Assign `noc' role",
+		"com.ecadlabs.users.delegate:ops":   "Assign `ops' role",
+		"com.ecadlabs.users.full_control":   "Allows user to manage all accounts",
+		"com.ecadlabs.users.read":           "Allows user to view users",
+		"com.ecadlabs.users.read_logs":      "Allows user to access logs",
+		"com.ecadlabs.users.read_self":      "Allows user to view their own user resource record",
+		"com.ecadlabs.users.write":          "Allows user to create new users",
+		"com.ecadlabs.users.write_self":     "Allows user to edit their own user resource record",
+	},
+}
+
 func TestService(t *testing.T) {
 	// Clear everything
 	db, err := sqlx.Open("postgres", *dbURL)
@@ -294,7 +332,7 @@ func TestService(t *testing.T) {
 		Notifier:               testNotifier(tokenCh),
 	}
 
-	svc, err := config.New()
+	svc, err := service.New(&config, &testRBAC)
 	if err != nil {
 		t.Error(err)
 		return

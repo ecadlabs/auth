@@ -11,6 +11,8 @@ tags:
     description: Authentication and JWT token management
   - name: logs
     description: Logs operations
+  - name: rbac
+    description: Roles and permissions
   - name: users
     description: Users operations
 paths:
@@ -64,6 +66,114 @@ paths:
       responses:
         '200':
           $ref: '#/components/responses/Token'
+        default:
+          $ref: '#/components/responses/Error'
+      security:
+        - jwtAuth: []
+  /rbac/roles/:
+    get:
+      tags:
+        - rbac
+      summary: Get roles list
+      operationId: getRoles
+      parameters:
+        - in: query
+          name: perm
+          description: Filter by permission
+          explode: true
+          schema:
+            type: array
+            items:
+              type: string
+      responses:
+        '200':
+          description: Roles list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RoleDesc'
+        '204':
+          description: Empty response
+        default:
+          $ref: '#/components/responses/Error'
+      security:
+        - jwtAuth: []
+  /rbac/roles/{name}:
+    get:
+      tags:
+        - rbac
+      summary: Get role info
+      operationId: getRole
+      parameters:
+        - in: path
+          name: name
+          required: true
+          description: Role Name
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Role info
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoleDesc'
+        default:
+          $ref: '#/components/responses/Error'
+      security:
+        - jwtAuth: []
+  /rbac/permissions/:
+    get:
+      tags:
+        - rbac
+      summary: Get permissions list
+      operationId: getPermissions
+      parameters:
+        - in: query
+          name: role
+          description: Filter by role
+          explode: true
+          schema:
+            type: array
+            items:
+              type: string
+      responses:
+        '200':
+          description: Permissions list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PermissionDesc'
+        '204':
+          description: Empty response
+        default:
+          $ref: '#/components/responses/Error'
+      security:
+        - jwtAuth: []
+  /rbac/permissions/{name}:
+    get:
+      tags:
+        - rbac
+      summary: Get permission info
+      operationId: getPermission
+      parameters:
+        - in: path
+          name: name
+          required: true
+          description: Permission Name
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Permission info
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PermissionDesc'
         default:
           $ref: '#/components/responses/Error'
       security:
@@ -456,7 +566,7 @@ paths:
         default:
           $ref: '#/components/responses/Error'
       security:
-        - jwtAuth: []  
+        - jwtAuth: []
   /version:
     get:
       tags:
@@ -537,6 +647,8 @@ components:
             - nvalid_token_fmt
             - invalid_audience
             - email_not_verified
+            - role_not_found
+            - permission_not_found
     Paginated:
       type: object
       required:
@@ -624,6 +736,34 @@ components:
         data:
           type: object
           additionalProperties: true
+    PermissionDesc:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        roles:
+          type: array
+          nullable: true
+          items:
+            type: string
+    RoleDesc:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        permissions:
+          type: array
+          nullable: true
+          items:
+            type: string
     Predicate:
       type: object
       properties:
