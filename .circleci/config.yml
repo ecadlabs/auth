@@ -1,0 +1,31 @@
+version: 2
+jobs:
+  test:
+    working_directory: ~/webapp
+    docker:
+      - image: circleci/node:10-browsers-legacy
+    steps:
+      - checkout
+      - restore_cache:
+          key: dependency-cache-{{ checksum "webapp/package-lock.json" }}
+      - run:
+          name: install-dependencies
+          command: cd webapp && npm ci
+      - save_cache:
+          key: dependency-cache-{{ checksum "webapp/package-lock.json" }}
+          paths:
+            - ./webapp/node_modules
+      - run:
+          name: lint
+          command: cd webapp && npm run lint
+      - run:
+          name: build
+          command: cd webapp && npm run build
+      - run:
+          name: test
+          command: cd webapp && npm run test-ci
+workflows:
+  version: 2
+  test:
+    jobs:
+      - test
