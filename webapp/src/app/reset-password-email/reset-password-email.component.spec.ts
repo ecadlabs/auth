@@ -1,6 +1,7 @@
 import { async, ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { ResetPasswordEmailComponent } from './reset-password-email.component';
+import { ecadAngularAuth } from 'src/testing/fixture';
 
 describe('ResetPasswordEmailComponent', () => {
   let component: ResetPasswordEmailComponent;
@@ -8,9 +9,12 @@ describe('ResetPasswordEmailComponent', () => {
 
   beforeEach(async(() => {
     TestBed.configureTestingModule({
-      declarations: [ ResetPasswordEmailComponent ]
+      imports: [
+        ...ecadAngularAuth
+      ],
+      declarations: [ResetPasswordEmailComponent]
     })
-    .compileComponents();
+      .compileComponents();
   }));
 
   beforeEach(() => {

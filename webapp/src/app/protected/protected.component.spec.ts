@@ -1,6 +1,7 @@
 import { async, ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { ProtectedComponent } from './protected.component';
+import { ecadAngularAuth } from 'src/testing/fixture';
 
 describe('ProtectedComponent', () => {
   let component: ProtectedComponent;
@@ -8,9 +9,12 @@ describe('ProtectedComponent', () => {
 
   beforeEach(async(() => {
     TestBed.configureTestingModule({
-      declarations: [ ProtectedComponent ]
+      imports: [
+        ...ecadAngularAuth
+      ],
+      declarations: [ProtectedComponent]
     })
-    .compileComponents();
+      .compileComponents();
   }));
 
   beforeEach(() => {
