@@ -1,8 +1,13 @@
-import { EcadAngularAuthModule, EcadAngularAuthComponentsModule, EcadAngularAuthAdminComponentsModule, EcadAngularAuthAdminModule } from "projects/ecad-angular-auth/src/public_api";
+import {
+    EcadAngularAuthModule,
+    EcadAngularAuthComponentsModule,
+    EcadAngularAuthAdminComponentsModule,
+    EcadAngularAuthAdminModule
+} from 'projects/ecad-angular-auth/src/public_api';
 
-import { tokenGetter, tokenSetter } from "src/app/app.module";
-import { NoopAnimationsModule } from "@angular/platform-browser/animations";
-import { RouterTestingModule } from "@angular/router/testing";
+import { tokenGetter, tokenSetter } from 'src/app/app.module';
+import { NoopAnimationsModule } from '@angular/platform-browser/animations';
+import { RouterTestingModule } from '@angular/router/testing';
 
 export const ecadAngularAuth = [
     NoopAnimationsModule,
@@ -33,4 +38,4 @@ export const ecadAngularAuth = [
         apiEndpoint: '/api/v1/users',
         emailUpdateUrl: '/api/v1/request_email_update'
     })
-]
+];
