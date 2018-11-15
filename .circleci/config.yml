@@ -15,7 +15,7 @@ jobs:
         environment:
           POSTGRES_USER: circleci
           POSTGRES_DB: userstest
-    working_directory: /go/src/github.com/ecadlabs
+    working_directory: /go/src/github.com/ecadlabs/auth
     steps:
       - checkout
       - run:
