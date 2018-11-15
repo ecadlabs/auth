@@ -19,23 +19,23 @@ jobs:
           key: dependency-cache-{{ checksum "webapp/package-lock.json" }}
           paths:
             - ./webapp/node_modules
-      - run:
-          name: lint
-          command: cd webapp && npm run lint
-      - run:
-          name: build
-          command: cd webapp && npm run build
-      - run:
-          name: test
-          command: cd webapp && npm run test-ci
+      # - run:
+      #     name: lint
+      #     command: cd webapp && npm run lint
+      # - run:
+      #     name: build
+      #     command: cd webapp && npm run build
+      # - run:
+      #     name: test
+      #     command: cd webapp && npm run test-ci
       - persist_to_workspace:
-          root: ~/auth-webapp
+          root: ~/auth
           paths: .
   webapp-deploy:
     <<: *defaults
     steps:
       - attach_workspace:
-          at: ~/auth-webapp
+          at: ~/auth
       - run:
           name: Authenticate with registry
           command: cd webapp/dist/ecad-angular-auth && echo "//registry.npmjs.org/:_authToken=$npm_TOKEN" > .npmrc
