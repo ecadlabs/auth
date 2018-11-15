@@ -8,9 +8,7 @@ defaults: &defaults
 jobs:
   daemon-test:
     docker:
-      # CircleCI Go images available at: https://hub.docker.com/r/circleci/golang/
       - image: circleci/golang:1.10.4
-      # CircleCI PostgreSQL images available at: https://hub.docker.com/r/circleci/postgres/
       - image: postgres:latest
         environment:
           POSTGRES_USER: circleci
@@ -54,13 +52,16 @@ jobs:
       - setup_remote_docker
       - run:
           name: Build Docker Image
-          command: docker build -t ecadlabs/auth:0.0.10 .
+          command: docker build -t ecadlabs/auth:$CIRCLE_TAG .
       - run:
           name: Login to Docker Hub
           command: docker login -u $DOCKER_USER -p $DOCKER_PASS
       - run: 
           name: Publish image to Docker Hub
-          command: docker push ecadlabs/auth:0.0.10
+          command: docker push ecadlabs/auth:$CIRCLE_TAG
+      - run: 
+          name: Add latest tag to docker image
+          command: docker tag ecadlabs/auth:$CIRCLE_TAG ecadlabs/auth:latest && docker push ecadlabs/auth:latest
   webapp-publish:
     <<: *defaults
     steps:
