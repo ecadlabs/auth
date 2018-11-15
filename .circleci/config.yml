@@ -20,7 +20,7 @@ jobs:
       - checkout
       - run:
           name: Integration test
-          command: cd intergationtesting &&  go test --db "postgres://circleci@localhost/userstest?sslmode=disable"
+          command: cd intergationtesting && go test --db "postgres://circleci@localhost/userstest?sslmode=disable"
   webapp-test:
     <<: *defaults
     steps:
@@ -46,7 +46,22 @@ jobs:
       - persist_to_workspace:
           root: ~/auth
           paths: .
-  webapp-deploy:
+  daemon-publish:
+    docker:
+      - image: docker:17.05.0-ce-git
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build Docker Image
+          command: docker build -t ecadlabs/auth:0.0.10 .
+      - run:
+          name: Login to Docker Hub
+          command: docker login -u $DOCKER_USER -p $DOCKER_PASS
+      - run: 
+          name: Publish image to Docker Hub
+          command: docker push ecadlabs/auth:0.0.10
+  webapp-publish:
     <<: *defaults
     steps:
       - attach_workspace:
@@ -67,13 +82,18 @@ workflows:
     jobs:
       - daemon-test
       - webapp-test
+  deploy-daemon:
+    jobs:
+      - daemon-publish
   test-deploy:
     jobs:
       - webapp-test:
           filters:
             tags:
               only: /^v.*/
-      - webapp-deploy:
+            branches:
+              ignore: /.*/
+      - webapp-publish:
           requires:
             - webapp-test
           filters:
