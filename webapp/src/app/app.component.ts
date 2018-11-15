@@ -1,5 +1,5 @@
 import { Component, Inject } from '@angular/core';
-import { LOGIN_SERVICE, ILoginService } from 'ecad-angular-auth';
+import { LOGIN_SERVICE, ILoginService } from '@ecadlabs/angular-auth';
 
 @Component({
   selector: 'app-root',
