@@ -47,10 +47,6 @@ workflows:
       - webapp-test
   test-deploy:
     jobs:
-      - webapp-test:
-          filters:
-            tags:
-              only: /^\d+\.\d+\.\d+$/
       - webapp-deploy:
           requires:
             - webapp-test
