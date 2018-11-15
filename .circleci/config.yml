@@ -6,7 +6,7 @@ defaults: &defaults
       - image: circleci/node:10-browsers-legacy
 
 jobs:
-  webapp_test:
+  webapp-test:
     <<: *defaults
     steps:
       - checkout
@@ -44,12 +44,16 @@ workflows:
   version: 2
   test:
     jobs:
-      - webapp_test
+      - webapp-test
   test-deploy:
     jobs:
+      - webapp-test:
+          filters:
+            tags:
+              only: /^v.*/
       - webapp-deploy:
           requires:
-            - test
+            - webapp-test
           filters:
             tags:
               only: /^v.*/
