@@ -36,6 +36,8 @@ jobs:
     steps:
       - attach_workspace:
           at: ~/auth
+      - run: Build Prod
+          command: cd webapp && npm run build-prod
       - run:
           name: Authenticate with registry
           command: cd webapp/dist/ecad-angular-auth && echo "//registry.npmjs.org/:_authToken=$npm_TOKEN" > .npmrc
