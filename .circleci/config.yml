@@ -50,7 +50,7 @@ workflows:
       - webapp-test
   test-deploy:
     jobs:
-      - webapp-test:
+      - webapp-test
           # filters:
           #   tags:
           #     only: /^v.*/
