@@ -52,6 +52,6 @@ workflows:
             - webapp-test
           filters:
             tags:
-              only: /^\d+\.\d+\.\d+$/
+              only: /^v.*/
             branches:
               ignore: /.*/
