@@ -9,7 +9,7 @@ jobs:
   daemon-test:
     docker:
       # CircleCI Go images available at: https://hub.docker.com/r/circleci/golang/
-      - image: circleci/golang:1.8-jessie
+      - image: circleci/golang:1.10.4
       # CircleCI PostgreSQL images available at: https://hub.docker.com/r/circleci/postgres/
       - image: postgres:latest
         environment:
