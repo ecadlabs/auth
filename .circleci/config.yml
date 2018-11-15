@@ -82,10 +82,23 @@ workflows:
     jobs:
       - daemon-test
       - webapp-test
-  deploy-daemon:
+  daemon-publish:
     jobs:
-      - daemon-publish
-  test-deploy:
+      - daemon-test:
+          filters:
+            tags:
+              only: /^v.*/
+            branches:
+              ignore: /.*/
+      - daemon-publish:
+          requires:
+            - daemon-test
+          filters:
+            tags:
+              only: /^v.*/
+            branches:
+              ignore: /.*/
+  webapp-publish:
     jobs:
       - webapp-test:
           filters:
