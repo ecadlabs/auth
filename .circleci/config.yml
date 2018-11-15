@@ -13,7 +13,7 @@ jobs:
       - restore_cache:
           key: dependency-cache-{{ checksum "webapp/package-lock.json" }}
       - run:
-          name: install-dependencies
+          name: Install npm dependencies
           command: cd webapp && npm ci
       - save_cache:
           key: dependency-cache-{{ checksum "webapp/package-lock.json" }}
@@ -36,7 +36,8 @@ jobs:
     steps:
       - attach_workspace:
           at: ~/auth
-      - run: Build Prod
+      - run:
+          name: Build Prod
           command: cd webapp && npm run build-prod
       - run:
           name: Authenticate with registry
