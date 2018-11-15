@@ -28,14 +28,17 @@ jobs:
       - run:
           name: test
           command: cd webapp && npm run test-ci
+      - persist_to_workspace:
+          root: ~/auth-webapp
+          paths: .
   webapp-deploy:
     <<: *defaults
     steps:
       - attach_workspace:
-          at: ~/auth
+          at: ~/auth-webapp
       - run:
           name: Authenticate with registry
-          command: echo "//registry.npmjs.org/:_authToken=$npm_TOKEN" > ~/auth/webapp/.npmrc
+          command: cd webapp/dist/ecad-angular-auth && echo "//registry.npmjs.org/:_authToken=$npm_TOKEN" > .npmrc
       - run:
           name: Publish package
           command: cd webapp/dist/ecad-angular-auth && npm publish
@@ -48,14 +51,14 @@ workflows:
   test-deploy:
     jobs:
       - webapp-test:
-          filters:
-            tags:
-              only: /^v.*/
+          # filters:
+          #   tags:
+          #     only: /^v.*/
       - webapp-deploy:
           requires:
             - webapp-test
-          filters:
-            tags:
-              only: /^v.*/
-            branches:
-              ignore: /.*/
+          # filters:
+          #   tags:
+          #     only: /^v.*/
+          #   branches:
+          #     ignore: /.*/
