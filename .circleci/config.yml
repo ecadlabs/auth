@@ -19,15 +19,15 @@ jobs:
           key: dependency-cache-{{ checksum "webapp/package-lock.json" }}
           paths:
             - ./webapp/node_modules
-      # - run:
-      #     name: lint
-      #     command: cd webapp && npm run lint
-      # - run:
-      #     name: build
-      #     command: cd webapp && npm run build
-      # - run:
-      #     name: test
-      #     command: cd webapp && npm run test-ci
+      - run:
+          name: lint
+          command: cd webapp && npm run lint
+      - run:
+          name: build
+          command: cd webapp && npm run build
+      - run:
+          name: test
+          command: cd webapp && npm run test-ci
       - persist_to_workspace:
           root: ~/auth
           paths: .
@@ -54,14 +54,14 @@ workflows:
   test-deploy:
     jobs:
       - webapp-test
-          # filters:
-          #   tags:
-          #     only: /^v.*/
+          filters:
+            tags:
+              only: /^v.*/
       - webapp-deploy:
           requires:
             - webapp-test
-          # filters:
-          #   tags:
-          #     only: /^v.*/
-          #   branches:
-          #     ignore: /.*/
+          filters:
+            tags:
+              only: /^v.*/
+            branches:
+              ignore: /.*/

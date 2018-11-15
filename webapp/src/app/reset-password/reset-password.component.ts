@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import {
   ResetPasswordFormConfig
-} from 'ecad-angular-auth';
+} from '@ecadlabs/angular-auth';
 
 @Component({
   selector: 'app-reset-password',

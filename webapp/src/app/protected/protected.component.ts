@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { User } from 'ecad-angular-auth';
+import { User } from '@ecadlabs/angular-auth';
 import { Router } from '@angular/router';
 
 @Component({

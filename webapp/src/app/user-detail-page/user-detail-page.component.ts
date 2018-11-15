@@ -1,7 +1,7 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { pluck, first, tap } from 'rxjs/operators';
-import { User } from 'ecad-angular-auth';
+import { pluck } from 'rxjs/operators';
+import { User } from '@ecadlabs/angular-auth';
 
 @Component({
   selector: 'app-user-detail-page',

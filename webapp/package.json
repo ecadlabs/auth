@@ -1,5 +1,5 @@
 {
-  "name": "ecad_auth_webapp",
+  "name": "@ecadlabs/auth-webapp",
   "description": "A reference implementation web application for the ecad auth daemon. Includes a CRUD module to manage users and roles.",
   "license": "UNLICENSED",
   "version": "0.0.7",

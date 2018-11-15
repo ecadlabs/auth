@@ -1,5 +1,5 @@
 {
-  "name": "ecad-angular-auth",
+  "name": "@ecadlabs/angular-auth",
   "version": "0.0.7",
   "peerDependencies": {
     "@angular/common": "^7.0.3",

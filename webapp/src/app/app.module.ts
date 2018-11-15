@@ -8,12 +8,11 @@ import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import {
   EcadAngularAuthModule,
   LoggedinGuard,
-  IpWhiteListedGuard,
   PermissionsGuard,
   EcadAngularAuthAdminComponentsModule,
   EcadAngularAuthAdminModule,
   EcadAngularAuthComponentsModule
-} from 'ecad-angular-auth';
+} from '@ecadlabs/angular-auth';
 import { LoginComponent } from './login/login.component';
 import { ResetPasswordComponent } from './reset-password/reset-password.component';
 import { ResetPasswordEmailComponent } from './reset-password-email/reset-password-email.component';

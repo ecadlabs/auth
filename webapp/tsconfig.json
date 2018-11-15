@@ -17,10 +17,10 @@
       "dom"
     ],
     "paths": {
-      "ecad-angular-auth": [
+      "@ecadlabs/angular-auth": [
         "dist/ecad-angular-auth"
       ],
-      "ecad-angular-auth/*": [
+      "@ecadlabs/angular-auth/*": [
         "dist/ecad-angular-auth/*"
       ]
     }
