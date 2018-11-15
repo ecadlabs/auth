@@ -1,12 +1,12 @@
 version: 2
 
 defaults: &defaults
-    working_directory: ~/webapp
+    working_directory: ~/auth
     docker:
       - image: circleci/node:10-browsers-legacy
 
 jobs:
-  test:
+  webapp-test:
     <<: *defaults
     steps:
       - checkout
@@ -28,34 +28,34 @@ jobs:
       - run:
           name: test
           command: cd webapp && npm run test-ci
-  deploy:
+  webapp-deploy:
     <<: *defaults
     steps:
       - attach_workspace:
-          at: ~/webapp
+          at: ~/auth
       - run:
           name: Authenticate with registry
-          command: echo "//registry.npmjs.org/:_authToken=$npm_TOKEN" > ~/webapp/webapp/.npmrc
+          command: echo "//registry.npmjs.org/:_authToken=$npm_TOKEN" > ~/auth/webapp/.npmrc
       - run:
           name: Publish package
-          command: cd webapp && npm publish
+          command: cd webapp/dist/ecad-angular-auth && npm publish
             
 workflows:
   version: 2
   test:
     jobs:
-      - test
+      - webapp-test
   test-deploy:
     jobs:
-      - test:
+      - webapp-test:
           filters:
             tags:
-              only: /^v.*/
-      - deploy:
+              only: /^\d+\.\d+\.\d+$/
+      - webapp-deploy:
           requires:
-            - test
+            - webapp-test
           filters:
             tags:
-              only: /^v.*/
+              only: /^\d+\.\d+\.\d+$/
             branches:
               ignore: /.*/
