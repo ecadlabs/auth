@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"git.ecadlabs.com/ecad/auth/errors"
-	"git.ecadlabs.com/ecad/auth/jsonpatch"
+	"github.com/ecadlabs/auth/errors"
+	"github.com/ecadlabs/auth/jsonpatch"
 )
 
 type UserOps struct {

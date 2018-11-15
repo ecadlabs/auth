@@ -3,8 +3,8 @@ package middleware
 import (
 	"net/http"
 
-	"git.ecadlabs.com/ecad/auth/errors"
-	"git.ecadlabs.com/ecad/auth/utils"
+	"github.com/ecadlabs/auth/errors"
+	"github.com/ecadlabs/auth/utils"
 	"github.com/dgrijalva/jwt-go"
 )
 

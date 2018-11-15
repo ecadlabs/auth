@@ -1,10 +1,8 @@
 package storage
 
 import (
-	"strings"
 	"time"
 
-	"git.ecadlabs.com/ecad/auth/roles"
 	"github.com/satori/go.uuid"
 )
 
@@ -16,42 +14,6 @@ const (
 )
 
 type Roles map[string]interface{}
-
-func (r Roles) HasPrefix(prefix string) bool {
-	for role := range r {
-		if strings.HasPrefix(role, prefix) {
-			return true
-		}
-	}
-
-	return false
-}
-
-func (r Roles) Get() roles.Roles {
-	s := make([]string, len(r))
-	var i int
-	for role := range r {
-		s[i] = role
-		i++
-	}
-	return roles.GetKnownRoles(s)
-}
-
-func (r Roles) Has(role string) bool {
-	_, ok := r[role]
-	return ok
-}
-
-func (r *Roles) Add(role string) {
-	if *r == nil {
-		*r = make(Roles)
-	}
-	(*r)[role] = true
-}
-
-func (r Roles) Delete(role string) {
-	delete(r, role)
-}
 
 type User struct {
 	ID               uuid.UUID  `json:"id" schema:"id"`
@@ -79,6 +41,16 @@ type LogEntry struct {
 	Address   string                 `json:"addr,omitempty"`
 	Message   string                 `json:"msg,omitempty"`
 	Data      map[string]interface{} `json:"data,omitempty"`
+}
+
+func (r Roles) Get() (roles []string) {
+	roles = make([]string, 0, len(r))
+
+	for key := range r {
+		roles = append(roles, key)
+	}
+
+	return
 }
 
 const (

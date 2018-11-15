@@ -14,9 +14,10 @@ import (
 	"syscall"
 	"time"
 
-	"git.ecadlabs.com/ecad/auth/migrations"
-	"git.ecadlabs.com/ecad/auth/service"
 	"github.com/dgrijalva/jwt-go"
+	"github.com/ecadlabs/auth/migrations"
+	"github.com/ecadlabs/auth/rbac"
+	"github.com/ecadlabs/auth/service"
 	"github.com/golang-migrate/migrate"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
@@ -65,12 +66,14 @@ func main() {
 		useBase64   bool
 		migrateOnly bool
 		bootstrap   bool
+		rbacFile    string
 	)
 
 	flag.StringVar(&genPwd, "bcrypt", "", "Generate password hash.")
 	flag.IntVar(&genSecret, "gen_secret", 0, "Generate random JWT secret of N bytes.")
 	flag.BoolVar(&useBase64, "base64_secret", false, "Encode generated secret using base64.")
 	flag.StringVar(&configFile, "c", "", "Config file.")
+	flag.StringVar(&rbacFile, "r", "", "RBAC file.")
 	flag.BoolVar(&migrateOnly, "migrate", false, "Migrate and exit immediately.")
 	flag.BoolVar(&bootstrap, "bootstrap", false, "Bootstrap DB.")
 
@@ -127,7 +130,15 @@ func main() {
 		flag.Parse()
 	}
 
-	if config.JWTSecret == "" && !migrateOnly {
+	var ac rbac.RBAC
+	if rbacFile != "" {
+		var err error
+		if ac, err = rbac.LoadYAML(rbacFile); err != nil {
+			log.Fatal(err)
+		}
+	}
+
+	if (config.JWTSecret == "" || ac == nil) && !migrateOnly {
 		flag.Usage()
 		os.Exit(0)
 	}
@@ -150,7 +161,7 @@ func main() {
 	}
 
 	// Service instance
-	svc, err := config.New()
+	svc, err := service.New(&config, ac)
 	if err != nil {
 		log.Fatal(err)
 	}

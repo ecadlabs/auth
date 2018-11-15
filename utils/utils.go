@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strings"
 
-	"git.ecadlabs.com/ecad/auth/errors"
+	"github.com/ecadlabs/auth/errors"
 )
 
 func JSONError(w http.ResponseWriter, err string, code errors.Code) {
