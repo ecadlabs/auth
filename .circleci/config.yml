@@ -1,9 +1,13 @@
-version: 2
-jobs:
-  test:
+    version: 2
+
+defaults: &defaults
     working_directory: ~/webapp
     docker:
       - image: circleci/node:10-browsers-legacy
+
+jobs:
+  test:
+    <<: *defaults
     steps:
       - checkout
       - restore_cache:
@@ -24,8 +28,34 @@ jobs:
       - run:
           name: test
           command: cd webapp && npm run test-ci
+  deploy:
+    <<: *defaults
+    steps:
+      - attach_workspace:
+          at: ~/webapp
+      - run:
+          name: Authenticate with registry
+          command: echo "//registry.npmjs.org/:_authToken=$npm_TOKEN" > ~/webapp/webapp/.npmrc
+      - run:
+          name: Publish package
+          command: cd webapp && npm publish
+            
 workflows:
   version: 2
   test:
     jobs:
       - test
+  test-deploy:
+    jobs:
+      - test:
+          filters:
+            tags:
+              only: /^v.*/
+      - deploy:
+          requires:
+            - test
+          filters:
+            tags:
+              only: /^v.*/
+            branches:
+              ignore: /.*/
