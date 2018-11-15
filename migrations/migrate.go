@@ -7,7 +7,7 @@ import (
 
 	"github.com/golang-migrate/migrate"
 	"github.com/golang-migrate/migrate/database/postgres"
-	"github.com/golang-migrate/migrate/source/go-bindata"
+	bindata "github.com/golang-migrate/migrate/source/go-bindata"
 )
 
 const (

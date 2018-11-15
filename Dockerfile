@@ -1,6 +1,6 @@
 # build stage
 FROM golang:alpine AS build-env
-WORKDIR  /go/src/git.ecadlabs.com/ecad/auth
+WORKDIR  /go/src/github.com/ecadlabs/auth
 COPY . .
 RUN CGO_ENABLED=0 go build -o auth
 
@@ -8,7 +8,7 @@ RUN CGO_ENABLED=0 go build -o auth
 FROM alpine
 WORKDIR /app
 RUN apk --no-cache add ca-certificates
-COPY --from=build-env /go/src/git.ecadlabs.com/ecad/auth /app/
+COPY --from=build-env /go/src/github.com/ecadlabs/auth /app/
 
 RUN mkdir /data
 # RUN /app/auth -gen_secret 256 > /data/secret.bin

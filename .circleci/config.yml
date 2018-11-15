@@ -6,6 +6,21 @@ defaults: &defaults
       - image: circleci/node:10-browsers-legacy
 
 jobs:
+  daemon-test:
+    docker:
+      # CircleCI Go images available at: https://hub.docker.com/r/circleci/golang/
+      - image: circleci/golang:1.8-jessie
+      # CircleCI PostgreSQL images available at: https://hub.docker.com/r/circleci/postgres/
+      - image: postgres:latest
+        environment:
+          POSTGRES_USER: circleci
+          POSTGRES_DB: userstest
+    working_directory: /go/src/github.com/ecadlabs
+    steps:
+      - checkout
+      - run:
+          name: Integration test
+          command: cd intergationtesting &&  go test --db "postgres://circleci@localhost/userstest?sslmode=disable"
   webapp-test:
     <<: *defaults
     steps:
@@ -50,6 +65,7 @@ workflows:
   version: 2
   test:
     jobs:
+      - daemon-test
       - webapp-test
   test-deploy:
     jobs:
