@@ -16,19 +16,21 @@ type RolesHandler struct {
 	Timeout time.Duration
 }
 
-func (r *RolesHandler) context(req *http.Request) context.Context {
+func (r *RolesHandler) context(req *http.Request) (context.Context, context.CancelFunc) {
 	if r.Timeout != 0 {
-		ctx, _ := context.WithTimeout(req.Context(), r.Timeout)
-		return ctx
+		return context.WithTimeout(req.Context(), r.Timeout)
 	}
-	return req.Context()
+	return req.Context(), func() {}
 }
 
 func (r *RolesHandler) GetRoles(w http.ResponseWriter, req *http.Request) {
 	req.ParseForm()
 	perm := req.Form["perm"]
 
-	desc, err := r.DB.GetRolesDesc(r.context(req), perm...)
+	ctx, cancel := r.context(req)
+	defer cancel()
+
+	desc, err := r.DB.GetRolesDesc(ctx, perm...)
 	if err != nil {
 		log.Error(err)
 		utils.JSONErrorResponse(w, err)
@@ -46,7 +48,10 @@ func (r *RolesHandler) GetRoles(w http.ResponseWriter, req *http.Request) {
 func (r *RolesHandler) GetRole(w http.ResponseWriter, req *http.Request) {
 	role := mux.Vars(req)["id"]
 
-	desc, err := r.DB.GetRoleDesc(r.context(req), role)
+	ctx, cancel := r.context(req)
+	defer cancel()
+
+	desc, err := r.DB.GetRoleDesc(ctx, role)
 	if err != nil {
 		log.Error(err)
 		utils.JSONErrorResponse(w, err)
@@ -60,7 +65,10 @@ func (r *RolesHandler) GetPermissions(w http.ResponseWriter, req *http.Request) 
 	req.ParseForm()
 	roles := req.Form["role"]
 
-	desc, err := r.DB.GetPermissionsDesc(r.context(req), roles...)
+	ctx, cancel := r.context(req)
+	defer cancel()
+
+	desc, err := r.DB.GetPermissionsDesc(ctx, roles...)
 	if err != nil {
 		log.Error(err)
 		utils.JSONErrorResponse(w, err)
@@ -78,7 +86,10 @@ func (r *RolesHandler) GetPermissions(w http.ResponseWriter, req *http.Request) 
 func (r *RolesHandler) GetPermission(w http.ResponseWriter, req *http.Request) {
 	perm := mux.Vars(req)["id"]
 
-	desc, err := r.DB.GetPermissionDesc(r.context(req), perm)
+	ctx, cancel := r.context(req)
+	defer cancel()
+
+	desc, err := r.DB.GetPermissionDesc(ctx, perm)
 	if err != nil {
 		log.Error(err)
 		utils.JSONErrorResponse(w, err)

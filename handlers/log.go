@@ -15,7 +15,10 @@ func (u *Users) GetLogs(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	self := r.Context().Value(UserContextKey).(*storage.User)
 
-	role, err := u.Enforcer.GetRole(u.context(r), self.Roles.Get()...)
+	ctx, cancel := u.context(r)
+	defer cancel()
+
+	role, err := u.Enforcer.GetRole(ctx, self.Roles.Get()...)
 	if err != nil {
 		log.Error(err)
 		utils.JSONErrorResponse(w, err)
@@ -45,7 +48,7 @@ func (u *Users) GetLogs(w http.ResponseWriter, r *http.Request) {
 		q.Limit = DefaultLimit
 	}
 
-	logSlice, count, nextQuery, err := u.Storage.GetLogs(u.context(r), q)
+	logSlice, count, nextQuery, err := u.Storage.GetLogs(ctx, q)
 	if err != nil {
 		log.Error(err)
 		utils.JSONErrorResponse(w, err)

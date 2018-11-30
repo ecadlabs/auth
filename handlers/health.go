@@ -19,7 +19,9 @@ type HealthMonitor struct {
 }
 
 func (h *HealthMonitor) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	ctx, _ := context.WithTimeout(context.Background(), h.Timeout)
+	ctx, cancel := context.WithTimeout(context.Background(), h.Timeout)
+	defer cancel()
+
 	err := h.Pinger.Ping(ctx)
 
 	response := struct {

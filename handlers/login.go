@@ -5,10 +5,10 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/dgrijalva/jwt-go"
 	"github.com/ecadlabs/auth/errors"
 	"github.com/ecadlabs/auth/storage"
 	"github.com/ecadlabs/auth/utils"
-	"github.com/dgrijalva/jwt-go"
 	"github.com/satori/go.uuid"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
@@ -27,11 +27,11 @@ func (u *Users) writeUserToken(w http.ResponseWriter, user *storage.User) error 
 	now := time.Now()
 
 	claims := jwt.MapClaims{
-		"sub": user.ID,
-		"exp": now.Add(u.SessionMaxAge).Unix(),
-		"iat": now.Unix(),
-		"iss": u.BaseURL(),
-		"aud": u.BaseURL(),
+		"sub":                               user.ID,
+		"exp":                               now.Add(u.SessionMaxAge).Unix(),
+		"iat":                               now.Unix(),
+		"iss":                               u.BaseURL(),
+		"aud":                               u.BaseURL(),
 		utils.NSClaim(u.Namespace, "email"): user.Email,
 		utils.NSClaim(u.Namespace, "name"):  user.Name,
 		utils.NSClaim(u.Namespace, "roles"): roles,
@@ -87,7 +87,10 @@ func (u *Users) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := u.Storage.GetUserByEmail(u.context(r), request.Name)
+	ctx, cancel := u.context(r)
+	defer cancel()
+
+	user, err := u.Storage.GetUserByEmail(ctx, request.Name)
 	if err != nil {
 		log.Error(err)
 		utils.JSONError(w, "", errors.CodeUnauthorized)
@@ -111,7 +114,7 @@ func (u *Users) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := u.Storage.UpdateLoginInfo(u.context(r), user.ID, getRemoteAddr(r)); err != nil {
+	if err := u.Storage.UpdateLoginInfo(ctx, user.ID, getRemoteAddr(r)); err != nil {
 		utils.JSONErrorResponse(w, err)
 		return
 	}
@@ -130,7 +133,10 @@ func (u *Users) Login(w http.ResponseWriter, r *http.Request) {
 func (u *Users) Refresh(w http.ResponseWriter, r *http.Request) {
 	self := r.Context().Value(UserContextKey).(*storage.User)
 
-	if err := u.Storage.UpdateRefreshInfo(u.context(r), self.ID, getRemoteAddr(r)); err != nil {
+	ctx, cancel := u.context(r)
+	defer cancel()
+
+	if err := u.Storage.UpdateRefreshInfo(ctx, self.ID, getRemoteAddr(r)); err != nil {
 		utils.JSONErrorResponse(w, err)
 		return
 	}
