@@ -7,6 +7,8 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/auth0/go-jwt-middleware"
+	"github.com/dgrijalva/jwt-go"
 	"github.com/ecadlabs/auth/errors"
 	"github.com/ecadlabs/auth/jsonpatch"
 	"github.com/ecadlabs/auth/notification"
@@ -14,8 +16,6 @@ import (
 	"github.com/ecadlabs/auth/rbac"
 	"github.com/ecadlabs/auth/storage"
 	"github.com/ecadlabs/auth/utils"
-	"github.com/auth0/go-jwt-middleware"
-	"github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/mux"
 	"github.com/satori/go.uuid"
 	log "github.com/sirupsen/logrus"
@@ -72,12 +72,11 @@ func (u *Users) EmailUpdateURL() string {
 	return u.BaseURL() + u.EmailUpdatePath
 }
 
-func (u *Users) context(r *http.Request) context.Context {
+func (u *Users) context(r *http.Request) (context.Context, context.CancelFunc) {
 	if u.Timeout != 0 {
-		ctx, _ := context.WithTimeout(r.Context(), u.Timeout)
-		return ctx
+		return context.WithTimeout(r.Context(), u.Timeout)
 	}
-	return r.Context()
+	return r.Context(), func() {}
 }
 
 func (u *Users) GetUser(w http.ResponseWriter, r *http.Request) {
@@ -89,7 +88,10 @@ func (u *Users) GetUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	role, err := u.Enforcer.GetRole(u.context(r), self.Roles.Get()...)
+	ctx, cancel := u.context(r)
+	defer cancel()
+
+	role, err := u.Enforcer.GetRole(ctx, self.Roles.Get()...)
 	if err != nil {
 		log.Error(err)
 		utils.JSONErrorResponse(w, err)
@@ -113,7 +115,7 @@ func (u *Users) GetUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := u.Storage.GetUserByID(u.context(r), uid)
+	user, err := u.Storage.GetUserByID(ctx, uid)
 	if err != nil {
 		log.Error(err)
 		utils.JSONErrorResponse(w, err)
@@ -127,7 +129,10 @@ func (u *Users) GetUsers(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	self := r.Context().Value(UserContextKey).(*storage.User)
 
-	role, err := u.Enforcer.GetRole(u.context(r), self.Roles.Get()...)
+	ctx, cancel := u.context(r)
+	defer cancel()
+
+	role, err := u.Enforcer.GetRole(ctx, self.Roles.Get()...)
 	if err != nil {
 		log.Error(err)
 		utils.JSONErrorResponse(w, err)
@@ -157,7 +162,7 @@ func (u *Users) GetUsers(w http.ResponseWriter, r *http.Request) {
 		q.Limit = DefaultLimit
 	}
 
-	userSlice, count, nextQuery, err := u.Storage.GetUsers(u.context(r), q)
+	userSlice, count, nextQuery, err := u.Storage.GetUsers(ctx, q)
 	if err != nil {
 		log.Error(err)
 		utils.JSONErrorResponse(w, err)
@@ -235,7 +240,10 @@ func (u *Users) NewUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	role, err := u.Enforcer.GetRole(u.context(r), self.Roles.Get()...)
+	ctx, cancel := u.context(r)
+	defer cancel()
+
+	role, err := u.Enforcer.GetRole(ctx, self.Roles.Get()...)
 	if err != nil {
 		log.Error(err)
 		utils.JSONErrorResponse(w, err)
@@ -285,7 +293,7 @@ func (u *Users) NewUser(w http.ResponseWriter, r *http.Request) {
 	user.EmailVerified = false
 	user.PasswordHash = nil
 
-	ret, err := u.Storage.NewUser(u.context(r), &user)
+	ret, err := u.Storage.NewUser(ctx, &user)
 	if err != nil {
 		log.Error(err)
 		utils.JSONErrorResponse(w, err)
@@ -300,7 +308,7 @@ func (u *Users) NewUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err = u.Notifier.Notify(r.Context(), notification.NotificationInvite, &notification.NotificationData{
+	if err = u.Notifier.Notify(ctx, notification.NotificationInvite, &notification.NotificationData{
 		Addr:        getRemoteAddr(r),
 		CurrentUser: self,
 		TargetUser:  ret,
@@ -375,7 +383,10 @@ func (u *Users) PatchUser(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	role, err := u.Enforcer.GetRole(u.context(r), self.Roles.Get()...)
+	ctx, cancel := u.context(r)
+	defer cancel()
+
+	role, err := u.Enforcer.GetRole(ctx, self.Roles.Get()...)
 	if err != nil {
 		log.Error(err)
 		utils.JSONErrorResponse(w, err)
@@ -429,7 +440,7 @@ func (u *Users) PatchUser(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	user, err := u.Storage.UpdateUser(u.context(r), uid, ops)
+	user, err := u.Storage.UpdateUser(ctx, uid, ops)
 	if err != nil {
 		log.Error(err)
 		utils.JSONErrorResponse(w, err)
@@ -463,7 +474,10 @@ func (u *Users) DeleteUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	role, err := u.Enforcer.GetRole(u.context(r), self.Roles.Get()...)
+	ctx, cancel := u.context(r)
+	defer cancel()
+
+	role, err := u.Enforcer.GetRole(ctx, self.Roles.Get()...)
 	if err != nil {
 		log.Error(err)
 		utils.JSONErrorResponse(w, err)
@@ -487,7 +501,7 @@ func (u *Users) DeleteUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := u.Storage.DeleteUser(u.context(r), uid); err != nil {
+	if err := u.Storage.DeleteUser(ctx, uid); err != nil {
 		log.Error(err)
 		utils.JSONErrorResponse(w, err)
 		return
@@ -585,7 +599,10 @@ func (u *Users) ResetPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = u.Storage.UpdatePasswordWithGen(u.context(r), id, hash, int(gen))
+	ctx, cancel := u.context(r)
+	defer cancel()
+
+	err = u.Storage.UpdatePasswordWithGen(ctx, id, hash, int(gen))
 	if err != nil {
 		log.Error(err)
 		utils.JSONErrorResponse(w, err)
@@ -624,7 +641,10 @@ func (u *Users) SendResetRequest(w http.ResponseWriter, r *http.Request) {
 	// Don't return anything
 	defer w.WriteHeader(http.StatusNoContent)
 
-	user, err := u.Storage.GetUserByEmail(u.context(r), request.Email)
+	ctx, cancel := u.context(r)
+	defer cancel()
+
+	user, err := u.Storage.GetUserByEmail(ctx, request.Email)
 	if err != nil {
 		log.Error(err)
 		return
@@ -678,7 +698,10 @@ func (u *Users) SendUpdateEmailRequest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	role, err := u.Enforcer.GetRole(u.context(r), self.Roles.Get()...)
+	ctx, cancel := u.context(r)
+	defer cancel()
+
+	role, err := u.Enforcer.GetRole(ctx, self.Roles.Get()...)
 	if err != nil {
 		log.Error(err)
 		utils.JSONErrorResponse(w, err)
@@ -702,7 +725,7 @@ func (u *Users) SendUpdateEmailRequest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := u.Storage.GetUserByID(u.context(r), request.ID)
+	user, err := u.Storage.GetUserByID(ctx, request.ID)
 	if err != nil {
 		log.Error(err)
 		utils.JSONErrorResponse(w, err)
@@ -738,7 +761,7 @@ func (u *Users) SendUpdateEmailRequest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err = u.Notifier.Notify(r.Context(), notification.NotificationEmailUpdateRequest, &notification.NotificationData{
+	if err = u.Notifier.Notify(ctx, notification.NotificationEmailUpdateRequest, &notification.NotificationData{
 		Addr:        getRemoteAddr(r),
 		To:          []string{request.Email},
 		Email:       request.Email,
@@ -829,14 +852,17 @@ func (u *Users) UpdateEmail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, prevEmail, err := u.Storage.UpdateEmailWithGen(u.context(r), id, email, int(gen))
+	ctx, cancel := u.context(r)
+	defer cancel()
+
+	user, prevEmail, err := u.Storage.UpdateEmailWithGen(ctx, id, email, int(gen))
 	if err != nil {
 		log.Error(err)
 		utils.JSONErrorResponse(w, err)
 		return
 	}
 
-	if err = u.Notifier.Notify(r.Context(), notification.NotificationEmailUpdate, &notification.NotificationData{
+	if err = u.Notifier.Notify(ctx, notification.NotificationEmailUpdate, &notification.NotificationData{
 		Addr:        getRemoteAddr(r),
 		Email:       prevEmail,
 		To:          []string{prevEmail, user.Email},
