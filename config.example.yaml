@@ -1,7 +1,7 @@
 jwt_secret: secret
 email:
   from_address: auth@ecadlabs.com
-  driver: debug,
+  driver: debug
   config:
     address: smtp.gmail.com:587
     user: auth@ecadlabs.com

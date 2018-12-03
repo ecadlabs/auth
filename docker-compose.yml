@@ -2,7 +2,7 @@ version: '3'
 services:
 
   envoy:
-    image: envoyproxy/envoy-alpine
+    image: envoyproxy/envoy-alpine:v1.6.0
     volumes:
       - ./envoy/:/etc/envoy
     command: /usr/local/bin/envoy -c /etc/envoy/envoy_dev.yaml
