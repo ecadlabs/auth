@@ -20,6 +20,8 @@ import { ProtectedComponent } from './protected/protected.component';
 import { UserDetailPageComponent } from './user-detail-page/user-detail-page.component';
 import { UserLogsComponent } from './user-logs/user-logs.component';
 import { RequestEmailChangeComponent } from './request-email-change/request-email-change.component';
+import { HTTP_INTERCEPTORS } from '@angular/common/http';
+import { ErrorHttpInterceptor } from './error-http-interceptor';
 
 export function tokenGetter() { return localStorage.getItem('token'); }
 export function tokenSetter(value: string) { localStorage.setItem('token', value); }
@@ -47,7 +49,7 @@ export function tokenSetter(value: string) { localStorage.setItem('token', value
       autoRefreshInterval: 5000,
       tokenPropertyPrefix: 'com.ecadlabs.auth',
       rolesPermissionsMapping: {
-        'com.ecadlabs.auth.admin': ['show.is-admin']
+        'admin': ['show.is-admin']
       },
       emailChangeValidationUrl: '/api/v1/email_update',
       emailUpdateUrl: '/api/v1/request_email_update'
@@ -56,8 +58,8 @@ export function tokenSetter(value: string) { localStorage.setItem('token', value
     EcadAngularAuthAdminComponentsModule,
     EcadAngularAuthAdminModule.forRoot({
       roles: [
-        { value: 'com.ecadlabs.auth.regular', displayValue: 'Regular' },
-        { value: 'com.ecadlabs.auth.admin', displayValue: 'Admin' }
+        { value: 'regular', displayValue: 'Regular' },
+        { value: 'admin', displayValue: 'Admin' }
       ],
       apiEndpoint: '/api/v1/users',
       emailUpdateUrl: '/api/v1/request_email_update'
@@ -90,7 +92,6 @@ export function tokenSetter(value: string) { localStorage.setItem('token', value
     ]),
     MatToolbarModule,
   ],
-  providers: [],
   bootstrap: [AppComponent]
 })
 export class AppModule { }
