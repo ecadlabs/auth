@@ -13,3 +13,8 @@
         flex:1;
     }
 }
+
+::ng-deep .snackbar-error {
+    color: #fff;
+    background: red;
+}
