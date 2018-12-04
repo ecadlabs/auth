@@ -20,6 +20,8 @@ import { ProtectedComponent } from './protected/protected.component';
 import { UserDetailPageComponent } from './user-detail-page/user-detail-page.component';
 import { UserLogsComponent } from './user-logs/user-logs.component';
 import { RequestEmailChangeComponent } from './request-email-change/request-email-change.component';
+import { HTTP_INTERCEPTORS } from '@angular/common/http';
+import { ErrorHttpInterceptor } from './error-http-interceptor';
 
 export function tokenGetter() { return localStorage.getItem('token'); }
 export function tokenSetter(value: string) { localStorage.setItem('token', value); }
@@ -90,7 +92,13 @@ export function tokenSetter(value: string) { localStorage.setItem('token', value
     ]),
     MatToolbarModule,
   ],
-  providers: [],
+  providers: [
+    {
+      provide: HTTP_INTERCEPTORS,
+      useClass: ErrorHttpInterceptor,
+      multi: true
+    },
+  ],
   bootstrap: [AppComponent]
 })
 export class AppModule { }
