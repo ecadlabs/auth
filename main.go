@@ -2,12 +2,9 @@ package main
 
 import (
 	"context"
-	"crypto/rand"
 	"crypto/tls"
 	"database/sql"
-	"encoding/base64"
 	"flag"
-	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
@@ -20,7 +17,6 @@ import (
 	"github.com/ecadlabs/auth/service"
 	"github.com/golang-migrate/migrate"
 	log "github.com/sirupsen/logrus"
-	"golang.org/x/crypto/bcrypt"
 )
 
 const (
@@ -61,17 +57,11 @@ func main() {
 	var (
 		config      service.Config
 		configFile  string
-		genPwd      string
-		genSecret   int
-		useBase64   bool
 		migrateOnly bool
 		bootstrap   bool
 		rbacFile    string
 	)
 
-	flag.StringVar(&genPwd, "bcrypt", "", "Generate password hash.")
-	flag.IntVar(&genSecret, "gen_secret", 0, "Generate random JWT secret of N bytes.")
-	flag.BoolVar(&useBase64, "base64_secret", false, "Encode generated secret using base64.")
 	flag.StringVar(&configFile, "c", "", "Config file.")
 	flag.StringVar(&rbacFile, "r", "", "RBAC file.")
 	flag.BoolVar(&migrateOnly, "migrate", false, "Migrate and exit immediately.")
@@ -94,32 +84,6 @@ func main() {
 	flag.StringVar(&config.TLSKey, "tlskey", "", "TLS private key file.")
 
 	flag.Parse()
-
-	if genSecret != 0 {
-		buf := make([]byte, genSecret)
-		if _, err := rand.Read(buf); err != nil {
-			log.Fatal(err)
-		}
-
-		if !useBase64 {
-			os.Stdout.Write(buf)
-			os.Exit(0)
-		}
-
-		s := base64.StdEncoding.EncodeToString(buf)
-		fmt.Println(s)
-		os.Exit(0)
-	}
-
-	if genPwd != "" {
-		hash, err := bcrypt.GenerateFromPassword([]byte(genPwd), bcrypt.DefaultCost)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		fmt.Println(string(hash))
-		os.Exit(0)
-	}
 
 	if configFile != "" {
 		if err := config.Load(configFile); err != nil {
