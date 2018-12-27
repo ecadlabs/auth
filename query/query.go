@@ -119,10 +119,19 @@ func (e *Expr) Expr(val string) string {
 	return expr
 }
 
-func FromValues(q url.Values) (*Query, error) {
+func FromValues(q url.Values, defaultValues map[string][]string) (*Query, error) {
 	var res Query
 
+	var values = defaultValues
+	if values == nil {
+		values = make(map[string][]string)
+	}
+
 	for k, val := range q {
+		values[k] = val
+	}
+
+	for k, val := range values {
 		if len(val) == 0 {
 			continue
 		}

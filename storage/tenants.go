@@ -19,6 +19,7 @@ type tenantModel struct {
 	Added     time.Time `json:"added" db:"added"`
 	Modified  time.Time `json:"modified" db:"modified"`
 	Protected bool      `json:"-" db:"protected"`
+	Archived  bool      `json:"-" db:"archived"`
 	SortedBy  string    `json:"-" db:"sorted_by"`
 }
 
@@ -94,12 +95,13 @@ var tenantsQueryColumns = map[string]int{
 	"name":     query.ColQuery | query.ColSort,
 	"added":    query.ColQuery | query.ColSort,
 	"modified": query.ColQuery | query.ColSort,
+	"archived": query.ColQuery | query.ColSort,
 }
 
 func (s *TenantStorage) GetTenants(ctx context.Context, self *User, onlySelf bool, q *query.Query) (tenants []*tenantModel, count int, next *query.Query, err error) {
-	var queryExtension = ""
+	var queryExtension = "tenants as scoped_tenants"
 	if onlySelf {
-		queryExtension += "WHERE id IN (SELECT tenant_id FROM membership WHERE user_id = '" + self.ID.String() + "')"
+		queryExtension = "(SELECT * FROM tenants WHERE id IN (SELECT tenant_id FROM membership WHERE user_id = '" + self.ID.String() + "')) as scoped_tenants"
 	}
 
 	if q.SortBy == "" {
@@ -107,8 +109,8 @@ func (s *TenantStorage) GetTenants(ctx context.Context, self *User, onlySelf boo
 	}
 
 	selOpt := query.SelectOptions{
-		SelectExpr: "tenants.*, tenants." + pq.QuoteIdentifier(q.SortBy) + " AS sorted_by",
-		FromExpr:   "tenants " + queryExtension,
+		SelectExpr: "scoped_tenants.*, scoped_tenants." + pq.QuoteIdentifier(q.SortBy) + " AS sorted_by",
+		FromExpr:   queryExtension,
 		IDColumn:   "id",
 		ColumnFlagsFunc: func(col string) int {
 			if flags, ok := tenantsQueryColumns[col]; ok {
@@ -242,7 +244,7 @@ func (s *TenantStorage) DeleteTenant(ctx context.Context, id uuid.UUID) error {
 		err = tx.Commit()
 	}()
 
-	_, err = tx.ExecContext(ctx, "DELETE tenants WHERE id = $1", id)
+	_, err = tx.ExecContext(ctx, "UPDATE tenants SET archived = TRUE WHERE id = $1", id)
 
 	if err != nil {
 		return err
