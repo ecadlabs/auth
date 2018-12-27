@@ -185,6 +185,12 @@ func (t *Tenants) CreateTenant(w http.ResponseWriter, r *http.Request) {
 		utils.JSONError(w, err.Error(), errors.CodeBadRequest)
 		return
 	}
+
+	if createTenant.Name == "" {
+		utils.JSONErrorResponse(w, errors.ErrTenantName)
+		return
+	}
+
 	newTenants, err := t.Storage.CreateTenant(ctx, createTenant.Name)
 
 	if err != nil {
