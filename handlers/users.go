@@ -151,7 +151,7 @@ func (u *Users) GetUsers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	q, err := query.FromValues(r.Form)
+	q, err := query.FromValues(r.Form, nil)
 	if err != nil {
 		log.Error(err)
 		utils.JSONError(w, err.Error(), errors.CodeQuerySyntax)
@@ -202,11 +202,11 @@ func (u *Users) resetToken(user *storage.User) (string, error) {
 	now := time.Now()
 
 	claims := jwt.MapClaims{
-		"sub":                             user.ID,
-		"exp":                             now.Add(u.ResetTokenMaxAge).Unix(),
-		"iat":                             now.Unix(),
-		"iss":                             u.BaseURL(),
-		"aud":                             u.ResetURL(),
+		"sub": user.ID,
+		"exp": now.Add(u.ResetTokenMaxAge).Unix(),
+		"iat": now.Unix(),
+		"iss": u.BaseURL(),
+		"aud": u.ResetURL(),
 		utils.NSClaim(u.Namespace, "gen"): user.PasswordGen,
 	}
 
@@ -736,11 +736,11 @@ func (u *Users) SendUpdateEmailRequest(w http.ResponseWriter, r *http.Request) {
 	now := time.Now()
 
 	claims := jwt.MapClaims{
-		"sub":                               user.ID,
-		"exp":                               now.Add(u.EmailUpdateTokenMaxAge).Unix(),
-		"iat":                               now.Unix(),
-		"iss":                               u.BaseURL(),
-		"aud":                               u.EmailUpdateURL(),
+		"sub": user.ID,
+		"exp": now.Add(u.EmailUpdateTokenMaxAge).Unix(),
+		"iat": now.Unix(),
+		"iss": u.BaseURL(),
+		"aud": u.EmailUpdateURL(),
 		utils.NSClaim(u.Namespace, "email"): request.Email,
 		utils.NSClaim(u.Namespace, "gen"):   user.EmailGen,
 	}

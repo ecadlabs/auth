@@ -106,6 +106,7 @@ func (t *Tenants) DeleteTenant(w http.ResponseWriter, r *http.Request) {
 }
 
 func (t *Tenants) FindTenants(w http.ResponseWriter, r *http.Request) {
+	r.ParseForm()
 	self := r.Context().Value(UserContextKey).(*storage.User)
 	ctx, cancel := t.context(r)
 	defer cancel()
@@ -118,7 +119,11 @@ func (t *Tenants) FindTenants(w http.ResponseWriter, r *http.Request) {
 		utils.JSONError(w, err.Error(), errors.CodeUnknown)
 	}
 
-	q, err := query.FromValues(r.Form)
+	// Default archived value to false
+	defaults := make(map[string][]string)
+	defaults["archived[eq]"] = []string{"false"}
+
+	q, err := query.FromValues(r.Form, defaults)
 	if err != nil {
 		log.Error(err)
 		utils.JSONError(w, err.Error(), errors.CodeQuerySyntax)
