@@ -106,6 +106,7 @@ var httpStatus = map[Code]int{
 // Some predefined errors
 
 var (
+	ErrTenantName         = &Error{errors.New("Name is required"), CodeBadRequest}
 	ErrTenantNotFound     = &Error{errors.New("Tenant not found"), CodeTenantNotFound}
 	ErrUserNotFound       = &Error{errors.New("User not found"), CodeUserNotFound}
 	ErrResourceNotFound   = &Error{errors.New("Resource not found"), CodeResourceNotFound}
