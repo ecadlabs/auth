@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/auth0/go-jwt-middleware"
+	"github.com/dgrijalva/jwt-go"
 	"github.com/ecadlabs/auth/errors"
 	"github.com/ecadlabs/auth/handlers"
 	"github.com/ecadlabs/auth/logger"
@@ -16,8 +18,6 @@ import (
 	"github.com/ecadlabs/auth/rbac"
 	"github.com/ecadlabs/auth/storage"
 	"github.com/ecadlabs/auth/utils"
-	"github.com/auth0/go-jwt-middleware"
-	"github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/mux"
 	"github.com/jmoiron/sqlx"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -32,11 +32,12 @@ const (
 var JWTSigningMethod = jwt.SigningMethodHS256
 
 type Service struct {
-	config   Config
-	storage  *storage.Storage
-	notifier notification.Notifier
-	DB       *sql.DB
-	ac       rbac.RBAC
+	config        Config
+	storage       *storage.Storage
+	tenantStorage *storage.TenantStorage
+	notifier      notification.Notifier
+	DB            *sql.DB
+	ac            rbac.RBAC
 }
 
 func New(c *Config, ac rbac.RBAC) (*Service, error) {
@@ -70,12 +71,15 @@ func New(c *Config, ac rbac.RBAC) (*Service, error) {
 		}
 	}
 
+	var dbCon = sqlx.NewDb(db, "postgres")
+
 	return &Service{
-		config:   *c,
-		storage:  &storage.Storage{DB: sqlx.NewDb(db, "postgres")},
-		DB:       db,
-		notifier: notifier,
-		ac:       ac,
+		config:        *c,
+		storage:       &storage.Storage{DB: dbCon},
+		tenantStorage: &storage.TenantStorage{DB: dbCon},
+		DB:            db,
+		notifier:      notifier,
+		ac:            ac,
 	}, nil
 }
 
@@ -112,6 +116,15 @@ func (s *Service) APIHandler() http.Handler {
 
 		AuxLogger: dbLogger,
 		Notifier:  s.notifier,
+	}
+
+	tenantsHandler := &handlers.Tenants{
+		Storage:  s.tenantStorage,
+		Timeout:  time.Duration(s.config.DBTimeout) * time.Second,
+		Enforcer: s.ac,
+
+		BaseURL:     baseURLFunc,
+		TenantsPath: "/tenants/",
 	}
 
 	jwtOptions := jwtmiddleware.Options{
@@ -163,6 +176,18 @@ func (s *Service) APIHandler() http.Handler {
 	umux.Methods("GET").Path("/{id}").HandlerFunc(usersHandler.GetUser)
 	umux.Methods("PATCH").Path("/{id}").HandlerFunc(usersHandler.PatchUser)
 	umux.Methods("DELETE").Path("/{id}").HandlerFunc(usersHandler.DeleteUser)
+
+	// Tenants API
+	tmux := m.PathPrefix("/tenants").Subrouter()
+	tmux.Use(jwtMiddleware.Handler)
+	tmux.Use(aud.Handler)
+	tmux.Use(userdata.Handler)
+
+	tmux.Methods("POST").Path("/").HandlerFunc(tenantsHandler.CreateTenant)
+	tmux.Methods("GET").Path("/{id}").HandlerFunc(tenantsHandler.FindTenant)
+	tmux.Methods("GET").Path("/").HandlerFunc(tenantsHandler.FindTenants)
+	tmux.Methods("DELETE").Path("/{id}").HandlerFunc(tenantsHandler.DeleteTenant)
+	tmux.Methods("PATCH").Path("/{id}").HandlerFunc(tenantsHandler.UpdateTenant)
 
 	// Log API
 	lmux := m.PathPrefix("/logs").Subrouter()

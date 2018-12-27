@@ -53,6 +53,7 @@ func (c Code) HTTPStatus() int {
 
 const (
 	CodeUnknown            Code = "unknown"
+	CodeTenantNotFound     Code = "tenant_not_found"
 	CodeUserNotFound       Code = "user_not_found"
 	CodeResourceNotFound   Code = "resource_not_found"
 	CodeEmailInUse         Code = "email_in_use"
@@ -79,6 +80,7 @@ const (
 var httpStatus = map[Code]int{
 	CodeUnknown:            http.StatusInternalServerError,
 	CodeUserNotFound:       http.StatusNotFound,
+	CodeTenantNotFound:     http.StatusNotFound,
 	CodeResourceNotFound:   http.StatusNotFound,
 	CodeEmailInUse:         http.StatusConflict,
 	CodeRoleExists:         http.StatusConflict,
@@ -104,6 +106,7 @@ var httpStatus = map[Code]int{
 // Some predefined errors
 
 var (
+	ErrTenantNotFound     = &Error{errors.New("Tenant not found"), CodeTenantNotFound}
 	ErrUserNotFound       = &Error{errors.New("User not found"), CodeUserNotFound}
 	ErrResourceNotFound   = &Error{errors.New("Resource not found"), CodeResourceNotFound}
 	ErrEmailInUse         = &Error{errors.New("Email is in use"), CodeEmailInUse}
