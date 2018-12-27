@@ -1,45 +1,47 @@
 permissions:
-    com.ecadlabs.users.write: Allows user to create new users
-    com.ecadlabs.users.read: Allows user to view users
-    com.ecadlabs.users.read_self: Allows user to view their own user resource record
-    com.ecadlabs.users.write_self: Allows user to edit their own user resource record
-    com.ecadlabs.users.full_control: Allows user to manage all accounts
-    com.ecadlabs.users.read_logs: Allows user to access logs
-    com.ecadlabs.users.delegate:noc: Assign `noc' role
-    com.ecadlabs.users.delegate:admin: Assign `admin' role
-    com.ecadlabs.users.delegate:ops: Assign `ops' role
-    # The org permsissions are speculative/future looking permissions included
-    # here to provoke analysis/critical evaluation
-    com.ecadlabs.org.read_self: Allows user to view the organizations to which they are assigned
-    com.ecadlabs.org.write_self: Allows user to view the organizations to which they are assigned
-    com.ecadlabs.org.billing.read_self: Allows user to view the organizations billing details
-    com.ecadlabs.org.billing.write_self: Allows user to view & edit the organizations billing details
-    it.r255.cloudwatch.full_control: Allows user full control of cloudwatch features
-    it.r255.edge.full_control: Allows user full control of edge network visualization features
-    it.r255.grt.full_control: Allows user to use all GRT features, including creating jobs, archiving jobs, etc.
+  com.ecadlabs.users.write: Allows user to create new users
+  com.ecadlabs.users.read: Allows user to view users
+  com.ecadlabs.users.read_self: Allows user to view their own user resource record
+  com.ecadlabs.users.write_self: Allows user to edit their own user resource record
+  com.ecadlabs.users.full_control: Allows user to manage all accounts
+  com.ecadlabs.tenants.full_control: Allows user to manage all tenants
+  com.ecadlabs.users.read_logs: Allows user to access logs
+  com.ecadlabs.users.delegate:noc: Assign `noc' role
+  com.ecadlabs.users.delegate:admin: Assign `admin' role
+  com.ecadlabs.users.delegate:ops: Assign `ops' role
+  # The org permsissions are speculative/future looking permissions included
+  # here to provoke analysis/critical evaluation
+  com.ecadlabs.org.read_self: Allows user to view the organizations to which they are assigned
+  com.ecadlabs.org.write_self: Allows user to view the organizations to which they are assigned
+  com.ecadlabs.org.billing.read_self: Allows user to view the organizations billing details
+  com.ecadlabs.org.billing.write_self: Allows user to view & edit the organizations billing details
+  it.r255.cloudwatch.full_control: Allows user full control of cloudwatch features
+  it.r255.edge.full_control: Allows user full control of edge network visualization features
+  it.r255.grt.full_control: Allows user to use all GRT features, including creating jobs, archiving jobs, etc.
 
 roles:
-    admin:
-        description: A super user that has all access
-        permissions:
-            - com.ecadlabs.users.full_control
-            - it.r255.cloudwatch.full_control
-            - it.r255.edge.full_control
-            - it.r255.grt.full_control
-            - com.ecadlabs.users.delegate:noc
-            - com.ecadlabs.users.delegate:admin
-            - com.ecadlabs.users.delegate:ops
-    noc:
-        description: Network Operation Staff
-        permissions:
-            - com.ecadlabs.users.read_self
-            - com.ecadlabs.users.write_self
-            - it.r255.cloudwatch.full_control
-            - it.r255.edge.full_control
-            - it.r255.grt.full_control
-    ops:
-        description: Operations Staff
-        permissions:
-            - com.ecadlabs.users.read_self
-            - com.ecadlabs.users.write_self
-            - it.r255.grt.full_control
+  admin:
+    description: A super user that has all access
+    permissions:
+      - com.ecadlabs.users.full_control
+      - com.ecadlabs.tenants.full_control
+      - it.r255.cloudwatch.full_control
+      - it.r255.edge.full_control
+      - it.r255.grt.full_control
+      - com.ecadlabs.users.delegate:noc
+      - com.ecadlabs.users.delegate:admin
+      - com.ecadlabs.users.delegate:ops
+  noc:
+    description: Network Operation Staff
+    permissions:
+      - com.ecadlabs.users.read_self
+      - com.ecadlabs.users.write_self
+      - it.r255.cloudwatch.full_control
+      - it.r255.edge.full_control
+      - it.r255.grt.full_control
+  ops:
+    description: Operations Staff
+    permissions:
+      - com.ecadlabs.users.read_self
+      - com.ecadlabs.users.write_self
+      - it.r255.grt.full_control

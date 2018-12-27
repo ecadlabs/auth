@@ -12,10 +12,13 @@ import (
 
 const (
 	EvCreate             = "create"
+	EvCreateTenant       = "create_tenant"
 	EvUpdate             = "update"
+	EvUpdateTenant       = "update_tenant"
 	EvAddRole            = "add_role"
 	EvRemoveRole         = "remove_role"
 	EvDelete             = "delete"
+	EvArchiveTenant      = "archive_tenant"
 	EvReset              = "reset"
 	EvResetRequest       = "reset_request"
 	EvLogin              = "login"
