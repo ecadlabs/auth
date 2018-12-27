@@ -101,8 +101,7 @@ func (t *Tenants) DeleteTenant(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.WriteHeader(200)
-	w.Write(([]byte)(""))
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (t *Tenants) FindTenants(w http.ResponseWriter, r *http.Request) {
