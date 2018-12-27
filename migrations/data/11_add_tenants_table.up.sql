@@ -1,3 +1,5 @@
+BEGIN;
+
 CREATE TABLE tenants(
 	id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
 	name TEXT,
@@ -22,3 +24,5 @@ INSERT INTO tenants (name, protected) VALUES ('root', TRUE);
 /* Add all previous users to the root tenant */
 INSERT INTO membership (user_id, tenant_id)
 SELECT id AS user_id, (SELECT id AS tenant_id FROM tenants WHERE name like 'root' LIMIT 1) FROM users;
+
+COMMIT;
