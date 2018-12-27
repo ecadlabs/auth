@@ -2,6 +2,8 @@
 // sources:
 // data/10_add_email_gen_column.down.sql
 // data/10_add_email_gen_column.up.sql
+// data/11_add_tenants_table.down.sql
+// data/11_add_tenants_table.up.sql
 // data/1_add_users_table.down.sql
 // data/1_add_users_table.up.sql
 // data/2_add_roles_table.down.sql
@@ -102,7 +104,7 @@ func _10_add_email_gen_columnDownSql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "10_add_email_gen_column.down.sql", size: 41, mode: os.FileMode(420), modTime: time.Unix(1530708784, 0)}
+	info := bindataFileInfo{name: "10_add_email_gen_column.down.sql", size: 41, mode: os.FileMode(420), modTime: time.Unix(1532446858, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -122,7 +124,47 @@ func _10_add_email_gen_columnUpSql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "10_add_email_gen_column.up.sql", size: 67, mode: os.FileMode(420), modTime: time.Unix(1530708758, 0)}
+	info := bindataFileInfo{name: "10_add_email_gen_column.up.sql", size: 67, mode: os.FileMode(420), modTime: time.Unix(1532446858, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
+var __11_add_tenants_tableDownSql = []byte("\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\x72\x09\xf2\x0f\x50\x08\x71\x74\xf2\x71\x55\x28\x49\xcd\x4b\xcc\x2b\x29\xb6\xe6\x42\x12\xcb\x4d\xcd\x4d\x4a\x2d\x2a\xce\xc8\x2c\xb0\x06\x04\x00\x00\xff\xff\x84\xb1\xc8\xb1\x2a\x00\x00\x00")
+
+func _11_add_tenants_tableDownSqlBytes() ([]byte, error) {
+	return bindataRead(
+		__11_add_tenants_tableDownSql,
+		"11_add_tenants_table.down.sql",
+	)
+}
+
+func _11_add_tenants_tableDownSql() (*asset, error) {
+	bytes, err := _11_add_tenants_tableDownSqlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "11_add_tenants_table.down.sql", size: 42, mode: os.FileMode(420), modTime: time.Unix(1545660305, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
+var __11_add_tenants_tableUpSql = []byte("\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\xc4\x53\xc1\x6e\x9b\x40\x14\x3c\xc3\x57\xcc\x0d\x88\x90\xa2\x4a\xbd\xe5\xb4\x81\x67\x05\x75\x59\xac\x65\xa9\xeb\x5e\x2c\xda\xdd\x36\xab\x1a\xb0\x60\x9d\xaa\x7f\x5f\x01\x01\xd7\x4d\x0e\x55\x2f\x39\x32\x9a\x19\xde\x9b\x79\x9b\x48\x62\x8a\xa0\xd8\x3d\x27\x38\xd3\xd6\xad\x1b\x42\xdf\xb3\x1a\x55\x95\xa5\xd8\xca\x2c\x67\x72\x8f\x0f\xb4\x47\x4a\x1b\x56\x71\x85\xf3\xd9\xea\xc3\x77\xd3\x9a\xbe\x76\xe6\xf0\xf4\x3e\x8c\x62\xdf\x6b\xeb\xc6\x40\xd1\x27\x15\xfb\x5e\xad\xb5\xd1\x50\x59\x4e\xa5\x62\xf9\x16\xbb\x4c\x3d\x4c\x9f\xf8\x5c\x08\x82\x28\x14\x44\xc5\xf9\x6a\x28\x8a\xdd\xe4\xd1\x74\xda\x7e\xb3\xff\x25\x3d\xf5\x9d\x33\x5f\x9d\xd1\xb8\x2f\x0a\x4e\x4c\xbc\xa4\x6e\x18\x2f\xc9\x8f\xee\x7c\x7f\xd9\x79\xbf\x25\x34\xa6\xf9\x62\xfa\xe1\xd1\x9e\x0e\xee\xd7\xc9\x80\x95\x20\x51\xe5\x08\x83\xee\x67\x6b\xfa\x20\x46\x30\x53\x82\x3f\x95\x53\x5a\x17\x69\xe8\x7b\xe7\xc1\xf4\x87\x25\x35\x49\x1b\x92\x24\x12\x2a\x31\xe2\x43\x68\x75\x84\x42\xa0\xda\xa6\xa3\x3c\x61\x65\xc2\x52\x1a\x91\x94\x38\x5d\x90\xd8\xf7\xe6\x0a\x5e\x73\x5a\xca\xf9\x77\xaf\x37\xe8\xa1\x31\xcd\x9c\xe3\xdf\xb9\xbe\x50\x2c\xb1\xc6\x3e\x80\xab\x3b\x0b\x9f\xb3\x8c\xb1\x86\x11\x4d\xbd\x65\xa2\x24\xa9\x90\x09\x55\x2c\x69\x20\x1c\x0f\x2f\xc6\xda\x7f\x84\x8f\x8c\x57\x54\x22\x0c\xfa\xae\x73\x41\x0c\x25\x2b\x1a\xd5\xb7\x37\x60\x5a\xa3\x3e\x1e\x71\xea\xcd\x93\xed\xce\xc3\xdc\x0e\x5c\x07\xf7\x68\x30\xf2\x9f\x7d\x71\x73\x7b\xf5\xb7\xcb\x36\xaf\x4f\x57\x12\xa7\x44\xc1\xea\xf1\x7e\x56\x42\x78\x05\x5f\x9a\xdd\xc8\x22\x5f\x17\xd8\x3d\x90\x24\x4c\xcf\xe7\x68\x7f\x18\xcc\x63\x83\x67\x79\xa6\xf0\x2e\x9a\xc9\xd3\x9c\x77\xbf\x03\x00\x00\xff\xff\x9c\x15\x89\x25\xac\x03\x00\x00")
+
+func _11_add_tenants_tableUpSqlBytes() ([]byte, error) {
+	return bindataRead(
+		__11_add_tenants_tableUpSql,
+		"11_add_tenants_table.up.sql",
+	)
+}
+
+func _11_add_tenants_tableUpSql() (*asset, error) {
+	bytes, err := _11_add_tenants_tableUpSqlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "11_add_tenants_table.up.sql", size: 940, mode: os.FileMode(420), modTime: time.Unix(1545672275, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -142,7 +184,7 @@ func _1_add_users_tableDownSql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "1_add_users_table.down.sql", size: 18, mode: os.FileMode(420), modTime: time.Unix(1530033174, 0)}
+	info := bindataFileInfo{name: "1_add_users_table.down.sql", size: 18, mode: os.FileMode(420), modTime: time.Unix(1529430051, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -162,7 +204,7 @@ func _1_add_users_tableUpSql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "1_add_users_table.up.sql", size: 286, mode: os.FileMode(420), modTime: time.Unix(1530033174, 0)}
+	info := bindataFileInfo{name: "1_add_users_table.up.sql", size: 286, mode: os.FileMode(420), modTime: time.Unix(1529430051, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -182,7 +224,7 @@ func _2_add_roles_tableDownSql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "2_add_roles_table.down.sql", size: 17, mode: os.FileMode(420), modTime: time.Unix(1530033174, 0)}
+	info := bindataFileInfo{name: "2_add_roles_table.down.sql", size: 17, mode: os.FileMode(420), modTime: time.Unix(1529430051, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -202,7 +244,7 @@ func _2_add_roles_tableUpSql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "2_add_roles_table.up.sql", size: 87, mode: os.FileMode(420), modTime: time.Unix(1530033174, 0)}
+	info := bindataFileInfo{name: "2_add_roles_table.up.sql", size: 87, mode: os.FileMode(420), modTime: time.Unix(1529430051, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -222,7 +264,7 @@ func _3_add_log_tableDownSql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "3_add_log_table.down.sql", size: 15, mode: os.FileMode(420), modTime: time.Unix(1530033174, 0)}
+	info := bindataFileInfo{name: "3_add_log_table.down.sql", size: 15, mode: os.FileMode(420), modTime: time.Unix(1529430051, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -242,7 +284,7 @@ func _3_add_log_tableUpSql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "3_add_log_table.up.sql", size: 136, mode: os.FileMode(420), modTime: time.Unix(1530033174, 0)}
+	info := bindataFileInfo{name: "3_add_log_table.up.sql", size: 136, mode: os.FileMode(420), modTime: time.Unix(1529430051, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -262,7 +304,7 @@ func _4_not_nullDownSql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "4_not_null.down.sql", size: 50, mode: os.FileMode(420), modTime: time.Unix(1530033174, 0)}
+	info := bindataFileInfo{name: "4_not_null.down.sql", size: 50, mode: os.FileMode(420), modTime: time.Unix(1529711024, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -282,7 +324,7 @@ func _4_not_nullUpSql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "4_not_null.up.sql", size: 145, mode: os.FileMode(420), modTime: time.Unix(1530033174, 0)}
+	info := bindataFileInfo{name: "4_not_null.up.sql", size: 145, mode: os.FileMode(420), modTime: time.Unix(1529711024, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -302,7 +344,7 @@ func _5_bootstrapDownSql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "5_bootstrap.down.sql", size: 21, mode: os.FileMode(420), modTime: time.Unix(1530033174, 0)}
+	info := bindataFileInfo{name: "5_bootstrap.down.sql", size: 21, mode: os.FileMode(420), modTime: time.Unix(1529711024, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -322,7 +364,7 @@ func _5_bootstrapUpSql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "5_bootstrap.up.sql", size: 124, mode: os.FileMode(420), modTime: time.Unix(1530033174, 0)}
+	info := bindataFileInfo{name: "5_bootstrap.up.sql", size: 124, mode: os.FileMode(420), modTime: time.Unix(1529711024, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -342,7 +384,7 @@ func _6_add_gen_columnDownSql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "6_add_gen_column.down.sql", size: 43, mode: os.FileMode(420), modTime: time.Unix(1530033174, 0)}
+	info := bindataFileInfo{name: "6_add_gen_column.down.sql", size: 43, mode: os.FileMode(420), modTime: time.Unix(1529711024, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -362,7 +404,7 @@ func _6_add_gen_columnUpSql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "6_add_gen_column.up.sql", size: 69, mode: os.FileMode(420), modTime: time.Unix(1530033174, 0)}
+	info := bindataFileInfo{name: "6_add_gen_column.up.sql", size: 69, mode: os.FileMode(420), modTime: time.Unix(1529711024, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -382,7 +424,7 @@ func _7_add_ip_columnDownSql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "7_add_ip_column.down.sql", size: 34, mode: os.FileMode(420), modTime: time.Unix(1530536182, 0)}
+	info := bindataFileInfo{name: "7_add_ip_column.down.sql", size: 34, mode: os.FileMode(420), modTime: time.Unix(1530306711, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -402,7 +444,7 @@ func _7_add_ip_columnUpSql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "7_add_ip_column.up.sql", size: 44, mode: os.FileMode(420), modTime: time.Unix(1530536182, 0)}
+	info := bindataFileInfo{name: "7_add_ip_column.up.sql", size: 44, mode: os.FileMode(420), modTime: time.Unix(1530306711, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -422,7 +464,7 @@ func _8_add_user_addr_columnsDownSql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "8_add_user_addr_columns.down.sql", size: 138, mode: os.FileMode(420), modTime: time.Unix(1530536182, 0)}
+	info := bindataFileInfo{name: "8_add_user_addr_columns.down.sql", size: 138, mode: os.FileMode(420), modTime: time.Unix(1530306711, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -442,7 +484,7 @@ func _8_add_user_addr_columnsUpSql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "8_add_user_addr_columns.up.sql", size: 278, mode: os.FileMode(420), modTime: time.Unix(1530536182, 0)}
+	info := bindataFileInfo{name: "8_add_user_addr_columns.up.sql", size: 278, mode: os.FileMode(420), modTime: time.Unix(1530306711, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -462,7 +504,7 @@ func _9_add_log_columnsDownSql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "9_add_log_columns.down.sql", size: 241, mode: os.FileMode(420), modTime: time.Unix(1530536182, 0)}
+	info := bindataFileInfo{name: "9_add_log_columns.down.sql", size: 241, mode: os.FileMode(420), modTime: time.Unix(1530306711, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -482,7 +524,7 @@ func _9_add_log_columnsUpSql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "9_add_log_columns.up.sql", size: 486, mode: os.FileMode(420), modTime: time.Unix(1530536182, 0)}
+	info := bindataFileInfo{name: "9_add_log_columns.up.sql", size: 486, mode: os.FileMode(420), modTime: time.Unix(1530306711, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -541,6 +583,8 @@ func AssetNames() []string {
 var _bindata = map[string]func() (*asset, error){
 	"10_add_email_gen_column.down.sql": _10_add_email_gen_columnDownSql,
 	"10_add_email_gen_column.up.sql": _10_add_email_gen_columnUpSql,
+	"11_add_tenants_table.down.sql": _11_add_tenants_tableDownSql,
+	"11_add_tenants_table.up.sql": _11_add_tenants_tableUpSql,
 	"1_add_users_table.down.sql": _1_add_users_tableDownSql,
 	"1_add_users_table.up.sql": _1_add_users_tableUpSql,
 	"2_add_roles_table.down.sql": _2_add_roles_tableDownSql,
@@ -603,6 +647,8 @@ type bintree struct {
 var _bintree = &bintree{nil, map[string]*bintree{
 	"10_add_email_gen_column.down.sql": &bintree{_10_add_email_gen_columnDownSql, map[string]*bintree{}},
 	"10_add_email_gen_column.up.sql": &bintree{_10_add_email_gen_columnUpSql, map[string]*bintree{}},
+	"11_add_tenants_table.down.sql": &bintree{_11_add_tenants_tableDownSql, map[string]*bintree{}},
+	"11_add_tenants_table.up.sql": &bintree{_11_add_tenants_tableUpSql, map[string]*bintree{}},
 	"1_add_users_table.down.sql": &bintree{_1_add_users_tableDownSql, map[string]*bintree{}},
 	"1_add_users_table.up.sql": &bintree{_1_add_users_tableUpSql, map[string]*bintree{}},
 	"2_add_roles_table.down.sql": &bintree{_2_add_roles_tableDownSql, map[string]*bintree{}},
