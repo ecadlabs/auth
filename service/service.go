@@ -154,6 +154,7 @@ func (s *Service) APIHandler() http.Handler {
 	// Login API
 	m.Methods("POST").Path("/password_reset").HandlerFunc(usersHandler.ResetPassword)
 	m.Methods("GET", "POST").Path("/request_password_reset").HandlerFunc(usersHandler.SendResetRequest)
+	m.Methods("GET", "POST").Path("/login/{id}").HandlerFunc(usersHandler.Login)
 	m.Methods("GET", "POST").Path("/login").HandlerFunc(usersHandler.Login)
 
 	userdata := &middleware.UserData{
@@ -162,7 +163,7 @@ func (s *Service) APIHandler() http.Handler {
 		Storage:         s.storage,
 	}
 
-	m.Methods("GET").Path("/refresh").Handler(jwtMiddleware.Handler(aud.Handler(userdata.Handler(http.HandlerFunc(usersHandler.Refresh)))))
+	m.Methods("GET").Path("/refresh/{id}").Handler(jwtMiddleware.Handler(aud.Handler(userdata.Handler(http.HandlerFunc(usersHandler.Refresh)))))
 
 	// Users API
 	m.Methods("POST").Path("/request_email_update").Handler(jwtMiddleware.Handler(aud.Handler(userdata.Handler(http.HandlerFunc(usersHandler.SendUpdateEmailRequest)))))
