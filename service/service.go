@@ -125,6 +125,8 @@ func (s *Service) APIHandler() http.Handler {
 
 		BaseURL:     baseURLFunc,
 		TenantsPath: "/tenants/",
+
+		AuxLogger: dbLogger,
 	}
 
 	jwtOptions := jwtmiddleware.Options{

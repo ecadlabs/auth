@@ -33,6 +33,8 @@ type Tenants struct {
 
 	BaseURL     func() string
 	TenantsPath string
+
+	AuxLogger *log.Logger
 }
 
 func (t *Tenants) context(r *http.Request) (context.Context, context.CancelFunc) {
@@ -99,6 +101,11 @@ func (t *Tenants) DeleteTenant(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		utils.JSONError(w, err.Error(), errors.CodeUnknown)
 		return
+	}
+
+	// Log
+	if t.AuxLogger != nil {
+		t.AuxLogger.WithFields(logFields(EvArchiveTenant, self.ID, uid, r)).Printf("User %v archived tenant %v", self.ID, uid)
 	}
 
 	w.WriteHeader(http.StatusNoContent)
@@ -202,6 +209,11 @@ func (t *Tenants) CreateTenant(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Log
+	if t.AuxLogger != nil {
+		t.AuxLogger.WithFields(logFields(EvCreateTenant, self.ID, newTenants.ID, r)).Printf("User %v create tenant %v", self.ID, newTenants.ID)
+	}
+
 	utils.JSONResponse(w, 200, newTenants)
 }
 
@@ -257,6 +269,12 @@ func (t *Tenants) UpdateTenant(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		utils.JSONError(w, err.Error(), errors.CodeUnknown)
+	}
+
+	if t.AuxLogger != nil {
+		if len(ops.Update) != 0 {
+			t.AuxLogger.WithFields(logFields(EvUpdateTenant, self.ID, uid, r)).WithFields(log.Fields(ops.Update)).Printf("User %v updated tenant %v", self.ID, uid)
+		}
 	}
 
 	utils.JSONResponse(w, 200, &tenant)
