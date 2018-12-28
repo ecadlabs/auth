@@ -10,6 +10,7 @@ CREATE TABLE tenants(
 );
 
 CREATE TYPE membership_type AS ENUM ('owner', 'member');
+CREATE TYPE membership_status AS ENUM ('active', 'invited');
 
 CREATE TABLE membership(
 	user_id UUID REFERENCES users(id) ON UPDATE CASCADE ON DELETE CASCADE,
@@ -17,6 +18,7 @@ CREATE TABLE membership(
 	added TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
 	modified TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
 	mem_type membership_type NOT NULL DEFAULT 'member',
+	mem_status membership_status NOT NULL DEFAULT 'active',
     PRIMARY KEY (user_id, tenant_id)
 );
 

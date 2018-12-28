@@ -51,6 +51,19 @@ Your email address has been updated to {{.TargetUser.Email}}, and your old email
 If you did not make this change, you should contact {{.SupportEmail}} immediately. Otherwise, you can ignore this notice.
 
 Thank you
+{{- end}}
+
+{{define "tenant_invite_subject"}}You have been invited to join {{.Tenant.Name}} by {{.CurrentUser.Email}} {{end}}
+{{define "tenant_invite_body" -}}
+Hello {{.TargetUser.Name}}
+
+You have been invited to {{.Tenant.Name}} by {{.CurrentUser.Email}} 
+
+Click the link to accept the invitation.
+
+{{.TenantInvitePrefix}}{{.Token| urlquery}}
+
+Thank you
 {{- end}}`
 )
 

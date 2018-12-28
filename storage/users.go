@@ -43,7 +43,7 @@ func (u *userModel) toUser() *User {
 		Added:         u.Added,
 		Modified:      u.Modified,
 		Roles:         make(Roles, len(u.Roles)),
-		Memberships:   []*Membership{},
+		Memberships:   []*MembershipItem{},
 		EmailVerified: u.EmailVerified,
 		PasswordGen:   u.PasswordGen,
 		LoginAddr:     u.LoginAddr,
@@ -67,7 +67,7 @@ func (u *userModel) toUser() *User {
 
 	for _, m := range u.Memberships {
 		result := strings.Split(m, ",")
-		ret.Memberships = append(ret.Memberships, &Membership{
+		ret.Memberships = append(ret.Memberships, &MembershipItem{
 			Membership_type: result[1],
 			TenantID:        uuid.FromStringOrNil(result[0]),
 		})
@@ -83,7 +83,7 @@ type Storage struct {
 func (s *Storage) getUser(ctx context.Context, col string, val interface{}) (*User, error) {
 	var u userModel
 
-	q := "SELECT users.*, ra.roles, mem.memberships FROM users LEFT JOIN (SELECT user_id, array_agg(tenant_id || ',' || mem_type) AS memberships FROM membership LEFT JOIN tenants on tenants.id = tenant_id WHERE tenants.archived = FALSE GROUP BY user_id) AS mem ON mem.user_id = users.id LEFT JOIN (SELECT user_id, array_agg(role) AS roles FROM roles GROUP BY user_id) AS ra ON ra.user_id = users.id WHERE users." + pq.QuoteIdentifier(col) + " = $1"
+	q := "SELECT users.*, ra.roles, mem.memberships FROM users LEFT JOIN (SELECT user_id, array_agg(tenant_id || ',' || mem_type) AS memberships FROM membership LEFT JOIN tenants on tenants.id = tenant_id WHERE tenants.archived = FALSE AND membership.mem_status = 'active' GROUP BY user_id) AS mem ON mem.user_id = users.id LEFT JOIN (SELECT user_id, array_agg(role) AS roles FROM roles GROUP BY user_id) AS ra ON ra.user_id = users.id WHERE users." + pq.QuoteIdentifier(col) + " = $1"
 	if err := s.DB.GetContext(ctx, &u, q, val); err != nil {
 		if err == sql.ErrNoRows {
 			err = errors.ErrUserNotFound
@@ -124,7 +124,7 @@ func (s *Storage) GetUsers(ctx context.Context, q *query.Query) (users []*User, 
 
 	selOpt := query.SelectOptions{
 		SelectExpr: "users.*, ra.roles, mem.memberships, users." + pq.QuoteIdentifier(q.SortBy) + " AS sorted_by",
-		FromExpr:   "users LEFT JOIN (SELECT user_id, array_agg(tenant_id || ',' || mem_type) AS memberships FROM membership LEFT JOIN tenants on tenants.id = tenant_id WHERE tenants.archived = FALSE GROUP BY user_id) AS mem ON mem.user_id = users.id LEFT JOIN (SELECT user_id, array_agg(role) AS roles FROM roles GROUP BY user_id) AS ra ON ra.user_id = users.id",
+		FromExpr:   "users LEFT JOIN (SELECT user_id, array_agg(tenant_id || ',' || mem_type) AS memberships FROM membership LEFT JOIN tenants on tenants.id = tenant_id WHERE tenants.archived = FALSE AND membership.mem_status = 'active' GROUP BY user_id) AS mem ON mem.user_id = users.id LEFT JOIN (SELECT user_id, array_agg(role) AS roles FROM roles GROUP BY user_id) AS ra ON ra.user_id = users.id",
 		IDColumn:   "id",
 		ColumnFlagsFunc: func(col string) int {
 			if flags, ok := userQueryColumns[col]; ok {
@@ -228,7 +228,7 @@ func NewUserInt(ctx context.Context, tx *sqlx.Tx, user *User) (res *User, err er
 
 	res.Roles = user.Roles
 
-	tModel := tenantModel{}
+	tModel := TenantModel{}
 
 	// Create membership
 	query, err := sqlx.NamedQueryContext(ctx, tx, "SELECT * FROM tenants where name like 'root' AND protected = TRUE LIMIT 1", &tModel)

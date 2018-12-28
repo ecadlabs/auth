@@ -54,9 +54,11 @@ func (c Code) HTTPStatus() int {
 const (
 	CodeUnknown            Code = "unknown"
 	CodeTenantNotFound     Code = "tenant_not_found"
+	CodeMembershipNotFound Code = "membership_not_found"
 	CodeUserNotFound       Code = "user_not_found"
 	CodeResourceNotFound   Code = "resource_not_found"
 	CodeEmailInUse         Code = "email_in_use"
+	CodeMembershipExists   Code = "membership_exists"
 	CodePatchFormat        Code = "patch_format"
 	CodeRoleExists         Code = "role_exists"
 	CodeTokenExpired       Code = "token_expired"
@@ -106,8 +108,10 @@ var httpStatus = map[Code]int{
 // Some predefined errors
 
 var (
+	ErrMembershipExisits  = &Error{errors.New("Membership exists"), CodeMembershipExists}
 	ErrTenantName         = &Error{errors.New("Name is required"), CodeBadRequest}
 	ErrTenantNotFound     = &Error{errors.New("Tenant not found"), CodeTenantNotFound}
+	ErrMembershipNotFound = &Error{errors.New("Membership not found"), CodeMembershipNotFound}
 	ErrUserNotFound       = &Error{errors.New("User not found"), CodeUserNotFound}
 	ErrResourceNotFound   = &Error{errors.New("Resource not found"), CodeResourceNotFound}
 	ErrEmailInUse         = &Error{errors.New("Email is in use"), CodeEmailInUse}

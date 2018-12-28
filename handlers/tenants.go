@@ -7,8 +7,10 @@ import (
 	"net/url"
 	"time"
 
+	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/ecadlabs/auth/errors"
 	"github.com/ecadlabs/auth/jsonpatch"
+	"github.com/ecadlabs/auth/notification"
 	"github.com/ecadlabs/auth/query"
 	"github.com/ecadlabs/auth/rbac"
 	"github.com/ecadlabs/auth/storage"
@@ -27,14 +29,19 @@ type CreateTenantModel struct {
 }
 
 type Tenants struct {
-	Storage  *storage.TenantStorage
-	Timeout  time.Duration
-	Enforcer rbac.Enforcer
+	UserStorage       *storage.Storage
+	Storage           *storage.TenantStorage
+	MembershipStorage *storage.MembershipStorage
+	Timeout           time.Duration
+	Enforcer          rbac.Enforcer
 
-	BaseURL     func() string
-	TenantsPath string
-
-	AuxLogger *log.Logger
+	BaseURL            func() string
+	TokenFactory       *TokenFactory
+	TenantsPath        string
+	InvitePath         string
+	Notifier           notification.Notifier
+	AuxLogger          *log.Logger
+	TenantInviteMaxAge time.Duration
 }
 
 func (t *Tenants) context(r *http.Request) (context.Context, context.CancelFunc) {
@@ -278,4 +285,168 @@ func (t *Tenants) UpdateTenant(w http.ResponseWriter, r *http.Request) {
 	}
 
 	utils.JSONResponse(w, 200, &tenant)
+}
+
+func (t *Tenants) inviteToken(user *storage.User, tenantID uuid.UUID) (string, error) {
+	return t.TokenFactory.Create(
+		jwt.MapClaims{
+			"tenant_invite": tenantID,
+		},
+		user,
+		t.InvitePath,
+		t.TenantInviteMaxAge,
+	)
+}
+
+type inviteExistingUser struct {
+	Email string `json:email`
+}
+
+type acceptInvite struct {
+	Token string `json:token`
+}
+
+func (t *Tenants) AcceptInvite(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := t.context(r)
+	defer cancel()
+
+	invite := acceptInvite{}
+
+	if err := json.NewDecoder(r.Body).Decode(&invite); err != nil {
+		log.Error(err)
+		utils.JSONError(w, err.Error(), errors.CodeBadRequest)
+		return
+	}
+
+	requestToken := invite.Token
+	if requestToken == "" {
+		log.Error(errors.ErrTokenEmpty)
+		utils.JSONErrorResponse(w, errors.ErrTokenEmpty)
+	}
+
+	// Verify token
+	token, err := t.TokenFactory.Verify(requestToken)
+	if err != nil {
+		log.Error(err)
+		utils.JSONErrorResponse(w, err)
+		return
+	}
+
+	// Verify audience
+	claims := token.Claims.(jwt.MapClaims)
+	if !claims.VerifyAudience(t.InvitePath, true) {
+		utils.JSONErrorResponse(w, errors.ErrAudience)
+		return
+	}
+
+	// Get tenantId
+	tenantIdStr, ok := t.TokenFactory.GetClaim(token, "tenant_invite").(string)
+	if !ok {
+		utils.JSONErrorResponse(w, errors.ErrInvalidToken)
+		return
+	}
+	tenantId, err := uuid.FromString(tenantIdStr)
+
+	// Get user id
+	sub, ok := claims["sub"].(string)
+	if !ok {
+		utils.JSONErrorResponse(w, errors.ErrInvalidToken)
+		return
+	}
+
+	id, err := uuid.FromString(sub)
+	if err != nil {
+		utils.JSONErrorResponse(w, errors.ErrInvalidToken)
+		return
+	}
+
+	err = t.MembershipStorage.UpdateMembership(ctx, tenantId, id, "active")
+	if err != nil {
+		log.Error(err)
+		utils.JSONError(w, err.Error(), errors.CodeUnknown)
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (t *Tenants) InviteExistingUser(w http.ResponseWriter, r *http.Request) {
+	self := r.Context().Value(UserContextKey).(*storage.User)
+	ctx, cancel := t.context(r)
+	defer cancel()
+
+	role, err := t.Enforcer.GetRole(ctx, self.Roles.Get()...)
+	granted, err := role.IsAllGranted(permissionTenantsFull)
+
+	if err != nil {
+		log.Error(err)
+		utils.JSONError(w, err.Error(), errors.CodeUnknown)
+	}
+
+	uid, err := uuid.FromString(mux.Vars(r)["id"])
+	if err != nil {
+		log.Error(err)
+		utils.JSONError(w, err.Error(), errors.CodeBadRequest)
+		return
+	}
+
+	if !t.CanUpdateTenant(role, self, uid) {
+		utils.JSONError(w, "", errors.CodeForbidden)
+		return
+	}
+
+	var user inviteExistingUser
+	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
+		log.Error(err)
+		utils.JSONError(w, err.Error(), errors.CodeBadRequest)
+		return
+	}
+
+	target, err := t.UserStorage.GetUserByEmail(ctx, user.Email)
+
+	if err != nil {
+		log.Error(err)
+		utils.JSONErrorResponse(w, errors.ErrUserNotFound)
+		return
+	}
+
+	// Create invite token
+	token, err := t.inviteToken(target, uid)
+	if err != nil {
+		log.Error(err)
+		utils.JSONErrorResponse(w, err)
+		return
+	}
+
+	tenant, err := t.Storage.GetTenant(ctx, uid, self, !granted)
+	if err != nil {
+		log.Error(err)
+		utils.JSONErrorResponse(w, err)
+		return
+	}
+
+	membership, _ := t.MembershipStorage.GetMembership(ctx, uid, target.ID)
+
+	if membership != nil && membership.Membership_status != "invited" {
+		utils.JSONErrorResponse(w, errors.ErrMembershipExisits)
+		return
+	}
+
+	if membership == nil {
+		err = t.MembershipStorage.AddMembership(ctx, uid, target, "invited")
+		if err != nil {
+			log.Error(err)
+			utils.JSONErrorResponse(w, err)
+			return
+		}
+	}
+
+	if err = t.Notifier.Notify(ctx, notification.NotificationTenantInvite, &notification.NotificationData{
+		Tenant:      tenant,
+		CurrentUser: self,
+		TargetUser:  target,
+		Token:       token,
+		TokenMaxAge: t.TokenFactory.SessionMaxAge,
+	}); err != nil {
+		log.Error(err)
+	}
 }

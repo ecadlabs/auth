@@ -32,12 +32,13 @@ const (
 var JWTSigningMethod = jwt.SigningMethodHS256
 
 type Service struct {
-	config        Config
-	storage       *storage.Storage
-	tenantStorage *storage.TenantStorage
-	notifier      notification.Notifier
-	DB            *sql.DB
-	ac            rbac.RBAC
+	config            Config
+	storage           *storage.Storage
+	tenantStorage     *storage.TenantStorage
+	membershipStorage *storage.MembershipStorage
+	notifier          notification.Notifier
+	DB                *sql.DB
+	ac                rbac.RBAC
 }
 
 func New(c *Config, ac rbac.RBAC) (*Service, error) {
@@ -74,12 +75,13 @@ func New(c *Config, ac rbac.RBAC) (*Service, error) {
 	var dbCon = sqlx.NewDb(db, "postgres")
 
 	return &Service{
-		config:        *c,
-		storage:       &storage.Storage{DB: dbCon},
-		tenantStorage: &storage.TenantStorage{DB: dbCon},
-		DB:            db,
-		notifier:      notifier,
-		ac:            ac,
+		config:            *c,
+		storage:           &storage.Storage{DB: dbCon},
+		tenantStorage:     &storage.TenantStorage{DB: dbCon},
+		membershipStorage: &storage.MembershipStorage{DB: dbCon},
+		DB:                db,
+		notifier:          notifier,
+		ac:                ac,
 	}, nil
 }
 
@@ -90,6 +92,17 @@ func (s *Service) APIHandler() http.Handler {
 	dbLogger.AddHook(&logger.Hook{
 		DB: s.DB,
 	})
+
+	tokenFactory := &handlers.TokenFactory{
+		Namespace: s.config.Namespace(),
+		JWTSecretGetter: func() ([]byte, error) {
+			return []byte(s.config.JWTSecret), nil
+		},
+		JWTSigningMethod: JWTSigningMethod,
+
+		BaseURL:       baseURLFunc,
+		SessionMaxAge: time.Duration(s.config.SessionMaxAge) * time.Second,
+	}
 
 	usersHandler := &handlers.Users{
 		Storage: s.storage,
@@ -119,14 +132,19 @@ func (s *Service) APIHandler() http.Handler {
 	}
 
 	tenantsHandler := &handlers.Tenants{
-		Storage:  s.tenantStorage,
-		Timeout:  time.Duration(s.config.DBTimeout) * time.Second,
-		Enforcer: s.ac,
+		UserStorage:       s.storage,
+		Storage:           s.tenantStorage,
+		MembershipStorage: s.membershipStorage,
+		Timeout:           time.Duration(s.config.DBTimeout) * time.Second,
+		Enforcer:          s.ac,
 
-		BaseURL:     baseURLFunc,
-		TenantsPath: "/tenants/",
-
-		AuxLogger: dbLogger,
+		BaseURL:            baseURLFunc,
+		TenantsPath:        "/tenants/",
+		InvitePath:         "/tenants/accept_invite",
+		TokenFactory:       tokenFactory,
+		AuxLogger:          dbLogger,
+		Notifier:           s.notifier,
+		TenantInviteMaxAge: time.Duration(s.config.TenantInviteMaxAge) * time.Second,
 	}
 
 	jwtOptions := jwtmiddleware.Options{
@@ -191,6 +209,8 @@ func (s *Service) APIHandler() http.Handler {
 	tmux.Methods("GET").Path("/").HandlerFunc(tenantsHandler.FindTenants)
 	tmux.Methods("DELETE").Path("/{id}").HandlerFunc(tenantsHandler.DeleteTenant)
 	tmux.Methods("PATCH").Path("/{id}").HandlerFunc(tenantsHandler.UpdateTenant)
+	tmux.Methods("POST").Path("/{id}/invite").HandlerFunc(tenantsHandler.InviteExistingUser)
+	tmux.Methods("POST").Path("/accept_invite").HandlerFunc(tenantsHandler.AcceptInvite)
 
 	// Log API
 	lmux := m.PathPrefix("/logs").Subrouter()

@@ -19,6 +19,7 @@ type Message struct {
 }
 
 type EmailTemplateData struct {
+	TenantInvitePrefix   string `json:"tenant_invite_prefix`
 	ResetURLPrefix       string `json:"reset_url_prefix"`
 	UpdateEmailURLPrefix string `json:"update_email_prefix"`
 	AppName              string `json:"app_name"`
