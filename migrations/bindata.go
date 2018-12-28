@@ -4,6 +4,8 @@
 // data/10_add_email_gen_column.up.sql
 // data/11_add_tenants_table.down.sql
 // data/11_add_tenants_table.up.sql
+// data/12_role_per_tenant.down.sql
+// data/12_role_per_tenant.up.sql
 // data/1_add_users_table.down.sql
 // data/1_add_users_table.up.sql
 // data/2_add_roles_table.down.sql
@@ -165,6 +167,46 @@ func _11_add_tenants_tableUpSql() (*asset, error) {
 	}
 
 	info := bindataFileInfo{name: "11_add_tenants_table.up.sql", size: 1126, mode: os.FileMode(420), modTime: time.Unix(1545945771, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
+var __12_role_per_tenantDownSql = []byte("\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\x72\xf4\x09\x71\x0d\x52\x08\x71\x74\xf2\x71\x55\x28\xca\xcf\x49\x2d\x56\x70\x09\xf2\x0f\x50\x70\xf6\xf7\x09\xf5\xf5\x53\x28\x49\xcd\x4b\xcc\x2b\x89\xcf\x4c\xb1\x06\x04\x00\x00\xff\xff\x32\x0c\x20\xa0\x28\x00\x00\x00")
+
+func _12_role_per_tenantDownSqlBytes() ([]byte, error) {
+	return bindataRead(
+		__12_role_per_tenantDownSql,
+		"12_role_per_tenant.down.sql",
+	)
+}
+
+func _12_role_per_tenantDownSql() (*asset, error) {
+	bytes, err := _12_role_per_tenantDownSqlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "12_role_per_tenant.down.sql", size: 40, mode: os.FileMode(420), modTime: time.Unix(1546012863, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
+var __12_role_per_tenantUpSql = []byte("\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\x4c\x8e\x4f\x4b\xc4\x30\x10\x47\xef\xf9\x14\xbf\xdb\xfe\xb9\x2c\x9e\xcb\x1e\xb2\xc9\xac\x06\x92\x54\xf2\x07\x8f\xb2\xd8\x41\x03\x35\x95\x36\x82\x1f\x5f\x8a\x15\xbd\xbe\x99\x79\xf3\x2e\x74\x6f\x7c\x27\x84\xb4\x89\x02\x92\xbc\x58\xc2\x3c\x8d\xbc\x40\x6a\x0d\xd5\xdb\xec\x3c\x1a\xd7\x5b\x6d\xcf\x65\x40\xce\x46\x23\xd0\x95\x02\x79\x45\x71\x9b\x2c\xfb\x32\x1c\xd0\x7b\xe4\x47\x2d\x13\x41\xc9\xa8\xa4\xa6\x95\x68\xb2\xf4\x47\x3a\x21\x4e\x47\x44\x6e\xb8\x8d\x23\xf8\xab\x2c\xad\xd4\xd7\xed\xe1\x67\x1d\x78\x46\x7b\x63\xcc\xd3\xd4\x36\x35\x8e\x27\xb1\x59\x7f\xb6\x22\xa5\x7f\x3d\x67\xec\x23\x59\x52\x09\x65\xc0\x35\xf4\xee\xb7\x08\x4f\x0f\x14\x08\xf5\xf6\xce\x38\x63\xb7\x1a\x77\x90\x5e\xe3\x63\x9e\x1a\xbf\x34\x5e\x6f\x53\xc8\x04\x6b\x9c\x49\xb8\x3b\x74\x42\xa8\xde\x39\x93\xba\xef\x00\x00\x00\xff\xff\x10\x21\xdb\x3c\x14\x01\x00\x00")
+
+func _12_role_per_tenantUpSqlBytes() ([]byte, error) {
+	return bindataRead(
+		__12_role_per_tenantUpSql,
+		"12_role_per_tenant.up.sql",
+	)
+}
+
+func _12_role_per_tenantUpSql() (*asset, error) {
+	bytes, err := _12_role_per_tenantUpSqlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "12_role_per_tenant.up.sql", size: 276, mode: os.FileMode(420), modTime: time.Unix(1546012901, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -585,6 +627,8 @@ var _bindata = map[string]func() (*asset, error){
 	"10_add_email_gen_column.up.sql": _10_add_email_gen_columnUpSql,
 	"11_add_tenants_table.down.sql": _11_add_tenants_tableDownSql,
 	"11_add_tenants_table.up.sql": _11_add_tenants_tableUpSql,
+	"12_role_per_tenant.down.sql": _12_role_per_tenantDownSql,
+	"12_role_per_tenant.up.sql": _12_role_per_tenantUpSql,
 	"1_add_users_table.down.sql": _1_add_users_tableDownSql,
 	"1_add_users_table.up.sql": _1_add_users_tableUpSql,
 	"2_add_roles_table.down.sql": _2_add_roles_tableDownSql,
@@ -649,6 +693,8 @@ var _bintree = &bintree{nil, map[string]*bintree{
 	"10_add_email_gen_column.up.sql": &bintree{_10_add_email_gen_columnUpSql, map[string]*bintree{}},
 	"11_add_tenants_table.down.sql": &bintree{_11_add_tenants_tableDownSql, map[string]*bintree{}},
 	"11_add_tenants_table.up.sql": &bintree{_11_add_tenants_tableUpSql, map[string]*bintree{}},
+	"12_role_per_tenant.down.sql": &bintree{_12_role_per_tenantDownSql, map[string]*bintree{}},
+	"12_role_per_tenant.up.sql": &bintree{_12_role_per_tenantUpSql, map[string]*bintree{}},
 	"1_add_users_table.down.sql": &bintree{_1_add_users_tableDownSql, map[string]*bintree{}},
 	"1_add_users_table.up.sql": &bintree{_1_add_users_tableUpSql, map[string]*bintree{}},
 	"2_add_roles_table.down.sql": &bintree{_2_add_roles_tableDownSql, map[string]*bintree{}},
