@@ -3,11 +3,10 @@ package handlers
 import (
 	"time"
 
-	"git.ecadlabs.com/ecad/auth/utils"
-
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/ecadlabs/auth/errors"
 	"github.com/ecadlabs/auth/storage"
+	"github.com/ecadlabs/auth/utils"
 	log "github.com/sirupsen/logrus"
 )
 
