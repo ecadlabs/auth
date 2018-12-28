@@ -299,7 +299,8 @@ func (t *Tenants) inviteToken(user *storage.User, tenantID uuid.UUID) (string, e
 }
 
 type inviteExistingUser struct {
-	Email string `json:email`
+	Email           string `json:email`
+	Membership_type string `json:type`
 }
 
 type acceptInvite struct {
@@ -401,6 +402,16 @@ func (t *Tenants) InviteExistingUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if user.Membership_type == "" {
+		user.Membership_type = storage.MemberMembership
+	}
+
+	if user.Membership_type != storage.OwnerMembership && user.Membership_type != storage.MemberMembership {
+		log.Error(err)
+		utils.JSONError(w, err.Error(), errors.CodeBadRequest)
+		return
+	}
+
 	target, err := t.UserStorage.GetUserByEmail(ctx, user.Email)
 
 	if err != nil {
@@ -426,13 +437,13 @@ func (t *Tenants) InviteExistingUser(w http.ResponseWriter, r *http.Request) {
 
 	membership, _ := t.MembershipStorage.GetMembership(ctx, uid, target.ID)
 
-	if membership != nil && membership.Membership_status != "invited" {
+	if membership != nil && membership.Membership_status != storage.InvitedState {
 		utils.JSONErrorResponse(w, errors.ErrMembershipExisits)
 		return
 	}
 
 	if membership == nil {
-		err = t.MembershipStorage.AddMembership(ctx, uid, target, "invited")
+		err = t.MembershipStorage.AddMembership(ctx, uid, target, storage.InvitedState, user.Membership_type)
 		if err != nil {
 			log.Error(err)
 			utils.JSONErrorResponse(w, err)

@@ -18,6 +18,11 @@ const (
 	MemberMembership = "member"
 )
 
+const (
+	InvitedState = "invited"
+	ActiveState  = "active"
+)
+
 type Roles map[string]interface{}
 
 type MembershipItem struct {

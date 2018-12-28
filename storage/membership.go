@@ -23,13 +23,7 @@ type MembershipStorage struct {
 	DB *sqlx.DB
 }
 
-type addMembership struct {
-	TenantId uuid.UUID `db:tenant_id schema:tenant_id`
-	UserId   uuid.UUID `db:user_id schema:user_id`
-	Status   string    `db:mem_status schema:mem_status`
-}
-
-func (s *MembershipStorage) AddMembership(ctx context.Context, id uuid.UUID, user *User, status string) error {
+func (s *MembershipStorage) AddMembership(ctx context.Context, id uuid.UUID, user *User, status string, mem_type string) error {
 	tx, err := s.DB.Beginx()
 	if err != nil {
 		return err
@@ -44,7 +38,7 @@ func (s *MembershipStorage) AddMembership(ctx context.Context, id uuid.UUID, use
 		err = tx.Commit()
 	}()
 
-	_, err = tx.ExecContext(ctx, "INSERT INTO membership (tenant_id, user_id, mem_status) VALUES ($1, $2, $3)", id, user.ID, status)
+	_, err = tx.ExecContext(ctx, "INSERT INTO membership (tenant_id, user_id, mem_status, mem_type) VALUES ($1, $2, $3, $4)", id, user.ID, status, mem_type)
 
 	if err != nil {
 		if isUniqueViolation(err, "membership_pkey") {
