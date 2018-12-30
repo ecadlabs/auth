@@ -35,15 +35,15 @@ func (u *Users) writeUserToken(w http.ResponseWriter, user *storage.User, tenant
 	now := time.Now()
 
 	claims := jwt.MapClaims{
-		"sub": user.ID,
-		"exp": now.Add(u.SessionMaxAge).Unix(),
-		"iat": now.Unix(),
-		"iss": u.BaseURL(),
-		"aud": u.BaseURL(),
-		utils.NSClaim(u.Namespace, "email"):  user.Email,
-		utils.NSClaim(u.Namespace, "tenant"): *firstMembership,
-		utils.NSClaim(u.Namespace, "name"):   user.Name,
-		utils.NSClaim(u.Namespace, "roles"):  roles,
+		"sub":    user.ID,
+		"exp":    now.Add(u.SessionMaxAge).Unix(),
+		"iat":    now.Unix(),
+		"iss":    u.BaseURL(),
+		"aud":    u.BaseURL(),
+		"tenant": *firstMembership,
+		utils.NSClaim(u.Namespace, "email"): user.Email,
+		utils.NSClaim(u.Namespace, "name"):  user.Name,
+		utils.NSClaim(u.Namespace, "roles"): roles,
 	}
 
 	token := jwt.NewWithClaims(u.JWTSigningMethod, claims)

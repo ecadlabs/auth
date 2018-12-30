@@ -1,1 +1,6 @@
+BEGIN;
+
+ALTER TABLE roles DROP CONSTRAINT role_unique;
 ALTER TABLE roles DROP COLUMN tenant_id;
+
+COMMIT;

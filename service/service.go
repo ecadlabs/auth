@@ -181,6 +181,13 @@ func (s *Service) APIHandler() http.Handler {
 		Storage:         s.storage,
 	}
 
+	membershipData := &middleware.MembershipData{
+		MembershipContextKey: handlers.MembershipContextKey,
+		TokenContextKey:      handlers.TokenContextKey,
+		Storage:              s.membershipStorage,
+		Namespace:            s.config.Namespace(),
+	}
+
 	m.Methods("GET").Path("/refresh/{id}").Handler(jwtMiddleware.Handler(aud.Handler(userdata.Handler(http.HandlerFunc(usersHandler.Refresh)))))
 
 	// Users API
@@ -191,6 +198,7 @@ func (s *Service) APIHandler() http.Handler {
 	umux.Use(jwtMiddleware.Handler)
 	umux.Use(aud.Handler)
 	umux.Use(userdata.Handler)
+	umux.Use(membershipData.Handler)
 
 	umux.Methods("POST").Path("/").HandlerFunc(usersHandler.NewUser)
 	umux.Methods("GET").Path("/").HandlerFunc(usersHandler.GetUsers)
@@ -203,6 +211,7 @@ func (s *Service) APIHandler() http.Handler {
 	tmux.Use(jwtMiddleware.Handler)
 	tmux.Use(aud.Handler)
 	tmux.Use(userdata.Handler)
+	tmux.Use(membershipData.Handler)
 
 	tmux.Methods("POST").Path("/").HandlerFunc(tenantsHandler.CreateTenant)
 	tmux.Methods("GET").Path("/{id}").HandlerFunc(tenantsHandler.FindTenant)

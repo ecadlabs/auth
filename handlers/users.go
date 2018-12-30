@@ -23,8 +23,9 @@ import (
 )
 
 const (
-	UserContextKey = "user"
-	DefaultLimit   = 20
+	UserContextKey       = "user"
+	MembershipContextKey = "membership"
+	DefaultLimit         = 20
 )
 
 type Users struct {
