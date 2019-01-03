@@ -126,7 +126,7 @@ func main() {
 	}
 
 	// Service instance
-	svc, err := service.New(&config, ac)
+	svc, err := service.New(&config, ac, true)
 	if err != nil {
 		log.Fatal(err)
 	}

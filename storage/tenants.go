@@ -14,13 +14,14 @@ import (
 )
 
 type TenantModel struct {
-	ID        uuid.UUID `json:"id" db:"id"`
-	Name      string    `json:"name" db:"name"`
-	Added     time.Time `json:"added" db:"added"`
-	Modified  time.Time `json:"modified" db:"modified"`
-	Protected bool      `json:"-" db:"protected"`
-	Archived  bool      `json:"-" db:"archived"`
-	SortedBy  string    `json:"-" db:"sorted_by"`
+	ID          uuid.UUID `json:"id" db:"id"`
+	Name        string    `json:"name" db:"name"`
+	Added       time.Time `json:"added" db:"added"`
+	Modified    time.Time `json:"modified" db:"modified"`
+	Protected   bool      `json:"-" db:"protected"`
+	Archived    bool      `json:"-" db:"archived"`
+	Tenant_type string    `json:"type" db:"tenant_type"`
+	SortedBy    string    `json:"-" db:"sorted_by"`
 }
 
 func (t *TenantModel) Clone() *TenantModel {
@@ -37,7 +38,7 @@ type TenantStorage struct {
 	DB *sqlx.DB
 }
 
-func (s *TenantStorage) CreateTenant(ctx context.Context, name string) (*TenantModel, error) {
+func (s *TenantStorage) CreateTenant(ctx context.Context, name string, ownerId uuid.UUID) (*TenantModel, error) {
 	tx, err := s.DB.Beginx()
 	if err != nil {
 		return nil, err
@@ -69,16 +70,28 @@ func (s *TenantStorage) CreateTenant(ctx context.Context, name string) (*TenantM
 		}
 	}
 
+	_, err = tx.ExecContext(ctx, "INSERT INTO membership (tenant_id, user_id, membership_status, membership_type) VALUES ($1, $2, $3, $4)", newTenant.ID, ownerId, ActiveState, OwnerMembership)
+
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = tx.ExecContext(ctx, "INSERT INTO roles (tenant_id, user_id, role) VALUES ($1, $2, $3)", newTenant.ID, ownerId, OwnerRole)
+
+	if err != nil {
+		return nil, err
+	}
+
 	return &newTenant, nil
 }
 
-func (s *TenantStorage) GetTenant(ctx context.Context, id uuid.UUID, self *User, onlySelf bool) (*TenantModel, error) {
+func (s *TenantStorage) GetTenant(ctx context.Context, tenant_id uuid.UUID, user_id uuid.UUID, onlySelf bool) (*TenantModel, error) {
 	var queryExtension = ""
 	if onlySelf {
-		queryExtension += "AND id IN (SELECT tenant_id FROM membership WHERE user_id = '" + self.ID.String() + "')"
+		queryExtension += "AND id IN (SELECT tenant_id FROM membership WHERE user_id = '" + user_id.String() + "')"
 	}
 	model := TenantModel{}
-	err := s.DB.GetContext(ctx, &model, "SELECT tenants.* FROM tenants WHERE id = $1"+queryExtension, id)
+	err := s.DB.GetContext(ctx, &model, "SELECT tenants.* FROM tenants WHERE id = $1"+queryExtension, tenant_id)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -98,10 +111,53 @@ var tenantsQueryColumns = map[string]int{
 	"archived": query.ColQuery | query.ColSort,
 }
 
-func (s *TenantStorage) GetTenants(ctx context.Context, self *User, onlySelf bool, q *query.Query) (tenants []*TenantModel, count int, next *query.Query, err error) {
+func (s *TenantStorage) GetTenantsSoleMember(ctx context.Context, user_id uuid.UUID) (tenants []*TenantModel, err error) {
+	rows, err := s.DB.QueryContext(ctx, `
+	SELECT * FROM tenants WHERE id IN (
+		SELECT membership.tenant_id FROM membership 
+		WHERE membership.tenant_id IN (
+			SELECT tenant_id FROM membership WHERE user_id = $1
+		)
+	GROUP BY membership.tenant_id
+	HAVING COUNT(user_id) = 1
+	)`, user_id)
+
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	tenantsSlice := []*TenantModel{}
+
+	for rows.Next() {
+		var tenant TenantModel
+		if err = rows.Scan(
+			&tenant.ID,
+			&tenant.Name,
+			&tenant.Added,
+			&tenant.Modified,
+			&tenant.Protected,
+			&tenant.Archived,
+			&tenant.Tenant_type,
+		); err != nil {
+			return
+		}
+
+		tenantsSlice = append(tenantsSlice, &tenant)
+	}
+
+	if err = rows.Err(); err != nil {
+		return
+	}
+
+	tenants = tenantsSlice
+	return
+}
+
+func (s *TenantStorage) GetTenants(ctx context.Context, user_id uuid.UUID, onlySelf bool, q *query.Query) (tenants []*TenantModel, count int, next *query.Query, err error) {
 	var queryExtension = "tenants as scoped_tenants"
 	if onlySelf {
-		queryExtension = "(SELECT * FROM tenants WHERE id IN (SELECT tenant_id FROM membership WHERE user_id = '" + self.ID.String() + "')) as scoped_tenants"
+		queryExtension = "(SELECT * FROM tenants WHERE id IN (SELECT tenant_id FROM membership WHERE user_id = '" + user_id.String() + "')) as scoped_tenants"
 	}
 
 	if q.SortBy == "" {
@@ -176,7 +232,7 @@ var tenantUpdatePaths = map[string]struct{}{
 	"name": struct{}{},
 }
 
-func (s *TenantStorage) PatchTenant(ctx context.Context, id uuid.UUID, ops *TenantOps) (*TenantModel, error) {
+func (s *TenantStorage) PatchTenant(ctx context.Context, id uuid.UUID, ops *Ops) (*TenantModel, error) {
 	// Verify columns
 	for k := range ops.Update {
 		if _, ok := tenantUpdatePaths[k]; !ok {
@@ -226,6 +282,7 @@ func (s *TenantStorage) PatchTenant(ctx context.Context, id uuid.UUID, ops *Tena
 		}
 		return nil, err
 	}
+
 	return &tenant, nil
 }
 

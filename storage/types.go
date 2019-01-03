@@ -3,6 +3,7 @@ package storage
 import (
 	"time"
 
+	"github.com/ecadlabs/auth/rbac"
 	"github.com/satori/go.uuid"
 )
 
@@ -11,6 +12,10 @@ type SortOrder int
 const (
 	SortAsc SortOrder = iota
 	SortDesc
+)
+
+const (
+	OwnerRole = "owner"
 )
 
 const (
@@ -30,22 +35,40 @@ type MembershipItem struct {
 	TenantID        uuid.UUID `json:"tenantID"`
 }
 
+type CreateUser struct {
+	Email            string     `json:"email" schema:"email"`
+	Name             string     `json:"name,omitempty" schema:"name"`
+	ID               uuid.UUID  `json:"id" schema:"id"`
+	PasswordHash     []byte     `json:"-" schema:"-"`
+	Added            time.Time  `json:"added" schema:"added"`
+	Modified         time.Time  `json:"modified" schema:"modified"`
+	EmailVerified    bool       `json:"email_verified" schema:"email_verified"`
+	LoginAddr        string     `json:"login_addr,omitempty"`
+	LoginTimestamp   *time.Time `json:"login_ts,omitempty"`
+	RefreshAddr      string     `json:"refresh_addr,omitempty"`
+	RefreshTimestamp *time.Time `json:"refresh_ts,omitempty"`
+	Roles            Roles      `json:"roles,omitempty`
+}
+
 type User struct {
 	ID               uuid.UUID         `json:"id" schema:"id"`
 	Email            string            `json:"email" schema:"email"`
 	EmailGen         int               `json:"-"`
-	PasswordHash     []byte            `json:"-" schema:"-"`
 	Name             string            `json:"name,omitempty" schema:"name"`
+	PasswordHash     []byte            `json:"-" schema:"-"`
 	Added            time.Time         `json:"added" schema:"added"`
 	Modified         time.Time         `json:"modified" schema:"modified"`
 	EmailVerified    bool              `json:"email_verified" schema:"email_verified"`
-	Roles            Roles             `json:"roles,omitempty" schema:"roles"`
 	Memberships      []*MembershipItem `json:"memberships"`
 	PasswordGen      int               `json:"-"`
 	LoginAddr        string            `json:"login_addr,omitempty"`
 	LoginTimestamp   *time.Time        `json:"login_ts,omitempty"`
 	RefreshAddr      string            `json:"refresh_addr,omitempty"`
 	RefreshTimestamp *time.Time        `json:"refresh_ts,omitempty"`
+}
+
+func (u *User) GetDefaultMembership() (id uuid.UUID) {
+	return u.Memberships[0].TenantID
 }
 
 func (u *User) IsMember(id uuid.UUID) bool {
@@ -64,6 +87,37 @@ func (u *User) IsOwner(id uuid.UUID) bool {
 		}
 	}
 	return false
+}
+
+type Membership struct {
+	ID                uuid.UUID
+	Membership_type   string
+	TenantID          uuid.UUID
+	Membership_status string
+	UserID            uuid.UUID
+	Added             time.Time
+	Modified          time.Time
+	Roles             Roles
+}
+
+func (u *Membership) CanDelegate(role rbac.Role, roles Roles, prefix string) (bool, error) {
+	delegate := make([]string, 0, len(roles))
+	for r := range u.Roles {
+		delegate = append(delegate, prefix+r)
+	}
+
+	return role.IsAllGranted(delegate...)
+}
+
+type Member struct {
+	Email             string
+	TenantID          uuid.UUID
+	UserID            uuid.UUID
+	Membership_type   string
+	Membership_status string
+	Added             time.Time
+	Modified          time.Time
+	Roles             Roles
 }
 
 type LogEntry struct {
@@ -88,7 +142,8 @@ func (r Roles) Get() (roles []string) {
 }
 
 const (
-	UsersDefaultSortColumn   = "added"
-	TenantsDefaultSortColumn = "added"
-	LogDefaultSortColumn     = "ts"
+	UsersDefaultSortColumn       = "added"
+	TenantsDefaultSortColumn     = "added"
+	MembershipsDefaultSortColumn = "added"
+	LogDefaultSortColumn         = "ts"
 )

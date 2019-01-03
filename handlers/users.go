@@ -23,13 +23,16 @@ import (
 )
 
 const (
-	UserContextKey = "user"
-	DefaultLimit   = 20
+	UserContextKey       = "user"
+	MembershipContextKey = "membership"
+	DefaultLimit         = 20
 )
 
 type Users struct {
-	Storage *storage.Storage
-	Timeout time.Duration
+	Storage           *storage.Storage
+	TenantStorage     *storage.TenantStorage
+	MembershipStorage *storage.MembershipStorage
+	Timeout           time.Duration
 
 	SessionMaxAge    time.Duration
 	JWTSecretGetter  func() ([]byte, error)
@@ -81,6 +84,7 @@ func (u *Users) context(r *http.Request) (context.Context, context.CancelFunc) {
 
 func (u *Users) GetUser(w http.ResponseWriter, r *http.Request) {
 	self := r.Context().Value(UserContextKey).(*storage.User)
+	member := r.Context().Value(MembershipContextKey).(*storage.Membership)
 
 	uid, err := uuid.FromString(mux.Vars(r)["id"])
 	if err != nil {
@@ -91,7 +95,7 @@ func (u *Users) GetUser(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := u.context(r)
 	defer cancel()
 
-	role, err := u.Enforcer.GetRole(ctx, self.Roles.Get()...)
+	role, err := u.Enforcer.GetRole(ctx, member.Roles.Get()...)
 	if err != nil {
 		log.Error(err)
 		utils.JSONErrorResponse(w, err)
@@ -127,12 +131,12 @@ func (u *Users) GetUser(w http.ResponseWriter, r *http.Request) {
 
 func (u *Users) GetUsers(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
-	self := r.Context().Value(UserContextKey).(*storage.User)
+	member := r.Context().Value(MembershipContextKey).(*storage.Membership)
 
 	ctx, cancel := u.context(r)
 	defer cancel()
 
-	role, err := u.Enforcer.GetRole(ctx, self.Roles.Get()...)
+	role, err := u.Enforcer.GetRole(ctx, member.Roles.Get()...)
 	if err != nil {
 		log.Error(err)
 		utils.JSONErrorResponse(w, err)
@@ -222,8 +226,9 @@ func (u *Users) resetToken(user *storage.User) (string, error) {
 
 func (u *Users) NewUser(w http.ResponseWriter, r *http.Request) {
 	self := r.Context().Value(UserContextKey).(*storage.User)
+	member := r.Context().Value(MembershipContextKey).(*storage.Membership)
 
-	var user storage.User
+	var user storage.CreateUser
 	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
 		log.Error(err)
 		utils.JSONError(w, err.Error(), errors.CodeBadRequest)
@@ -235,7 +240,7 @@ func (u *Users) NewUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if len(user.Roles) == 0 {
+	if len(member.Roles) == 0 {
 		utils.JSONErrorResponse(w, errors.ErrRolesEmpty)
 		return
 	}
@@ -243,7 +248,7 @@ func (u *Users) NewUser(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := u.context(r)
 	defer cancel()
 
-	role, err := u.Enforcer.GetRole(ctx, self.Roles.Get()...)
+	role, err := u.Enforcer.GetRole(ctx, member.Roles.Get()...)
 	if err != nil {
 		log.Error(err)
 		utils.JSONErrorResponse(w, err)
@@ -272,18 +277,13 @@ func (u *Users) NewUser(w http.ResponseWriter, r *http.Request) {
 
 	// Check delegating access
 	if !fullGranted {
-		delegate := make([]string, 0, len(user.Roles))
-		for r := range user.Roles {
-			delegate = append(delegate, permissionDelegatePrefix+r)
-		}
+		granted, err := member.CanDelegate(role, user.Roles, permissionDelegatePrefix)
 
-		granted, err := role.IsAllGranted(delegate...)
 		if err != nil {
 			log.Error(err)
 			utils.JSONErrorResponse(w, err)
 			return
 		}
-
 		if !granted {
 			utils.JSONErrorResponse(w, errors.ErrForbidden)
 			return
@@ -325,7 +325,7 @@ func (u *Users) NewUser(w http.ResponseWriter, r *http.Request) {
 			"name":           ret.Name,
 			"added":          ret.Added,
 			"email_verified": ret.EmailVerified,
-			"roles":          ret.Roles,
+			// "roles":          ret.Roles,
 		}).Printf("User %v created account %v", self.ID, ret.ID)
 	}
 
@@ -336,6 +336,7 @@ func (u *Users) NewUser(w http.ResponseWriter, r *http.Request) {
 func (u *Users) PatchUser(w http.ResponseWriter, r *http.Request) {
 	// TODO Email verification
 	self := r.Context().Value(UserContextKey).(*storage.User)
+	member := r.Context().Value(MembershipContextKey).(*storage.Membership)
 
 	uid, err := uuid.FromString(mux.Vars(r)["id"])
 	if err != nil {
@@ -386,7 +387,7 @@ func (u *Users) PatchUser(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := u.context(r)
 	defer cancel()
 
-	role, err := u.Enforcer.GetRole(ctx, self.Roles.Get()...)
+	role, err := u.Enforcer.GetRole(ctx, member.Roles.Get()...)
 	if err != nil {
 		log.Error(err)
 		utils.JSONErrorResponse(w, err)
@@ -408,36 +409,6 @@ func (u *Users) PatchUser(w http.ResponseWriter, r *http.Request) {
 	if !granted {
 		utils.JSONErrorResponse(w, errors.ErrForbidden)
 		return
-	}
-
-	// Check role manipulation permissions
-	if len(ops.AddRoles) != 0 || len(ops.RemoveRoles) != 0 {
-		tmp := make(map[string]struct{}, len(ops.AddRoles)+len(ops.RemoveRoles))
-
-		for _, r := range ops.AddRoles {
-			tmp[permissionDelegatePrefix+r] = struct{}{}
-		}
-
-		for _, r := range ops.RemoveRoles {
-			tmp[permissionDelegatePrefix+r] = struct{}{}
-		}
-
-		perm := make([]string, 0, len(tmp))
-		for r := range tmp {
-			perm = append(perm, r)
-		}
-
-		granted, err := role.IsAllGranted(perm...)
-		if err != nil {
-			log.Error(err)
-			utils.JSONErrorResponse(w, err)
-			return
-		}
-
-		if !granted {
-			utils.JSONErrorResponse(w, errors.ErrForbidden)
-			return
-		}
 	}
 
 	user, err := u.Storage.UpdateUser(ctx, uid, ops)
@@ -452,14 +423,6 @@ func (u *Users) PatchUser(w http.ResponseWriter, r *http.Request) {
 		if len(ops.Update) != 0 {
 			u.AuxLogger.WithFields(logFields(EvUpdate, self.ID, uid, r)).WithFields(log.Fields(ops.Update)).Printf("User %v updated account %v", self.ID, uid)
 		}
-
-		for _, role := range ops.AddRoles {
-			u.AuxLogger.WithFields(logFields(EvAddRole, self.ID, uid, r)).WithField("role", role).Printf("User %v added role `%s' to account %v", self.ID, role, uid)
-		}
-
-		for _, role := range ops.RemoveRoles {
-			u.AuxLogger.WithFields(logFields(EvRemoveRole, self.ID, uid, r)).WithField("role", role).Printf("User %v removed role `%s' from account %v", self.ID, role, uid)
-		}
 	}
 
 	utils.JSONResponse(w, http.StatusOK, user)
@@ -467,6 +430,7 @@ func (u *Users) PatchUser(w http.ResponseWriter, r *http.Request) {
 
 func (u *Users) DeleteUser(w http.ResponseWriter, r *http.Request) {
 	self := r.Context().Value(UserContextKey).(*storage.User)
+	member := r.Context().Value(MembershipContextKey).(*storage.Membership)
 
 	uid, err := uuid.FromString(mux.Vars(r)["id"])
 	if err != nil {
@@ -477,7 +441,7 @@ func (u *Users) DeleteUser(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := u.context(r)
 	defer cancel()
 
-	role, err := u.Enforcer.GetRole(ctx, self.Roles.Get()...)
+	role, err := u.Enforcer.GetRole(ctx, member.Roles.Get()...)
 	if err != nil {
 		log.Error(err)
 		utils.JSONErrorResponse(w, err)
@@ -501,6 +465,15 @@ func (u *Users) DeleteUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	tenants, err := u.TenantStorage.GetTenantsSoleMember(ctx, uid)
+
+	if err != nil {
+		log.Error(err)
+		utils.JSONErrorResponse(w, err)
+		return
+	}
+
+	// TODO: archive user
 	if err := u.Storage.DeleteUser(ctx, uid); err != nil {
 		log.Error(err)
 		utils.JSONErrorResponse(w, err)
@@ -510,6 +483,27 @@ func (u *Users) DeleteUser(w http.ResponseWriter, r *http.Request) {
 	// Log
 	if u.AuxLogger != nil {
 		u.AuxLogger.WithFields(logFields(EvDelete, self.ID, uid, r)).Printf("User %v deleted account %v", self.ID, uid)
+	}
+
+	// Archive any tenant made orphan by this deletion
+	if len(tenants) > 0 {
+		for _, tenant := range tenants {
+			deleteErr := u.TenantStorage.DeleteTenant(ctx, tenant.ID)
+			// Log
+			if deleteErr == nil && u.AuxLogger != nil {
+				u.AuxLogger.WithFields(logFields(EvArchiveTenant, self.ID, tenant.ID, r)).Printf("User %v archived tenant %v", self.ID, tenant.ID)
+			}
+
+			if deleteErr != nil {
+				err = deleteErr
+			}
+		}
+
+		if err != nil {
+			log.Error(err)
+			utils.JSONErrorResponse(w, err)
+			return
+		}
 	}
 
 	w.WriteHeader(http.StatusNoContent)
@@ -676,6 +670,7 @@ func (u *Users) SendResetRequest(w http.ResponseWriter, r *http.Request) {
 
 func (u *Users) SendUpdateEmailRequest(w http.ResponseWriter, r *http.Request) {
 	self := r.Context().Value(UserContextKey).(*storage.User)
+	member := r.Context().Value(MembershipContextKey).(*storage.Membership)
 
 	var request struct {
 		Email string    `json:"email"`
@@ -701,7 +696,7 @@ func (u *Users) SendUpdateEmailRequest(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := u.context(r)
 	defer cancel()
 
-	role, err := u.Enforcer.GetRole(ctx, self.Roles.Get()...)
+	role, err := u.Enforcer.GetRole(ctx, member.Roles.Get()...)
 	if err != nil {
 		log.Error(err)
 		utils.JSONErrorResponse(w, err)

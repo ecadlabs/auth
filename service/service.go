@@ -2,6 +2,7 @@ package service
 
 import (
 	"database/sql"
+	"io/ioutil"
 	"net/http"
 	"net/mail"
 	"net/url"
@@ -39,9 +40,10 @@ type Service struct {
 	notifier          notification.Notifier
 	DB                *sql.DB
 	ac                rbac.RBAC
+	enableLog         bool
 }
 
-func New(c *Config, ac rbac.RBAC) (*Service, error) {
+func New(c *Config, ac rbac.RBAC, enableLog bool) (*Service, error) {
 	url, err := url.Parse(c.PostgresURL)
 	if err != nil {
 		return nil, err
@@ -82,6 +84,7 @@ func New(c *Config, ac rbac.RBAC) (*Service, error) {
 		DB:                db,
 		notifier:          notifier,
 		ac:                ac,
+		enableLog:         enableLog,
 	}, nil
 }
 
@@ -89,6 +92,9 @@ func (s *Service) APIHandler() http.Handler {
 	baseURLFunc := s.config.GetBaseURLFunc()
 
 	dbLogger := logrus.New()
+	if !s.enableLog {
+		dbLogger.Out = ioutil.Discard
+	}
 	dbLogger.AddHook(&logger.Hook{
 		DB: s.DB,
 	})
@@ -105,8 +111,10 @@ func (s *Service) APIHandler() http.Handler {
 	}
 
 	usersHandler := &handlers.Users{
-		Storage: s.storage,
-		Timeout: time.Duration(s.config.DBTimeout) * time.Second,
+		Storage:           s.storage,
+		TenantStorage:     s.tenantStorage,
+		MembershipStorage: s.membershipStorage,
+		Timeout:           time.Duration(s.config.DBTimeout) * time.Second,
 
 		JWTSecretGetter: func() ([]byte, error) {
 			return []byte(s.config.JWTSecret), nil
@@ -147,6 +155,18 @@ func (s *Service) APIHandler() http.Handler {
 		TenantInviteMaxAge: time.Duration(s.config.TenantInviteMaxAge) * time.Second,
 	}
 
+	membershipsHandler := &handlers.Memberships{
+		UserStorage:       s.storage,
+		Storage:           s.tenantStorage,
+		MembershipStorage: s.membershipStorage,
+		Timeout:           time.Duration(s.config.DBTimeout) * time.Second,
+		Enforcer:          s.ac,
+		BaseURL:           baseURLFunc,
+		TenantsPath:       "/tenants/",
+		UsersPath:         "/users/",
+		AuxLogger:         dbLogger,
+	}
+
 	jwtOptions := jwtmiddleware.Options{
 		ValidationKeyGetter: func(token *jwt.Token) (interface{}, error) { return []byte(s.config.JWTSecret), nil },
 		SigningMethod:       JWTSigningMethod,
@@ -165,7 +185,9 @@ func (s *Service) APIHandler() http.Handler {
 
 	m := mux.NewRouter()
 
-	m.Use((&middleware.Logging{}).Handler)
+	if s.enableLog {
+		m.Use((&middleware.Logging{}).Handler)
+	}
 	m.Use(middleware.NewPrometheus().Handler)
 	m.Use((&middleware.Recover{}).Handler)
 
@@ -181,7 +203,14 @@ func (s *Service) APIHandler() http.Handler {
 		Storage:         s.storage,
 	}
 
-	m.Methods("GET").Path("/refresh/{id}").Handler(jwtMiddleware.Handler(aud.Handler(userdata.Handler(http.HandlerFunc(usersHandler.Refresh)))))
+	membershipData := &middleware.MembershipData{
+		MembershipContextKey: handlers.MembershipContextKey,
+		TokenContextKey:      handlers.TokenContextKey,
+		Storage:              s.membershipStorage,
+		Namespace:            s.config.Namespace(),
+	}
+
+	m.Methods("GET").Path("/refresh").Handler(jwtMiddleware.Handler(aud.Handler(userdata.Handler(membershipData.Handler(http.HandlerFunc(usersHandler.Refresh))))))
 
 	// Users API
 	m.Methods("POST").Path("/request_email_update").Handler(jwtMiddleware.Handler(aud.Handler(userdata.Handler(http.HandlerFunc(usersHandler.SendUpdateEmailRequest)))))
@@ -191,26 +220,35 @@ func (s *Service) APIHandler() http.Handler {
 	umux.Use(jwtMiddleware.Handler)
 	umux.Use(aud.Handler)
 	umux.Use(userdata.Handler)
+	umux.Use(membershipData.Handler)
 
 	umux.Methods("POST").Path("/").HandlerFunc(usersHandler.NewUser)
 	umux.Methods("GET").Path("/").HandlerFunc(usersHandler.GetUsers)
 	umux.Methods("GET").Path("/{id}").HandlerFunc(usersHandler.GetUser)
 	umux.Methods("PATCH").Path("/{id}").HandlerFunc(usersHandler.PatchUser)
 	umux.Methods("DELETE").Path("/{id}").HandlerFunc(usersHandler.DeleteUser)
+	umux.Methods("GET").Path("/{userId}/memberships").HandlerFunc(membershipsHandler.FindUserMemberships)
 
 	// Tenants API
 	tmux := m.PathPrefix("/tenants").Subrouter()
 	tmux.Use(jwtMiddleware.Handler)
 	tmux.Use(aud.Handler)
-	tmux.Use(userdata.Handler)
+	tmux.Use(membershipData.Handler)
 
 	tmux.Methods("POST").Path("/").HandlerFunc(tenantsHandler.CreateTenant)
 	tmux.Methods("GET").Path("/{id}").HandlerFunc(tenantsHandler.FindTenant)
 	tmux.Methods("GET").Path("/").HandlerFunc(tenantsHandler.FindTenants)
 	tmux.Methods("DELETE").Path("/{id}").HandlerFunc(tenantsHandler.DeleteTenant)
 	tmux.Methods("PATCH").Path("/{id}").HandlerFunc(tenantsHandler.UpdateTenant)
-	tmux.Methods("POST").Path("/{id}/invite").HandlerFunc(tenantsHandler.InviteExistingUser)
-	tmux.Methods("POST").Path("/accept_invite").HandlerFunc(tenantsHandler.AcceptInvite)
+
+	tmux.Methods("POST").Path("/{id}/members").Handler(userdata.Handler(http.HandlerFunc(tenantsHandler.InviteExistingUser)))
+	tmux.Methods("GET").Path("/{tenantId}/members").HandlerFunc(membershipsHandler.FindTenantMemberships)
+	tmux.Methods("PATCH").Path("/{tenantId}/members/{userId}").HandlerFunc(membershipsHandler.PatchMembership)
+	tmux.Methods("DELETE").Path("/{tenantId}/members/{userId}").HandlerFunc(membershipsHandler.DeleteMembership)
+
+	amux := m.PathPrefix("/tenants/accept_invite").Subrouter()
+
+	amux.Methods("POST").Path("").HandlerFunc(tenantsHandler.AcceptInvite)
 
 	// Log API
 	lmux := m.PathPrefix("/logs").Subrouter()

@@ -25,7 +25,8 @@ func (t *Tenants) TenantsUrl() string {
 }
 
 type CreateTenantModel struct {
-	Name string `json:name`
+	Name  string `json:name`
+	Owner string `json:ownerId,omitempty`
 }
 
 type Tenants struct {
@@ -52,11 +53,11 @@ func (t *Tenants) context(r *http.Request) (context.Context, context.CancelFunc)
 }
 
 func (t *Tenants) FindTenant(w http.ResponseWriter, r *http.Request) {
-	self := r.Context().Value(UserContextKey).(*storage.User)
+	member := r.Context().Value(MembershipContextKey).(*storage.Membership)
 	ctx, cancel := t.context(r)
 	defer cancel()
 
-	role, err := t.Enforcer.GetRole(ctx, self.Roles.Get()...)
+	role, err := t.Enforcer.GetRole(ctx, member.Roles.Get()...)
 	granted, err := role.IsAllGranted(permissionTenantsFull)
 
 	if err != nil {
@@ -70,7 +71,7 @@ func (t *Tenants) FindTenant(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenant, err := t.Storage.GetTenant(ctx, uid, self, !granted)
+	tenant, err := t.Storage.GetTenant(ctx, uid, member.UserID, !granted)
 
 	if err != nil {
 		utils.JSONError(w, err.Error(), errors.CodeUnknown)
@@ -81,11 +82,11 @@ func (t *Tenants) FindTenant(w http.ResponseWriter, r *http.Request) {
 }
 
 func (t *Tenants) DeleteTenant(w http.ResponseWriter, r *http.Request) {
-	self := r.Context().Value(UserContextKey).(*storage.User)
+	member := r.Context().Value(MembershipContextKey).(*storage.Membership)
 	ctx, cancel := t.context(r)
 	defer cancel()
 
-	role, err := t.Enforcer.GetRole(ctx, self.Roles.Get()...)
+	role, err := t.Enforcer.GetRole(ctx, member.Roles.Get()...)
 
 	if err != nil {
 		log.Error(err)
@@ -98,7 +99,7 @@ func (t *Tenants) DeleteTenant(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !t.CanUpdateTenant(role, self, uid) {
+	if !t.CanUpdateTenant(role, member, uid) {
 		utils.JSONError(w, "", errors.CodeForbidden)
 		return
 	}
@@ -112,7 +113,7 @@ func (t *Tenants) DeleteTenant(w http.ResponseWriter, r *http.Request) {
 
 	// Log
 	if t.AuxLogger != nil {
-		t.AuxLogger.WithFields(logFields(EvArchiveTenant, self.ID, uid, r)).Printf("User %v archived tenant %v", self.ID, uid)
+		t.AuxLogger.WithFields(logFields(EvArchiveTenant, member.UserID, uid, r)).Printf("User %v archived tenant %v", member.UserID, uid)
 	}
 
 	w.WriteHeader(http.StatusNoContent)
@@ -120,12 +121,12 @@ func (t *Tenants) DeleteTenant(w http.ResponseWriter, r *http.Request) {
 
 func (t *Tenants) FindTenants(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
-	self := r.Context().Value(UserContextKey).(*storage.User)
+	member := r.Context().Value(MembershipContextKey).(*storage.Membership)
 	ctx, cancel := t.context(r)
 	defer cancel()
 
-	role, err := t.Enforcer.GetRole(ctx, self.Roles.Get()...)
-	granted, err := role.IsAllGranted(permissionTenantsFull)
+	role, err := t.Enforcer.GetRole(ctx, member.Roles.Get()...)
+	granted, err := role.IsAnyGranted(permissionTenantsFull, permissionTenantsRead)
 
 	if err != nil {
 		log.Error(err)
@@ -147,7 +148,7 @@ func (t *Tenants) FindTenants(w http.ResponseWriter, r *http.Request) {
 		q.Limit = DefaultLimit
 	}
 
-	tenants, count, nextQuery, err := t.Storage.GetTenants(ctx, self, !granted, q)
+	tenants, count, nextQuery, err := t.Storage.GetTenants(ctx, member.UserID, !granted, q)
 
 	if err != nil {
 		log.Error(err)
@@ -185,12 +186,12 @@ func (t *Tenants) FindTenants(w http.ResponseWriter, r *http.Request) {
 }
 
 func (t *Tenants) CreateTenant(w http.ResponseWriter, r *http.Request) {
-	self := r.Context().Value(UserContextKey).(*storage.User)
+	member := r.Context().Value(MembershipContextKey).(*storage.Membership)
 
 	ctx, cancel := t.context(r)
 	defer cancel()
-	role, err := t.Enforcer.GetRole(ctx, self.Roles.Get()...)
-	granted, err := role.IsAllGranted(permissionTenantsFull)
+	role, err := t.Enforcer.GetRole(ctx, member.Roles.Get()...)
+	granted, err := role.IsAnyGranted(permissionTenantsFull, permissionTenantsWrite, permissionTenantsCreate)
 
 	if !granted || err != nil {
 		utils.JSONError(w, "", errors.CodeForbidden)
@@ -209,7 +210,27 @@ func (t *Tenants) CreateTenant(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	newTenants, err := t.Storage.CreateTenant(ctx, createTenant.Name)
+	// Only super users can add a tenant with an other owner
+	granted, err = role.IsAnyGranted(permissionTenantsFull, permissionTenantsWrite)
+
+	if (!granted || err != nil) && createTenant.Owner != "" {
+		utils.JSONError(w, "", errors.CodeForbidden)
+		return
+	}
+
+	if createTenant.Owner == "" {
+		createTenant.Owner = member.UserID.String()
+	}
+
+	ownerId, err := uuid.FromString(createTenant.Owner)
+
+	if err != nil {
+		log.Error(err)
+		utils.JSONError(w, err.Error(), errors.CodeBadRequest)
+		return
+	}
+
+	newTenants, err := t.Storage.CreateTenant(ctx, createTenant.Name, ownerId)
 
 	if err != nil {
 		utils.JSONErrorResponse(w, err)
@@ -218,33 +239,33 @@ func (t *Tenants) CreateTenant(w http.ResponseWriter, r *http.Request) {
 
 	// Log
 	if t.AuxLogger != nil {
-		t.AuxLogger.WithFields(logFields(EvCreateTenant, self.ID, newTenants.ID, r)).Printf("User %v create tenant %v", self.ID, newTenants.ID)
+		t.AuxLogger.WithFields(logFields(EvCreateTenant, member.UserID, newTenants.ID, r)).Printf("User %v create tenant %v", member.UserID, newTenants.ID)
 	}
 
 	utils.JSONResponse(w, 200, newTenants)
 }
 
-func (t *Tenants) CanUpdateTenant(role rbac.Role, self *storage.User, uid uuid.UUID) bool {
+func (t *Tenants) CanUpdateTenant(role rbac.Role, member *storage.Membership, uid uuid.UUID) bool {
 	fullAccess, _ := role.IsAnyGranted(permissionTenantsFull)
 
 	if fullAccess {
 		return true
 	}
 
-	onlyOwn, _ := role.IsAllGranted(permissionTenantsWriteSelf, permissionReadSelf)
+	onlyOwn, _ := role.IsAllGranted(permissionTenantsWriteOwned)
 
 	if !onlyOwn {
 		return false
 	}
-	return self.IsOwner(uid)
+	return member.TenantID == uid && member.Membership_type == storage.OwnerMembership && member.Membership_status == storage.ActiveState
 }
 
 func (t *Tenants) UpdateTenant(w http.ResponseWriter, r *http.Request) {
-	self := r.Context().Value(UserContextKey).(*storage.User)
+	member := r.Context().Value(MembershipContextKey).(*storage.Membership)
 	ctx, cancel := t.context(r)
 	defer cancel()
 
-	role, err := t.Enforcer.GetRole(ctx, self.Roles.Get()...)
+	role, err := t.Enforcer.GetRole(ctx, member.Roles.Get()...)
 
 	if err != nil {
 		log.Error(err)
@@ -258,7 +279,7 @@ func (t *Tenants) UpdateTenant(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !t.CanUpdateTenant(role, self, uid) {
+	if !t.CanUpdateTenant(role, member, uid) {
 		utils.JSONError(w, "", errors.CodeForbidden)
 		return
 	}
@@ -270,7 +291,7 @@ func (t *Tenants) UpdateTenant(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ops, err := storage.TenantOpsFromPatch(p)
+	ops, err := storage.OpsFromPatch(p)
 
 	tenant, err := t.Storage.PatchTenant(ctx, uid, ops)
 
@@ -280,7 +301,7 @@ func (t *Tenants) UpdateTenant(w http.ResponseWriter, r *http.Request) {
 
 	if t.AuxLogger != nil {
 		if len(ops.Update) != 0 {
-			t.AuxLogger.WithFields(logFields(EvUpdateTenant, self.ID, uid, r)).WithFields(log.Fields(ops.Update)).Printf("User %v updated tenant %v", self.ID, uid)
+			t.AuxLogger.WithFields(logFields(EvUpdateTenant, member.UserID, uid, r)).WithFields(log.Fields(ops.Update)).Printf("User %v updated tenant %v", member.UserID, uid)
 		}
 	}
 
@@ -298,20 +319,13 @@ func (t *Tenants) inviteToken(user *storage.User, tenantID uuid.UUID) (string, e
 	)
 }
 
-type inviteExistingUser struct {
-	Email           string `json:email`
-	Membership_type string `json:type`
-}
-
-type acceptInvite struct {
-	Token string `json:token`
-}
-
 func (t *Tenants) AcceptInvite(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := t.context(r)
 	defer cancel()
 
-	invite := acceptInvite{}
+	invite := struct {
+		Token string `json:token`
+	}{}
 
 	if err := json.NewDecoder(r.Body).Decode(&invite); err != nil {
 		log.Error(err)
@@ -361,10 +375,16 @@ func (t *Tenants) AcceptInvite(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = t.MembershipStorage.UpdateMembership(ctx, tenantId, id, "active")
+	updates := make(map[string]interface{})
+	updates["membership_status"] = storage.ActiveState
+
+	_, err = t.MembershipStorage.UpdateMembership(ctx, tenantId, id, &storage.RoleOps{
+		Update: updates,
+	})
 	if err != nil {
 		log.Error(err)
 		utils.JSONError(w, err.Error(), errors.CodeUnknown)
+		return
 	}
 
 	w.WriteHeader(http.StatusNoContent)
@@ -372,10 +392,12 @@ func (t *Tenants) AcceptInvite(w http.ResponseWriter, r *http.Request) {
 
 func (t *Tenants) InviteExistingUser(w http.ResponseWriter, r *http.Request) {
 	self := r.Context().Value(UserContextKey).(*storage.User)
+	member := r.Context().Value(MembershipContextKey).(*storage.Membership)
+
 	ctx, cancel := t.context(r)
 	defer cancel()
 
-	role, err := t.Enforcer.GetRole(ctx, self.Roles.Get()...)
+	role, err := t.Enforcer.GetRole(ctx, member.Roles.Get()...)
 	granted, err := role.IsAllGranted(permissionTenantsFull)
 
 	if err != nil {
@@ -390,12 +412,17 @@ func (t *Tenants) InviteExistingUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !t.CanUpdateTenant(role, self, uid) {
+	if !t.CanUpdateTenant(role, member, uid) {
 		utils.JSONError(w, "", errors.CodeForbidden)
 		return
 	}
 
-	var user inviteExistingUser
+	var user struct {
+		Email           string        `json:email`
+		Membership_type string        `json:type`
+		Roles           storage.Roles `json:roles`
+	}
+
 	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
 		log.Error(err)
 		utils.JSONError(w, err.Error(), errors.CodeBadRequest)
@@ -404,6 +431,11 @@ func (t *Tenants) InviteExistingUser(w http.ResponseWriter, r *http.Request) {
 
 	if user.Membership_type == "" {
 		user.Membership_type = storage.MemberMembership
+	}
+
+	if len(user.Roles) == 0 {
+		utils.JSONErrorResponse(w, errors.ErrRolesEmpty)
+		return
 	}
 
 	if user.Membership_type != storage.OwnerMembership && user.Membership_type != storage.MemberMembership {
@@ -420,6 +452,29 @@ func (t *Tenants) InviteExistingUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Check write access
+	fullGranted, err := role.IsAnyGranted(permissionTenantsFull)
+	if err != nil {
+		log.Error(err)
+		utils.JSONErrorResponse(w, err)
+		return
+	}
+
+	// Check delegating access
+	if !fullGranted {
+		granted, err := member.CanDelegate(role, user.Roles, permissionDelegatePrefix)
+
+		if err != nil {
+			log.Error(err)
+			utils.JSONErrorResponse(w, err)
+			return
+		}
+		if !granted {
+			utils.JSONErrorResponse(w, errors.ErrForbidden)
+			return
+		}
+	}
+
 	// Create invite token
 	token, err := t.inviteToken(target, uid)
 	if err != nil {
@@ -428,7 +483,7 @@ func (t *Tenants) InviteExistingUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenant, err := t.Storage.GetTenant(ctx, uid, self, !granted)
+	tenant, err := t.Storage.GetTenant(ctx, uid, member.UserID, !granted)
 	if err != nil {
 		log.Error(err)
 		utils.JSONErrorResponse(w, err)
@@ -442,8 +497,9 @@ func (t *Tenants) InviteExistingUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Only create membership if it does not exists
 	if membership == nil {
-		err = t.MembershipStorage.AddMembership(ctx, uid, target, storage.InvitedState, user.Membership_type)
+		err = t.MembershipStorage.AddMembership(ctx, uid, target, storage.InvitedState, user.Membership_type, user.Roles)
 		if err != nil {
 			log.Error(err)
 			utils.JSONErrorResponse(w, err)
@@ -460,4 +516,6 @@ func (t *Tenants) InviteExistingUser(w http.ResponseWriter, r *http.Request) {
 	}); err != nil {
 		log.Error(err)
 	}
+
+	w.WriteHeader(http.StatusNoContent)
 }
