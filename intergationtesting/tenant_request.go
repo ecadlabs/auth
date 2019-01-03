@@ -39,7 +39,14 @@ func createTenant(srv *httptest.Server, tenant *createTenantModel, token string)
 	}
 	defer resp.Body.Close()
 
-	return resp.StatusCode, nil, nil
+	var t storage.TenantModel
+
+	dec := json.NewDecoder(resp.Body)
+	if err := dec.Decode(&t); err != nil {
+		return 0, nil, err
+	}
+
+	return resp.StatusCode, &t, nil
 }
 
 func getTenant(srv *httptest.Server, token string, uid uuid.UUID) (int, *storage.TenantModel, error) {

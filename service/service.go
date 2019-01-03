@@ -2,6 +2,7 @@ package service
 
 import (
 	"database/sql"
+	"io/ioutil"
 	"net/http"
 	"net/mail"
 	"net/url"
@@ -39,9 +40,10 @@ type Service struct {
 	notifier          notification.Notifier
 	DB                *sql.DB
 	ac                rbac.RBAC
+	enableLog         bool
 }
 
-func New(c *Config, ac rbac.RBAC) (*Service, error) {
+func New(c *Config, ac rbac.RBAC, enableLog bool) (*Service, error) {
 	url, err := url.Parse(c.PostgresURL)
 	if err != nil {
 		return nil, err
@@ -82,6 +84,7 @@ func New(c *Config, ac rbac.RBAC) (*Service, error) {
 		DB:                db,
 		notifier:          notifier,
 		ac:                ac,
+		enableLog:         enableLog,
 	}, nil
 }
 
@@ -89,6 +92,9 @@ func (s *Service) APIHandler() http.Handler {
 	baseURLFunc := s.config.GetBaseURLFunc()
 
 	dbLogger := logrus.New()
+	if !s.enableLog {
+		dbLogger.Out = ioutil.Discard
+	}
 	dbLogger.AddHook(&logger.Hook{
 		DB: s.DB,
 	})
@@ -179,7 +185,9 @@ func (s *Service) APIHandler() http.Handler {
 
 	m := mux.NewRouter()
 
-	m.Use((&middleware.Logging{}).Handler)
+	if s.enableLog {
+		m.Use((&middleware.Logging{}).Handler)
+	}
 	m.Use(middleware.NewPrometheus().Handler)
 	m.Use((&middleware.Recover{}).Handler)
 

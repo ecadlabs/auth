@@ -306,32 +306,29 @@ func (t *tenantsAndUsers) GetTenantbyName(email string) *storage.TenantModel {
 var res *tenantsAndUsers
 
 func fetchTenantAndUsers(srv *httptest.Server, refresh bool) (*tenantsAndUsers, error) {
-	if res == nil || refresh {
-		code, token, _, err := doLogin(srv, superUserEmail, testPassword, nil)
-		if err != nil {
-			return nil, err
-		}
-
-		if code != http.StatusOK {
-			return nil, err
-		}
-
-		_, list, err := getTenantList(srv, token, url.Values{})
-		if err != nil {
-			return nil, err
-		}
-
-		_, userList, err := getList(srv, token, url.Values{})
-		if err != nil {
-			return nil, err
-		}
-
-		res = &tenantsAndUsers{
-			Users:   userList,
-			Tenants: list,
-		}
+	code, token, _, err := doLogin(srv, superUserEmail, testPassword, nil)
+	if err != nil {
+		return nil, err
 	}
-	return res, nil
+
+	if code != http.StatusOK {
+		return nil, err
+	}
+
+	_, list, err := getTenantList(srv, token, url.Values{})
+	if err != nil {
+		return nil, err
+	}
+
+	_, userList, err := getList(srv, token, url.Values{})
+	if err != nil {
+		return nil, err
+	}
+
+	return &tenantsAndUsers{
+		Users:   userList,
+		Tenants: list,
+	}, nil
 }
 
 var testRBAC = rbac.StaticRBAC{
@@ -386,7 +383,7 @@ var testRBAC = rbac.StaticRBAC{
 	},
 }
 
-func TestService(t *testing.T) {
+func BeforeTest(t *testing.T) (srv *httptest.Server, userList []*storage.User, token string, tokenCh chan string, results *tenantsAndUsers) {
 	// Clear everything
 	db, err := sqlx.Open("postgres", *dbURL)
 	if err != nil {
@@ -414,11 +411,9 @@ func TestService(t *testing.T) {
 		return
 	}
 
-	tokenCh := make(chan string, 10)
+	tokenCh = make(chan string, 10)
 
 	// Create test server
-	var srv *httptest.Server
-
 	config := service.Config{
 		BaseURLFunc:            func() string { return srv.URL },
 		JWTSecret:              testJWTSecret,
@@ -431,7 +426,7 @@ func TestService(t *testing.T) {
 		Notifier:               testNotifier(tokenCh),
 	}
 
-	svc, err := service.New(&config, &testRBAC)
+	svc, err := service.New(&config, &testRBAC, false)
 	if err != nil {
 		t.Error(err)
 		return
@@ -445,7 +440,6 @@ func TestService(t *testing.T) {
 	}
 
 	srv = httptest.NewServer(svc.APIHandler())
-	defer srv.Close()
 
 	// Login as superuser
 	code, token, _, err := doLogin(srv, superUserEmail, testPassword, nil)
@@ -453,8 +447,6 @@ func TestService(t *testing.T) {
 		t.Error(err)
 		return
 	}
-
-	//fmt.Println(token)
 
 	if code != http.StatusOK {
 		t.Error(code)
@@ -480,6 +472,18 @@ func TestService(t *testing.T) {
 
 		usersList = append(usersList, res)
 	}
+
+	results, err = fetchTenantAndUsers(srv, false)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	return
+}
+
+func TestService(t *testing.T) {
+	srv, usersList, _, _, _ := BeforeTest(t)
 
 	// Run all other tests in parallel
 	t.Run("TestRegularUser", func(t *testing.T) {
@@ -734,601 +738,533 @@ func TestService(t *testing.T) {
 		})
 	})
 
-	t.Run("InviteToTenant", func(t *testing.T) {
-		results, err := fetchTenantAndUsers(srv, false)
-		if err != nil {
-			t.Error(err)
-			return
-		}
-
-		firstTenant := results.GetTenantbyName("test")
-
-		code, err = inviteTenant(srv, token, fmt.Sprintf("%s", firstTenant.ID), genTestEmail(0))
-
-		if code != http.StatusNoContent {
-			t.Error(code)
-			return
-		}
-
-		if err != nil {
-			t.Error(err)
-			return
-		}
-
-		inviteToken := <-tokenCh
-		fmt.Printf("%s", inviteToken)
-		code, err = acceptInvite(srv, inviteToken)
-
-		if code != http.StatusNoContent {
-			t.Error(code)
-			return
-		}
-
-		if err != nil {
-			t.Error(err)
-			return
-		}
-	})
-
-	t.Run("New Member Should Not Be Able To Invite Other", func(t *testing.T) {
-		results, err := fetchTenantAndUsers(srv, false)
-		if err != nil {
-			t.Error(err)
-			return
-		}
-
-		firstTenant := results.GetTenantbyName("test")
-
-		code, token, _, err = doLogin(srv, genTestEmail(0), testPassword, &firstTenant.ID)
-		if err != nil {
-			t.Error(err)
-			return
-		}
-
-		if code != http.StatusOK {
-			t.Error(code)
-			return
-		}
-
-		code, err = inviteTenant(srv, token, fmt.Sprintf("%s", firstTenant.ID), genTestEmail(1))
-
-		if code != http.StatusForbidden {
-			t.Error(code)
-			return
-		}
-
-		if err != nil {
-			t.Error(err)
-			return
-		}
-	})
-
-	t.Run("Admin can patch any membership", func(t *testing.T) {
-		results, err := fetchTenantAndUsers(srv, false)
-		if err != nil {
-			t.Error(err)
-			return
-		}
-
-		firstTenant := results.GetTenantbyName("test")
-		firstUser := results.GetUser(genTestEmail(0))
-
-		if firstTenant == nil {
-			t.Error("Tenant do not exists")
-			return
-		}
-
-		if firstUser == nil {
-			t.Error("User do not exists")
-			return
-		}
-
-		code, token, _, err := doLogin(srv, superUserEmail, testPassword, nil)
-
-		if code != http.StatusOK {
-			t.Error(code)
-			return
-		}
-
-		if err != nil {
-			t.Error(code)
-			return
-		}
-
-		code, err = patchMembership(srv, token, firstUser.ID, firstTenant.ID)
-
-		if code != http.StatusOK {
-			t.Error(code)
-			return
-		}
-
-		if err != nil {
-			t.Error(code)
-			return
-		}
-
-		fmt.Printf("%v, %v", firstTenant.ID, firstUser.ID)
-	})
-
-	t.Run("OwnerShouldBeAbleToInviteInHisOwnTenant", func(t *testing.T) {
-		results, err := fetchTenantAndUsers(srv, false)
-		if err != nil {
-			t.Error(err)
-			return
-		}
-
-		firstTenant := results.GetTenantbyName(genTestEmail(0))
-
-		if firstTenant == nil {
-			t.Error("Tenant do not exists")
-			return
-		}
-
-		code, token, _, err = doLogin(srv, genTestEmail(0), testPassword, &firstTenant.ID)
-		if err != nil {
-			t.Error(err)
-			return
-		}
-
-		if code != http.StatusOK {
-			t.Error(code)
-			return
-		}
-
-		code, err = inviteTenant(srv, token, fmt.Sprintf("%s", firstTenant.ID), genTestEmail(1))
-
-		if code != http.StatusNoContent {
-			t.Error(code)
-			return
-		}
-
-		if err != nil {
-			t.Error(err)
-			return
-		}
-
-		inviteToken := <-tokenCh
-		fmt.Printf("%s", inviteToken)
-		code, err = acceptInvite(srv, inviteToken)
-
-		if code != http.StatusNoContent {
-			t.Error(code)
-			return
-		}
-
-		if err != nil {
-			t.Error(err)
-			return
-		}
-	})
-
-	t.Run("Owner Should Not Be Able To Invite In Other Tenant", func(t *testing.T) {
-		results, err := fetchTenantAndUsers(srv, false)
-		if err != nil {
-			t.Error(err)
-			return
-		}
-
-		rootTenant := results.GetTenantbyName("admin@admin")
-		tenantWithOwner := results.GetTenantbyName(genTestEmail(0))
-
-		if tenantWithOwner == nil {
-			t.Error("Tenant do not exists")
-			return
-		}
-
-		code, token, _, err = doLogin(srv, genTestEmail(0), testPassword, &tenantWithOwner.ID)
-		if err != nil {
-			t.Error(err)
-			return
-		}
-
-		if code != http.StatusOK {
-			t.Error(code)
-			return
-		}
-		code, err = inviteTenant(srv, token, fmt.Sprintf("%s", rootTenant.ID), genTestEmail(1))
-
-		if code != http.StatusForbidden {
-			t.Error(code)
-			return
-		}
-
-		if err != nil {
-			t.Error(err)
-			return
-		}
-	})
-
-	t.Run("Owner can't delegate role in other tenant", func(t *testing.T) {
-		results, err := fetchTenantAndUsers(srv, false)
-
-		if err != nil {
-			t.Error(err)
-			return
-		}
-
-		rootTenant := results.GetTenantbyName("admin@admin")
-		tenantWithOwner := results.GetTenantbyName(genTestEmail(0))
-
-		if tenantWithOwner == nil {
-			t.Error("Tenant do not exists")
-			return
-		}
-		code, token, _, err = doLogin(srv, genTestEmail(0), testPassword, &tenantWithOwner.ID)
-
-		if code != http.StatusOK {
-			t.Error(code)
-			return
-		}
-
-		if err != nil {
-			t.Error(err)
-			return
-		}
-
-		code, err = patchMembership(srv, token, results.Users[0].ID, rootTenant.ID)
-
-		if code != http.StatusForbidden {
-			t.Error(code)
-			return
-		}
-
-		if err != nil {
-			t.Error(code)
-			return
-		}
-	})
-
-	t.Run("Regular user can't delete membership", func(t *testing.T) {
-		results, err := fetchTenantAndUsers(srv, false)
-
-		if err != nil {
-			t.Error(err)
-			return
-		}
-
-		tenantWithOwner := results.GetTenantbyName(genTestEmail(0))
-
-		if tenantWithOwner == nil {
-			t.Error("Tenant do not exists")
-			return
-		}
-		code, token, _, err = doLogin(srv, genTestEmail(1), testPassword, &tenantWithOwner.ID)
-
-		if code != http.StatusOK {
-			t.Error(code)
-			return
-		}
-
-		if err != nil {
-			t.Error(err)
-			return
-		}
-
-		user := results.GetUser(genTestEmail(0))
-		code, err = DeleteMembership(srv, token, tenantWithOwner.ID, user.ID)
-
-		if code != http.StatusForbidden {
-			t.Error(code)
-			return
-		}
-
-		if err != nil {
-			t.Error(code)
-			return
-		}
-	})
-
-	t.Run("Owner user can delete membership", func(t *testing.T) {
-		results, err := fetchTenantAndUsers(srv, false)
-
-		if err != nil {
-			t.Error(err)
-			return
-		}
-
-		tenantWithOwner := results.GetTenantbyName(genTestEmail(0))
-
-		if tenantWithOwner == nil {
-			t.Error("Tenant do not exists")
-			return
-		}
-		code, token, _, err = doLogin(srv, genTestEmail(0), testPassword, &tenantWithOwner.ID)
-
-		if code != http.StatusOK {
-			t.Error(code)
-			return
-		}
-
-		if err != nil {
-			t.Error(err)
-			return
-		}
-
-		user := results.GetUser(genTestEmail(1))
-		code, err = DeleteMembership(srv, token, tenantWithOwner.ID, user.ID)
-
-		if code != http.StatusNoContent {
-			t.Error(code)
-			return
-		}
-
-		if err != nil {
-			t.Error(code)
-			return
-		}
-	})
-
-	t.Run("Owner user can see all membership in tenant", func(t *testing.T) {
-		results, err := fetchTenantAndUsers(srv, false)
-		if err != nil {
-			t.Error(err)
-			return
-		}
-		tenantWithOwner := results.GetTenantbyName(genTestEmail(0))
-		if tenantWithOwner == nil {
-			t.Error("Tenant do not exists")
-			return
-		}
-		code, token, _, err = doLogin(srv, genTestEmail(0), testPassword, &tenantWithOwner.ID)
-
-		if code != http.StatusOK {
-			t.Error(code)
-			return
-		}
-
-		if err != nil {
-			t.Error(err)
-			return
-		}
-
-		_, list, err := getTenantMembershipsList(srv, token, tenantWithOwner.ID, url.Values{})
-		if err != nil {
-			t.Error(err)
-			return
-		}
-
-		if len(list) != 1 {
-			t.Error("Should return 1 membership", len(list))
-		}
-	})
-
-	t.Run("Regular user can't see all member", func(t *testing.T) {
-		results, err := fetchTenantAndUsers(srv, false)
-		if err != nil {
-			t.Error(err)
-			return
-		}
-
-		firstTenant := results.GetTenantbyName(genTestEmail(0))
-		if firstTenant == nil {
-			t.Error("Tenant do not exists")
-			return
-		}
-
-		code, token, _, err = doLogin(srv, genTestEmail(0), testPassword, &firstTenant.ID)
-		if err != nil {
-			t.Error(err)
-			return
-		}
-
-		if code != http.StatusOK {
-			t.Error(code)
-			return
-		}
-
-		code, err = inviteTenant(srv, token, fmt.Sprintf("%s", firstTenant.ID), genTestEmail(4))
-
-		if code != http.StatusNoContent {
-			t.Error(code)
-			return
-		}
-
-		if err != nil {
-			t.Error(err)
-			return
-		}
-
-		inviteToken := <-tokenCh
-		fmt.Printf("%s", inviteToken)
-		code, err = acceptInvite(srv, inviteToken)
-
-		if code != http.StatusNoContent {
-			t.Error(code)
-			return
-		}
-
-		if err != nil {
-			t.Error(err)
-			return
-		}
-
-		code, token, _, err = doLogin(srv, genTestEmail(4), testPassword, &firstTenant.ID)
-
-		if code != http.StatusOK {
-			t.Error(code)
-			return
-		}
-
-		if err != nil {
-			t.Error(err)
-			return
-		}
-
-		code, _, err = getTenantMembershipsList(srv, token, firstTenant.ID, url.Values{})
-		if code != http.StatusForbidden {
-			t.Error(code)
-			return
-		}
-
-		if err != nil {
-			t.Error(err)
-			return
-		}
-	})
-
-	t.Run("User should be able to see all his membership", func(t *testing.T) {
-		results, err := fetchTenantAndUsers(srv, false)
-		if err != nil {
-			t.Error(err)
-			return
-		}
-		tenantWithOwner := results.GetTenantbyName(genTestEmail(0))
-		if tenantWithOwner == nil {
-			t.Error("Tenant do not exists")
-			return
-		}
-		code, token, _, err = doLogin(srv, genTestEmail(0), testPassword, &tenantWithOwner.ID)
-
-		if code != http.StatusOK {
-			t.Error(code)
-			return
-		}
-
-		if err != nil {
-			t.Error(err)
-			return
-		}
-
-		code, list, err := getUserMembershipsList(srv, token, results.GetUser(genTestEmail(0)).ID, url.Values{})
-		if err != nil {
-			t.Error(err)
-			return
-		}
-
-		if len(list) != 2 {
-			t.Error("Should return 2 membership", len(list), code)
-		}
-	})
-
-	t.Run("Regular user should not be able to see other user memberships", func(t *testing.T) {
-		results, err := fetchTenantAndUsers(srv, false)
-		if err != nil {
-			t.Error(err)
-			return
-		}
-		tenantWithOwner := results.GetTenantbyName(genTestEmail(0))
-		if tenantWithOwner == nil {
-			t.Error("Tenant do not exists")
-			return
-		}
-		code, token, _, err = doLogin(srv, genTestEmail(0), testPassword, &tenantWithOwner.ID)
-
-		if code != http.StatusOK {
-			t.Error(code)
-			return
-		}
-
-		if err != nil {
-			t.Error(err)
-			return
-		}
-
-		code, _, err = getUserMembershipsList(srv, token, results.GetUser(genTestEmail(1)).ID, url.Values{})
-		if code != http.StatusForbidden {
-			t.Error(code)
-			return
-		}
-
-		if err != nil {
-			t.Error(err)
-			return
-		}
-	})
-
-	t.Run("Invited user should not be able to login", func(t *testing.T) {
-		results, err := fetchTenantAndUsers(srv, false)
-		if err != nil {
-			t.Error(err)
-			return
-		}
-		tenantWithOwner := results.GetTenantbyName(genTestEmail(0))
-		if tenantWithOwner == nil {
-			t.Error("Tenant do not exists")
-			return
-		}
-		code, err = inviteTenant(srv, token, fmt.Sprintf("%s", tenantWithOwner.ID), genTestEmail(3))
-
-		if code != http.StatusNoContent {
-			t.Error(code)
-			return
-		}
-
-		if err != nil {
-			t.Error(err)
-			return
-		}
-
-		code, token, _, err = doLogin(srv, genTestEmail(3), testPassword, &tenantWithOwner.ID)
-
-		if code != http.StatusForbidden {
-			t.Error(code)
-			return
-		}
-
-		if err != nil {
-			t.Error(err)
-			return
-		}
-	})
-
-	t.Run("Delete user should archive orphan tenants", func(t *testing.T) {
-		results, err := fetchTenantAndUsers(srv, false)
-		if err != nil {
-			t.Error(err)
-			return
-		}
-
-		user := results.GetUser(genTestEmail(5))
-
-		if user == nil {
-			t.Error("User does not exists")
-			return
-		}
-
-		code, token, _, err := doLogin(srv, superUserEmail, testPassword, nil)
-
-		if code != http.StatusOK {
-			t.Error(code)
-			return
-		}
-
-		if err != nil {
-			t.Error(err)
-			return
-		}
-
-		code, err = deleteUser(srv, token, user.ID)
-
-		if code != http.StatusNoContent {
-			t.Error(code)
-			return
-		}
-
-		if err != nil {
-			t.Error(err)
-			return
-		}
-
-		results, err = fetchTenantAndUsers(srv, true)
-		if err != nil {
-			t.Error(err)
-			return
-		}
-
-		deletedTenant := results.GetTenantbyName(genTestEmail(5))
-
-		if err != nil {
-			t.Error(err)
-			return
-		}
-
-		if deletedTenant != nil {
-			t.Error("Tenant should have been archived", deletedTenant.Name, deletedTenant.Archived)
-		}
-
-	})
+	// t.Run("InviteToTenant", func(t *testing.T) {
+	// 	results, err := fetchTenantAndUsers(srv, false)
+	// 	if err != nil {
+	// 		t.Error(err)
+	// 		return
+	// 	}
+	// 	firstTenant := results.GetTenantbyName("test")
+
+	// 	code, err := inviteTenant(srv, token, fmt.Sprintf("%s", firstTenant.ID), genTestEmail(0))
+
+	// 	if code != http.StatusNoContent {
+	// 		t.Error(code)
+	// 		return
+	// 	}
+
+	// 	if err != nil {
+	// 		t.Error(err)
+	// 		return
+	// 	}
+
+	// 	inviteToken := <-tokenCh
+	// 	code, err = acceptInvite(srv, inviteToken)
+
+	// 	if code != http.StatusNoContent {
+	// 		t.Error(code)
+	// 		return
+	// 	}
+
+	// 	if err != nil {
+	// 		t.Error(err)
+	// 		return
+	// 	}
+	// })
+
+	// t.Run("New Member Should Not Be Able To Invite Other", func(t *testing.T) {
+	// 	results, err := fetchTenantAndUsers(srv, false)
+	// 	if err != nil {
+	// 		t.Error(err)
+	// 		return
+	// 	}
+	// 	firstTenant := results.GetTenantbyName("test")
+
+	// 	code, token, _, err := doLogin(srv, genTestEmail(0), testPassword, &firstTenant.ID)
+	// 	if err != nil {
+	// 		t.Error(err)
+	// 		return
+	// 	}
+
+	// 	if code != http.StatusOK {
+	// 		t.Error(code)
+	// 		return
+	// 	}
+
+	// 	code, err = inviteTenant(srv, token, fmt.Sprintf("%s", firstTenant.ID), genTestEmail(1))
+
+	// 	if code != http.StatusForbidden {
+	// 		t.Error(code)
+	// 		return
+	// 	}
+
+	// 	if err != nil {
+	// 		t.Error(err)
+	// 		return
+	// 	}
+	// })
+
+	// t.Run("Admin can patch any membership", func(t *testing.T) {
+	// 	results, err := fetchTenantAndUsers(srv, true)
+	// 	if err != nil {
+	// 		t.Error(err)
+	// 		return
+	// 	}
+	// 	firstTenant := results.GetTenantbyName("test")
+	// 	firstUser := results.GetUser(genTestEmail(0))
+
+	// 	if firstTenant == nil {
+	// 		t.Error("Tenant do not exists")
+	// 		return
+	// 	}
+
+	// 	if firstUser == nil {
+	// 		t.Error("User do not exists")
+	// 		return
+	// 	}
+
+	// 	code, token, _, err := doLogin(srv, superUserEmail, testPassword, nil)
+
+	// 	if code != http.StatusOK {
+	// 		t.Error(code)
+	// 		return
+	// 	}
+
+	// 	if err != nil {
+	// 		t.Error(code)
+	// 		return
+	// 	}
+
+	// 	code, err = patchMembership(srv, token, firstUser.ID, firstTenant.ID)
+
+	// 	if code != http.StatusOK {
+	// 		t.Error(code)
+	// 		return
+	// 	}
+
+	// 	if err != nil {
+	// 		t.Error(code)
+	// 		return
+	// 	}
+	// })
+
+	// t.Run("OwnerShouldBeAbleToInviteInHisOwnTenant", func(t *testing.T) {
+	// 	firstTenant := results.GetTenantbyName(genTestEmail(0))
+
+	// 	if firstTenant == nil {
+	// 		t.Error("Tenant do not exists")
+	// 		return
+	// 	}
+
+	// 	code, token, _, err := doLogin(srv, genTestEmail(0), testPassword, &firstTenant.ID)
+	// 	if err != nil {
+	// 		t.Error(err)
+	// 		return
+	// 	}
+
+	// 	if code != http.StatusOK {
+	// 		t.Error(code)
+	// 		return
+	// 	}
+
+	// 	code, err = inviteTenant(srv, token, fmt.Sprintf("%s", firstTenant.ID), genTestEmail(1))
+
+	// 	if code != http.StatusNoContent {
+	// 		t.Error(code)
+	// 		return
+	// 	}
+
+	// 	if err != nil {
+	// 		t.Error(err)
+	// 		return
+	// 	}
+
+	// 	inviteToken := <-tokenCh
+	// 	code, err = acceptInvite(srv, inviteToken)
+
+	// 	if code != http.StatusNoContent {
+	// 		t.Error(code)
+	// 		return
+	// 	}
+
+	// 	if err != nil {
+	// 		t.Error(err)
+	// 		return
+	// 	}
+	// })
+
+	// t.Run("Owner Should Not Be Able To Invite In Other Tenant", func(t *testing.T) {
+	// 	rootTenant := results.GetTenantbyName("admin@admin")
+	// 	tenantWithOwner := results.GetTenantbyName(genTestEmail(0))
+
+	// 	if tenantWithOwner == nil {
+	// 		t.Error("Tenant do not exists")
+	// 		return
+	// 	}
+
+	// 	code, token, _, err := doLogin(srv, genTestEmail(0), testPassword, &tenantWithOwner.ID)
+	// 	if err != nil {
+	// 		t.Error(err)
+	// 		return
+	// 	}
+
+	// 	if code != http.StatusOK {
+	// 		t.Error(code)
+	// 		return
+	// 	}
+	// 	code, err = inviteTenant(srv, token, fmt.Sprintf("%s", rootTenant.ID), genTestEmail(1))
+
+	// 	if code != http.StatusForbidden {
+	// 		t.Error(code)
+	// 		return
+	// 	}
+
+	// 	if err != nil {
+	// 		t.Error(err)
+	// 		return
+	// 	}
+	// })
+
+	// t.Run("Owner can't delegate role in other tenant", func(t *testing.T) {
+	// 	rootTenant := results.GetTenantbyName("admin@admin")
+	// 	tenantWithOwner := results.GetTenantbyName(genTestEmail(0))
+
+	// 	if tenantWithOwner == nil {
+	// 		t.Error("Tenant do not exists")
+	// 		return
+	// 	}
+	// 	code, token, _, err := doLogin(srv, genTestEmail(0), testPassword, &tenantWithOwner.ID)
+
+	// 	if code != http.StatusOK {
+	// 		t.Error(code)
+	// 		return
+	// 	}
+
+	// 	if err != nil {
+	// 		t.Error(err)
+	// 		return
+	// 	}
+
+	// 	code, err = patchMembership(srv, token, results.Users[0].ID, rootTenant.ID)
+
+	// 	if code != http.StatusForbidden {
+	// 		t.Error(code)
+	// 		return
+	// 	}
+
+	// 	if err != nil {
+	// 		t.Error(code)
+	// 		return
+	// 	}
+	// })
+
+	// t.Run("Regular user can't delete membership", func(t *testing.T) {
+	// 	tenantWithOwner := results.GetTenantbyName(genTestEmail(0))
+
+	// 	if tenantWithOwner == nil {
+	// 		t.Error("Tenant do not exists")
+	// 		return
+	// 	}
+	// 	code, token, _, err := doLogin(srv, genTestEmail(1), testPassword, &tenantWithOwner.ID)
+
+	// 	if code != http.StatusOK {
+	// 		t.Error(code)
+	// 		return
+	// 	}
+
+	// 	if err != nil {
+	// 		t.Error(err)
+	// 		return
+	// 	}
+
+	// 	user := results.GetUser(genTestEmail(0))
+	// 	code, err = DeleteMembership(srv, token, tenantWithOwner.ID, user.ID)
+
+	// 	if code != http.StatusForbidden {
+	// 		t.Error(code)
+	// 		return
+	// 	}
+
+	// 	if err != nil {
+	// 		t.Error(code)
+	// 		return
+	// 	}
+	// })
+
+	// t.Run("Owner user can delete membership", func(t *testing.T) {
+	// 	tenantWithOwner := results.GetTenantbyName(genTestEmail(0))
+
+	// 	if tenantWithOwner == nil {
+	// 		t.Error("Tenant do not exists")
+	// 		return
+	// 	}
+	// 	code, token, _, err := doLogin(srv, genTestEmail(0), testPassword, &tenantWithOwner.ID)
+
+	// 	if code != http.StatusOK {
+	// 		t.Error(code)
+	// 		return
+	// 	}
+
+	// 	if err != nil {
+	// 		t.Error(err)
+	// 		return
+	// 	}
+
+	// 	user := results.GetUser(genTestEmail(1))
+	// 	code, err = DeleteMembership(srv, token, tenantWithOwner.ID, user.ID)
+
+	// 	if code != http.StatusNoContent {
+	// 		t.Error(code)
+	// 		return
+	// 	}
+
+	// 	if err != nil {
+	// 		t.Error(code)
+	// 		return
+	// 	}
+	// })
+
+	// t.Run("Owner user can see all membership in tenant", func(t *testing.T) {
+	// 	tenantWithOwner := results.GetTenantbyName(genTestEmail(0))
+	// 	if tenantWithOwner == nil {
+	// 		t.Error("Tenant do not exists")
+	// 		return
+	// 	}
+	// 	code, token, _, err := doLogin(srv, genTestEmail(0), testPassword, &tenantWithOwner.ID)
+
+	// 	if code != http.StatusOK {
+	// 		t.Error(code)
+	// 		return
+	// 	}
+
+	// 	if err != nil {
+	// 		t.Error(err)
+	// 		return
+	// 	}
+
+	// 	_, list, err := getTenantMembershipsList(srv, token, tenantWithOwner.ID, url.Values{})
+	// 	if err != nil {
+	// 		t.Error(err)
+	// 		return
+	// 	}
+
+	// 	if len(list) != 1 {
+	// 		t.Error("Should return 1 membership", len(list))
+	// 	}
+	// })
+
+	// t.Run("Regular user can't see all member", func(t *testing.T) {
+	// 	firstTenant := results.GetTenantbyName(genTestEmail(0))
+	// 	if firstTenant == nil {
+	// 		t.Error("Tenant do not exists")
+	// 		return
+	// 	}
+
+	// 	code, token, _, err := doLogin(srv, genTestEmail(0), testPassword, &firstTenant.ID)
+	// 	if err != nil {
+	// 		t.Error(err)
+	// 		return
+	// 	}
+
+	// 	if code != http.StatusOK {
+	// 		t.Error(code)
+	// 		return
+	// 	}
+
+	// 	code, err = inviteTenant(srv, token, fmt.Sprintf("%s", firstTenant.ID), genTestEmail(4))
+
+	// 	if code != http.StatusNoContent {
+	// 		t.Error(code)
+	// 		return
+	// 	}
+
+	// 	if err != nil {
+	// 		t.Error(err)
+	// 		return
+	// 	}
+
+	// 	inviteToken := <-tokenCh
+	// 	code, err = acceptInvite(srv, inviteToken)
+
+	// 	if code != http.StatusNoContent {
+	// 		t.Error(code)
+	// 		return
+	// 	}
+
+	// 	if err != nil {
+	// 		t.Error(err)
+	// 		return
+	// 	}
+
+	// 	code, token, _, err = doLogin(srv, genTestEmail(4), testPassword, &firstTenant.ID)
+
+	// 	if code != http.StatusOK {
+	// 		t.Error(code)
+	// 		return
+	// 	}
+
+	// 	if err != nil {
+	// 		t.Error(err)
+	// 		return
+	// 	}
+
+	// 	code, _, err = getTenantMembershipsList(srv, token, firstTenant.ID, url.Values{})
+	// 	if code != http.StatusForbidden {
+	// 		t.Error(code)
+	// 		return
+	// 	}
+
+	// 	if err != nil {
+	// 		t.Error(err)
+	// 		return
+	// 	}
+	// })
+
+	// t.Run("User should be able to see all his membership", func(t *testing.T) {
+	// 	tenantWithOwner := results.GetTenantbyName(genTestEmail(0))
+	// 	if tenantWithOwner == nil {
+	// 		t.Error("Tenant do not exists")
+	// 		return
+	// 	}
+	// 	code, token, _, err := doLogin(srv, genTestEmail(0), testPassword, &tenantWithOwner.ID)
+
+	// 	if code != http.StatusOK {
+	// 		t.Error(code)
+	// 		return
+	// 	}
+
+	// 	if err != nil {
+	// 		t.Error(err)
+	// 		return
+	// 	}
+
+	// 	code, list, err := getUserMembershipsList(srv, token, results.GetUser(genTestEmail(0)).ID, url.Values{})
+	// 	if err != nil {
+	// 		t.Error(err)
+	// 		return
+	// 	}
+
+	// 	if len(list) != 2 {
+	// 		t.Error("Should return 2 membership", len(list), code)
+	// 	}
+	// })
+
+	// t.Run("Regular user should not be able to see other user memberships", func(t *testing.T) {
+	// 	tenantWithOwner := results.GetTenantbyName(genTestEmail(0))
+	// 	if tenantWithOwner == nil {
+	// 		t.Error("Tenant do not exists")
+	// 		return
+	// 	}
+	// 	code, token, _, err := doLogin(srv, genTestEmail(0), testPassword, &tenantWithOwner.ID)
+
+	// 	if code != http.StatusOK {
+	// 		t.Error(code)
+	// 		return
+	// 	}
+
+	// 	if err != nil {
+	// 		t.Error(err)
+	// 		return
+	// 	}
+
+	// 	code, _, err = getUserMembershipsList(srv, token, results.GetUser(genTestEmail(1)).ID, url.Values{})
+	// 	if code != http.StatusForbidden {
+	// 		t.Error(code)
+	// 		return
+	// 	}
+
+	// 	if err != nil {
+	// 		t.Error(err)
+	// 		return
+	// 	}
+	// })
+
+	// t.Run("Invited user should not be able to login", func(t *testing.T) {
+	// 	tenantWithOwner := results.GetTenantbyName(genTestEmail(0))
+	// 	if tenantWithOwner == nil {
+	// 		t.Error("Tenant do not exists")
+	// 		return
+	// 	}
+	// 	code, err := inviteTenant(srv, token, fmt.Sprintf("%s", tenantWithOwner.ID), genTestEmail(3))
+
+	// 	if code != http.StatusNoContent {
+	// 		t.Error(code)
+	// 		return
+	// 	}
+
+	// 	if err != nil {
+	// 		t.Error(err)
+	// 		return
+	// 	}
+
+	// 	code, token, _, err = doLogin(srv, genTestEmail(3), testPassword, &tenantWithOwner.ID)
+
+	// 	if code != http.StatusForbidden {
+	// 		t.Error(code)
+	// 		return
+	// 	}
+
+	// 	if err != nil {
+	// 		t.Error(err)
+	// 		return
+	// 	}
+	// })
+
+	// t.Run("DeleteUserShouldArchiveOrphanTenants", func(t *testing.T) {
+	// 	results, err := fetchTenantAndUsers(srv, false)
+	// 	if err != nil {
+	// 		t.Error(err)
+	// 		return
+	// 	}
+	// 	user := results.GetUser(genTestEmail(5))
+
+	// 	if user == nil {
+	// 		t.Error("User does not exists")
+	// 		return
+	// 	}
+
+	// 	code, token, _, err := doLogin(srv, superUserEmail, testPassword, nil)
+
+	// 	if code != http.StatusOK {
+	// 		t.Error(code)
+	// 		return
+	// 	}
+
+	// 	if err != nil {
+	// 		t.Error(err)
+	// 		return
+	// 	}
+
+	// 	code, err = deleteUser(srv, token, user.ID)
+
+	// 	if code != http.StatusNoContent {
+	// 		t.Error(code)
+	// 		return
+	// 	}
+
+	// 	if err != nil {
+	// 		t.Error(err)
+	// 		return
+	// 	}
+
+	// 	results, err = fetchTenantAndUsers(srv, true)
+	// 	if err != nil {
+	// 		t.Error(err)
+	// 		return
+	// 	}
+
+	// 	deletedTenant := results.GetTenantbyName(genTestEmail(5))
+
+	// 	if err != nil {
+	// 		t.Error(err)
+	// 		return
+	// 	}
+
+	// 	if deletedTenant != nil {
+	// 		t.Error("Tenant should have been archived", deletedTenant.Name, deletedTenant.Archived)
+	// 	}
+
+	// })
 
 	t.Run("TestWrongUserNameLogin", func(t *testing.T) {
 		code, _, _, err := doLogin(srv, "_dummy_@domain.com", "_dummy_", nil)
@@ -1355,4 +1291,542 @@ func TestService(t *testing.T) {
 			return
 		}
 	})
+}
+
+func givenTenantExists(srv *httptest.Server, name string) (tenant *storage.TenantModel, err error) {
+	code, token, _, err := doLogin(srv, superUserEmail, testPassword, nil)
+	if err != nil {
+		return
+	}
+
+	model := createTenantModel{Name: name}
+	code, tenant, err = createTenant(srv, &model, token)
+	if err != nil {
+		return
+	}
+
+	if code != http.StatusForbidden {
+		return
+	}
+	return
+}
+
+func givenUserInviteToTenant(srv *httptest.Server, email string, tenantId uuid.UUID, tokenCh chan string) (err error) {
+	code, token, _, err := doLogin(srv, superUserEmail, testPassword, nil)
+	if err != nil {
+		return
+	}
+
+	if code != http.StatusOK {
+		return
+	}
+
+	code, err = inviteTenant(srv, token, fmt.Sprintf("%s", tenantId), email)
+
+	if code != http.StatusNoContent {
+		return
+	}
+
+	if err != nil {
+		return
+	}
+
+	inviteToken := <-tokenCh
+	code, err = acceptInvite(srv, inviteToken)
+
+	if code != http.StatusNoContent {
+		return
+	}
+
+	if err != nil {
+		return
+	}
+
+	return
+}
+
+func TestInviteToTenant(t *testing.T) {
+	srv, _, token, tokenCh, results := BeforeTest(t)
+	firstTenant := results.GetTenantbyName(genTestEmail(3))
+
+	code, err := inviteTenant(srv, token, fmt.Sprintf("%s", firstTenant.ID), genTestEmail(0))
+
+	if code != http.StatusNoContent {
+		t.Error(code)
+		return
+	}
+
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	inviteToken := <-tokenCh
+	code, err = acceptInvite(srv, inviteToken)
+
+	if code != http.StatusNoContent {
+		t.Error(code)
+		return
+	}
+
+	if err != nil {
+		t.Error(err)
+		return
+	}
+}
+
+func TestNewUserShouldNotBeAbleToInvite(t *testing.T) {
+	srv, _, token, tokenCh, _ := BeforeTest(t)
+	firstTenant, err := givenTenantExists(srv, "test")
+
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	givenUserInviteToTenant(srv, genTestEmail(0), firstTenant.ID, tokenCh)
+
+	code, token, _, err := doLogin(srv, genTestEmail(0), testPassword, &firstTenant.ID)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	if code != http.StatusOK {
+		t.Error(code)
+		return
+	}
+
+	code, err = inviteTenant(srv, token, fmt.Sprintf("%s", firstTenant.ID), genTestEmail(1))
+
+	if code != http.StatusForbidden {
+		t.Error(code)
+		return
+	}
+
+	if err != nil {
+		t.Error(err)
+		return
+	}
+}
+
+func TestAdmincanPatchAnyMembership(t *testing.T) {
+	srv, _, token, tokenCh, results := BeforeTest(t)
+	firstTenant, err := givenTenantExists(srv, "test")
+
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	givenUserInviteToTenant(srv, genTestEmail(0), firstTenant.ID, tokenCh)
+	firstUser := results.GetUser(genTestEmail(0))
+
+	if firstTenant == nil {
+		t.Error("Tenant do not exists")
+		return
+	}
+
+	if firstUser == nil {
+		t.Error("User do not exists")
+		return
+	}
+
+	code, token, _, err := doLogin(srv, superUserEmail, testPassword, nil)
+
+	if code != http.StatusOK {
+		t.Error(code)
+		return
+	}
+
+	if err != nil {
+		t.Error(code)
+		return
+	}
+
+	code, err = patchMembership(srv, token, firstUser.ID, firstTenant.ID)
+
+	if code != http.StatusOK {
+		t.Error(code)
+		return
+	}
+
+	if err != nil {
+		t.Error(code)
+		return
+	}
+}
+
+func TestOwnerShouldBeAbleToInviteInHisOwnTenant(t *testing.T) {
+	srv, _, token, tokenCh, results := BeforeTest(t)
+	firstTenant := results.GetTenantbyName(genTestEmail(0))
+	code, token, _, err := doLogin(srv, genTestEmail(0), testPassword, &firstTenant.ID)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	if code != http.StatusOK {
+		t.Error(code)
+		return
+	}
+
+	code, err = inviteTenant(srv, token, fmt.Sprintf("%s", firstTenant.ID), genTestEmail(1))
+
+	if code != http.StatusNoContent {
+		t.Error(code)
+		return
+	}
+
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	inviteToken := <-tokenCh
+	code, err = acceptInvite(srv, inviteToken)
+
+	if code != http.StatusNoContent {
+		t.Error(code)
+		return
+	}
+
+	if err != nil {
+		t.Error(err)
+		return
+	}
+}
+
+func TestOwnerShouldNotBeAbleToInviteInOtherTenant(t *testing.T) {
+	srv, _, _, _, results := BeforeTest(t)
+	rootTenant := results.GetTenantbyName("admin@admin")
+	tenantWithOwner := results.GetTenantbyName(genTestEmail(0))
+
+	if tenantWithOwner == nil {
+		t.Error("Tenant do not exists")
+		return
+	}
+
+	code, token, _, err := doLogin(srv, genTestEmail(0), testPassword, &tenantWithOwner.ID)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	if code != http.StatusOK {
+		t.Error(code)
+		return
+	}
+	code, err = inviteTenant(srv, token, fmt.Sprintf("%s", rootTenant.ID), genTestEmail(1))
+	if code != http.StatusForbidden {
+		t.Error(code)
+		return
+	}
+	if err != nil {
+		t.Error(err)
+		return
+	}
+}
+
+func TestOwnerCantDelegateRoleInOtherTenant(t *testing.T) {
+	srv, _, _, _, results := BeforeTest(t)
+	rootTenant := results.GetTenantbyName("admin@admin")
+	tenantWithOwner := results.GetTenantbyName(genTestEmail(0))
+	if tenantWithOwner == nil {
+		t.Error("Tenant do not exists")
+		return
+	}
+	code, token, _, err := doLogin(srv, genTestEmail(0), testPassword, &tenantWithOwner.ID)
+	if code != http.StatusOK {
+		t.Error(code)
+		return
+	}
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	code, err = patchMembership(srv, token, results.Users[0].ID, rootTenant.ID)
+	if code != http.StatusForbidden {
+		t.Error(code)
+		return
+	}
+	if err != nil {
+		t.Error(code)
+		return
+	}
+}
+
+func TestRegularUserCantDeleteMembership(t *testing.T) {
+	srv, _, _, tokenCh, results := BeforeTest(t)
+	tenantWithOwner := results.GetTenantbyName(genTestEmail(0))
+	if tenantWithOwner == nil {
+		t.Error("Tenant do not exists")
+		return
+	}
+
+	givenUserInviteToTenant(srv, genTestEmail(1), tenantWithOwner.ID, tokenCh)
+	code, token, _, err := doLogin(srv, genTestEmail(1), testPassword, &tenantWithOwner.ID)
+
+	if code != http.StatusOK {
+		t.Error(code)
+		return
+	}
+
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	user := results.GetUser(genTestEmail(0))
+	code, err = DeleteMembership(srv, token, tenantWithOwner.ID, user.ID)
+
+	if code != http.StatusForbidden {
+		t.Error(code)
+		return
+	}
+
+	if err != nil {
+		t.Error(code)
+		return
+	}
+}
+
+func TestOwnerCanDeleteMembership(t *testing.T) {
+	srv, _, _, tokenCh, results := BeforeTest(t)
+	tenantWithOwner := results.GetTenantbyName(genTestEmail(0))
+	if tenantWithOwner == nil {
+		t.Error("Tenant do not exists")
+		return
+	}
+
+	givenUserInviteToTenant(srv, genTestEmail(1), tenantWithOwner.ID, tokenCh)
+
+	code, token, _, err := doLogin(srv, genTestEmail(0), testPassword, &tenantWithOwner.ID)
+
+	if code != http.StatusOK {
+		t.Error(code)
+		return
+	}
+
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	user := results.GetUser(genTestEmail(1))
+	code, err = DeleteMembership(srv, token, tenantWithOwner.ID, user.ID)
+
+	if code != http.StatusNoContent {
+		t.Error(code)
+		return
+	}
+
+	if err != nil {
+		t.Error(code)
+		return
+	}
+}
+
+func TestOwnerCanSeeAllMembership(t *testing.T) {
+	srv, _, _, tokenCh, results := BeforeTest(t)
+	tenantWithOwner := results.GetTenantbyName(genTestEmail(0))
+	if tenantWithOwner == nil {
+		t.Error("Tenant do not exists")
+		return
+	}
+
+	givenUserInviteToTenant(srv, genTestEmail(1), tenantWithOwner.ID, tokenCh)
+	code, token, _, err := doLogin(srv, genTestEmail(0), testPassword, &tenantWithOwner.ID)
+	if code != http.StatusOK {
+		t.Error(code)
+		return
+	}
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	_, list, err := getTenantMembershipsList(srv, token, tenantWithOwner.ID, url.Values{})
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	if len(list) != 2 {
+		t.Error("Should return 2 membership", len(list))
+	}
+}
+
+func TestRegularUserCantSeeAllMembership(t *testing.T) {
+	srv, _, _, tokenCh, results := BeforeTest(t)
+	tenantWithOwner := results.GetTenantbyName(genTestEmail(0))
+	if tenantWithOwner == nil {
+		t.Error("Tenant do not exists")
+		return
+	}
+
+	givenUserInviteToTenant(srv, genTestEmail(4), tenantWithOwner.ID, tokenCh)
+
+	code, token, _, err := doLogin(srv, genTestEmail(4), testPassword, &tenantWithOwner.ID)
+
+	if code != http.StatusOK {
+		t.Error(code)
+		return
+	}
+
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	code, _, err = getTenantMembershipsList(srv, token, tenantWithOwner.ID, url.Values{})
+	if code != http.StatusForbidden {
+		t.Error(code)
+		return
+	}
+
+	if err != nil {
+		t.Error(err)
+		return
+	}
+}
+
+func TestUserShouldBeAbleToSeeAllHisMembership(t *testing.T) {
+	srv, _, _, tokenCh, results := BeforeTest(t)
+	tenantWithOwner := results.GetTenantbyName(genTestEmail(1))
+	if tenantWithOwner == nil {
+		t.Error("Tenant do not exists")
+		return
+	}
+
+	givenUserInviteToTenant(srv, genTestEmail(0), tenantWithOwner.ID, tokenCh)
+	if tenantWithOwner == nil {
+		t.Error("Tenant do not exists")
+		return
+	}
+	code, token, _, err := doLogin(srv, genTestEmail(0), testPassword, &tenantWithOwner.ID)
+	if code != http.StatusOK {
+		t.Error(code)
+		return
+	}
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	code, list, err := getUserMembershipsList(srv, token, results.GetUser(genTestEmail(0)).ID, url.Values{})
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	if len(list) != 2 {
+		t.Error("Should return 2 membership", len(list), code)
+	}
+}
+
+func TestRegularUserShouldNotBeAbleToSeeOtherMembership(t *testing.T) {
+	srv, _, _, _, results := BeforeTest(t)
+	tenantWithOwner := results.GetTenantbyName(genTestEmail(0))
+	if tenantWithOwner == nil {
+		t.Error("Tenant do not exists")
+		return
+	}
+	code, token, _, err := doLogin(srv, genTestEmail(0), testPassword, &tenantWithOwner.ID)
+	if code != http.StatusOK {
+		t.Error(code)
+		return
+	}
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	code, _, err = getUserMembershipsList(srv, token, results.GetUser(genTestEmail(1)).ID, url.Values{})
+	if code != http.StatusForbidden {
+		t.Error(code)
+		return
+	}
+	if err != nil {
+		t.Error(err)
+		return
+	}
+}
+
+func TestInvitedUserShouldNotBeAbleToLogin(t *testing.T) {
+	srv, _, token, _, results := BeforeTest(t)
+	tenantWithOwner := results.GetTenantbyName(genTestEmail(0))
+	if tenantWithOwner == nil {
+		t.Error("Tenant do not exists")
+		return
+	}
+	code, err := inviteTenant(srv, token, fmt.Sprintf("%s", tenantWithOwner.ID), genTestEmail(3))
+
+	if code != http.StatusNoContent {
+		t.Error(code)
+		return
+	}
+
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	code, token, _, err = doLogin(srv, genTestEmail(3), testPassword, &tenantWithOwner.ID)
+
+	if code != http.StatusForbidden {
+		t.Error(code)
+		return
+	}
+
+	if err != nil {
+		t.Error(err)
+		return
+	}
+}
+
+func TestDeleteUserShouldArchiveOrphanTenant(t *testing.T) {
+	srv, _, token, _, results := BeforeTest(t)
+
+	user := results.GetUser(genTestEmail(5))
+
+	if user == nil {
+		t.Error("User does not exists")
+		return
+	}
+
+	code, token, _, err := doLogin(srv, superUserEmail, testPassword, nil)
+
+	if code != http.StatusOK {
+		t.Error(code)
+		return
+	}
+
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	code, err = deleteUser(srv, token, user.ID)
+
+	if code != http.StatusNoContent {
+		t.Error(code)
+		return
+	}
+
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	results, err = fetchTenantAndUsers(srv, true)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	deletedTenant := results.GetTenantbyName(genTestEmail(5))
+
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	if deletedTenant != nil {
+		t.Error("Tenant should have been archived", deletedTenant.Name, deletedTenant.Archived)
+	}
 }
