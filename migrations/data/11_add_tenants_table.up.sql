@@ -22,12 +22,6 @@ CREATE TABLE membership(
     PRIMARY KEY (user_id, tenant_id)
 );
 
--- INSERT INTO tenants (name, protected) VALUES ('root', TRUE);
-
--- /* Add all previous users to the root tenant */
--- INSERT INTO membership (user_id, tenant_id)
--- SELECT id AS user_id, (SELECT id AS tenant_id FROM tenants WHERE name like 'root' LIMIT 1) FROM users;
-
 INSERT INTO tenants (name) 
 SELECT email AS name FROM users;
 
