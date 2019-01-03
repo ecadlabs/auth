@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"time"
@@ -16,6 +17,7 @@ import (
 )
 
 const (
+	//TokenContextKey Context value key for request token
 	TokenContextKey = "token"
 )
 
@@ -67,6 +69,42 @@ func (u *Users) writeUserToken(w http.ResponseWriter, user *storage.User, member
 	return nil
 }
 
+func (u *Users) getTenantFromRequest(r *http.Request, user *storage.User) (uuid.UUID, error) {
+	var uid uuid.UUID
+	tenantID := mux.Vars(r)["id"]
+
+	if tenantID != "" {
+		tenantUUID, err := uuid.FromString(tenantID)
+		if err != nil {
+			return uuid.Nil, err
+		}
+		uid = tenantUUID
+	} else {
+		uid = user.GetDefaultMembership()
+	}
+
+	return uid, nil
+}
+
+func (u *Users) getMembershipLogin(ctx context.Context, tenantID, userID uuid.UUID) (*storage.Membership, error) {
+	membership, err := u.MembershipStorage.GetMembership(ctx, tenantID, userID)
+
+	if membership == nil {
+		return nil, errors.ErrMembershipNotFound
+	}
+
+	// Don't allow login with invited membership
+	if membership.MembershipStatus != storage.ActiveState {
+		return nil, errors.ErrMembershipNotActive
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return membership, nil
+}
+
 // Login is a login endpoint handler
 func (u *Users) Login(w http.ResponseWriter, r *http.Request) {
 	var request struct {
@@ -116,38 +154,15 @@ func (u *Users) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := u.Storage.UpdateLoginInfo(ctx, user.ID, getRemoteAddr(r)); err != nil {
-		utils.JSONErrorResponse(w, err)
+	uid, err := u.getTenantFromRequest(r, user)
+
+	if err != nil {
+		log.Error(err)
+		utils.JSONError(w, err.Error(), errors.CodeBadRequest)
 		return
 	}
 
-	var uid uuid.UUID
-	tenantId := mux.Vars(r)["id"]
-
-	if tenantId != "" {
-		tenantUUID, err := uuid.FromString(tenantId)
-		if err != nil {
-			log.Error(err)
-			utils.JSONError(w, err.Error(), errors.CodeBadRequest)
-			return
-		}
-		uid = tenantUUID
-	} else {
-		uid = user.GetDefaultMembership()
-	}
-
-	membership, err := u.MembershipStorage.GetMembership(ctx, uid, user.ID)
-
-	if membership == nil {
-		utils.JSONErrorResponse(w, errors.ErrMembershipNotFound)
-		return
-	}
-
-	// Don't allow login with invited membership
-	if membership.Membership_status != storage.ActiveState {
-		utils.JSONErrorResponse(w, errors.ErrMembershipNotActive)
-		return
-	}
+	membership, err := u.getMembershipLogin(ctx, uid, user.ID)
 
 	if err != nil {
 		utils.JSONErrorResponse(w, err)
@@ -159,12 +174,18 @@ func (u *Users) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if err := u.Storage.UpdateLoginInfo(ctx, user.ID, getRemoteAddr(r)); err != nil {
+		utils.JSONErrorResponse(w, err)
+		return
+	}
+
 	// Log
 	if u.AuxLogger != nil {
 		u.AuxLogger.WithFields(logFields(EvLogin, user.ID, user.ID, r)).WithField("email", user.Email).Printf("User %v logged in", user.ID)
 	}
 }
 
+//Refresh is a refresh endpoint handler
 func (u *Users) Refresh(w http.ResponseWriter, r *http.Request) {
 	self := r.Context().Value(UserContextKey).(*storage.User)
 	member := r.Context().Value(MembershipContextKey).(*storage.Membership)

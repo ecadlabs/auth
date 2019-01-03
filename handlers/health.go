@@ -9,10 +9,12 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+//Pinger interface representing a service that can ping something
 type Pinger interface {
 	Ping(ctx context.Context) error
 }
 
+//HealthMonitor service that do health check
 type HealthMonitor struct {
 	Pinger  Pinger
 	Timeout time.Duration

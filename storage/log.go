@@ -53,6 +53,7 @@ var logQueryColumns = map[string]int{
 	"addr":      query.ColQuery | query.ColSort,
 }
 
+// GetLogs retrive logs from the database as a paged results
 func (s *Storage) GetLogs(ctx context.Context, q *query.Query) (entries []*LogEntry, count int, next *query.Query, err error) {
 	if q.SortBy == "" {
 		q.SortBy = LogDefaultSortColumn

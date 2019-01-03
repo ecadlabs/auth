@@ -13,32 +13,38 @@ import (
 	uuid "github.com/satori/go.uuid"
 )
 
+// TenantModel struct that represent tenant resource
 type TenantModel struct {
-	ID          uuid.UUID `json:"id" db:"id"`
-	Name        string    `json:"name" db:"name"`
-	Added       time.Time `json:"added" db:"added"`
-	Modified    time.Time `json:"modified" db:"modified"`
-	Protected   bool      `json:"-" db:"protected"`
-	Archived    bool      `json:"-" db:"archived"`
-	Tenant_type string    `json:"type" db:"tenant_type"`
-	SortedBy    string    `json:"-" db:"sorted_by"`
+	ID         uuid.UUID `json:"id" db:"id"`
+	Name       string    `json:"name" db:"name"`
+	Added      time.Time `json:"added" db:"added"`
+	Modified   time.Time `json:"modified" db:"modified"`
+	Protected  bool      `json:"-" db:"protected"`
+	Archived   bool      `json:"-" db:"archived"`
+	TenantType string    `json:"type" db:"tenant_type"`
+	SortedBy   string    `json:"-" db:"sorted_by"`
 }
 
+// Clone clone a TenantModel struct
 func (t *TenantModel) Clone() *TenantModel {
 	return &TenantModel{
-		ID:        t.ID,
-		Name:      t.Name,
-		Added:     t.Added,
-		Modified:  t.Modified,
-		Protected: t.Protected,
+		ID:         t.ID,
+		Name:       t.Name,
+		Added:      t.Added,
+		Modified:   t.Modified,
+		Protected:  t.Protected,
+		Archived:   t.Archived,
+		TenantType: t.TenantType,
 	}
 }
 
+// TenantStorage storage service for tenant resource
 type TenantStorage struct {
 	DB *sqlx.DB
 }
 
-func (s *TenantStorage) CreateTenant(ctx context.Context, name string, ownerId uuid.UUID) (*TenantModel, error) {
+// CreateTenant insert a tenant in the database and return it
+func (s *TenantStorage) CreateTenant(ctx context.Context, name string, ownerID uuid.UUID) (*TenantModel, error) {
 	tx, err := s.DB.Beginx()
 	if err != nil {
 		return nil, err
@@ -70,13 +76,13 @@ func (s *TenantStorage) CreateTenant(ctx context.Context, name string, ownerId u
 		}
 	}
 
-	_, err = tx.ExecContext(ctx, "INSERT INTO membership (tenant_id, user_id, membership_status, membership_type) VALUES ($1, $2, $3, $4)", newTenant.ID, ownerId, ActiveState, OwnerMembership)
+	_, err = tx.ExecContext(ctx, "INSERT INTO membership (tenant_id, user_id, membership_status, membership_type) VALUES ($1, $2, $3, $4)", newTenant.ID, ownerID, ActiveState, OwnerMembership)
 
 	if err != nil {
 		return nil, err
 	}
 
-	_, err = tx.ExecContext(ctx, "INSERT INTO roles (tenant_id, user_id, role) VALUES ($1, $2, $3)", newTenant.ID, ownerId, OwnerRole)
+	_, err = tx.ExecContext(ctx, "INSERT INTO roles (tenant_id, user_id, role) VALUES ($1, $2, $3)", newTenant.ID, ownerID, OwnerRole)
 
 	if err != nil {
 		return nil, err
@@ -85,13 +91,14 @@ func (s *TenantStorage) CreateTenant(ctx context.Context, name string, ownerId u
 	return &newTenant, nil
 }
 
-func (s *TenantStorage) GetTenant(ctx context.Context, tenant_id uuid.UUID, user_id uuid.UUID, onlySelf bool) (*TenantModel, error) {
+// GetTenant fetch a tenant from the database and return it
+func (s *TenantStorage) GetTenant(ctx context.Context, tenantID, userID uuid.UUID, onlySelf bool) (*TenantModel, error) {
 	var queryExtension = ""
 	if onlySelf {
-		queryExtension += "AND id IN (SELECT tenant_id FROM membership WHERE user_id = '" + user_id.String() + "')"
+		queryExtension += "AND id IN (SELECT tenant_id FROM membership WHERE user_id = '" + userID.String() + "')"
 	}
 	model := TenantModel{}
-	err := s.DB.GetContext(ctx, &model, "SELECT tenants.* FROM tenants WHERE id = $1"+queryExtension, tenant_id)
+	err := s.DB.GetContext(ctx, &model, "SELECT tenants.* FROM tenants WHERE id = $1"+queryExtension, tenantID)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -111,7 +118,8 @@ var tenantsQueryColumns = map[string]int{
 	"archived": query.ColQuery | query.ColSort,
 }
 
-func (s *TenantStorage) GetTenantsSoleMember(ctx context.Context, user_id uuid.UUID) (tenants []*TenantModel, err error) {
+// GetTenantsSoleMember get a list of tenant where the user is the only member
+func (s *TenantStorage) GetTenantsSoleMember(ctx context.Context, userID uuid.UUID) (tenants []*TenantModel, err error) {
 	rows, err := s.DB.QueryContext(ctx, `
 	SELECT * FROM tenants WHERE id IN (
 		SELECT membership.tenant_id FROM membership 
@@ -120,7 +128,7 @@ func (s *TenantStorage) GetTenantsSoleMember(ctx context.Context, user_id uuid.U
 		)
 	GROUP BY membership.tenant_id
 	HAVING COUNT(user_id) = 1
-	)`, user_id)
+	)`, userID)
 
 	if err != nil {
 		return nil, err
@@ -138,7 +146,7 @@ func (s *TenantStorage) GetTenantsSoleMember(ctx context.Context, user_id uuid.U
 			&tenant.Modified,
 			&tenant.Protected,
 			&tenant.Archived,
-			&tenant.Tenant_type,
+			&tenant.TenantType,
 		); err != nil {
 			return
 		}
@@ -154,10 +162,11 @@ func (s *TenantStorage) GetTenantsSoleMember(ctx context.Context, user_id uuid.U
 	return
 }
 
-func (s *TenantStorage) GetTenants(ctx context.Context, user_id uuid.UUID, onlySelf bool, q *query.Query) (tenants []*TenantModel, count int, next *query.Query, err error) {
+// GetTenants get a list of tenant which are paged
+func (s *TenantStorage) GetTenants(ctx context.Context, userID uuid.UUID, onlySelf bool, q *query.Query) (tenants []*TenantModel, count int, next *query.Query, err error) {
 	var queryExtension = "tenants as scoped_tenants"
 	if onlySelf {
-		queryExtension = "(SELECT * FROM tenants WHERE id IN (SELECT tenant_id FROM membership WHERE user_id = '" + user_id.String() + "')) as scoped_tenants"
+		queryExtension = "(SELECT * FROM tenants WHERE id IN (SELECT tenant_id FROM membership WHERE user_id = '" + userID.String() + "')) as scoped_tenants"
 	}
 
 	if q.SortBy == "" {
@@ -232,6 +241,7 @@ var tenantUpdatePaths = map[string]struct{}{
 	"name": struct{}{},
 }
 
+// PatchTenant update a tenant
 func (s *TenantStorage) PatchTenant(ctx context.Context, id uuid.UUID, ops *Ops) (*TenantModel, error) {
 	// Verify columns
 	for k := range ops.Update {
@@ -286,6 +296,7 @@ func (s *TenantStorage) PatchTenant(ctx context.Context, id uuid.UUID, ops *Ops)
 	return &tenant, nil
 }
 
+// DeleteTenant delete a tenant from the database
 func (s *TenantStorage) DeleteTenant(ctx context.Context, id uuid.UUID) error {
 	tx, err := s.DB.Beginx()
 	if err != nil {
