@@ -16,13 +16,14 @@ CREATE TYPE membership_type AS ENUM ('owner', 'member');
 CREATE TYPE membership_status AS ENUM ('active', 'invited');
 
 CREATE TABLE membership(
+	id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
 	user_id UUID REFERENCES users(id) ON UPDATE CASCADE ON DELETE CASCADE,
 	tenant_id UUID REFERENCES tenants(id) ON UPDATE CASCADE ON DELETE CASCADE,
 	added TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
 	modified TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
 	membership_type membership_type NOT NULL DEFAULT 'member',
 	membership_status membership_status NOT NULL DEFAULT 'active',
-    PRIMARY KEY (user_id, tenant_id)
+    UNIQUE (user_id, tenant_id)
 );
 
 INSERT INTO tenants (name, tenant_type) 

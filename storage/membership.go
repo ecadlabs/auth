@@ -15,7 +15,7 @@ import (
 )
 
 type membershipModel struct {
-	ID                string         `db:"id"`
+	ID                uuid.UUID      `db:"id"`
 	Membership_type   string         `db:"membership_type"`
 	TenantID          uuid.UUID      `db:"tenant_id"`
 	Membership_status string         `db:"membership_status"`
@@ -28,6 +28,7 @@ type membershipModel struct {
 
 func (m *membershipModel) toMembership() *Membership {
 	ret := &Membership{
+		ID:                m.ID,
 		Membership_status: m.Membership_status,
 		Membership_type:   m.Membership_type,
 		UserID:            m.UserID,
@@ -187,8 +188,6 @@ func (s *MembershipStorage) UpdateMembership(ctx context.Context, id uuid.UUID, 
 		args[0] = userId
 		args[1] = id
 
-		fmt.Printf("%s", args)
-
 		if _, err = tx.ExecContext(ctx, expr, args...); err != nil {
 			if isUniqueViolation(err, "roles_pkey") {
 				err = errors.ErrRoleExists
@@ -252,7 +251,7 @@ func (s *MembershipStorage) GetMemberships(ctx context.Context, q *query.Query) 
 
 	selOpt := query.SelectOptions{
 		SelectExpr: "mem.*, " + pq.QuoteIdentifier(q.SortBy) + " AS sorted_by",
-		FromExpr:   "(SELECT membership.*, concat(user_id, '_', tenant_id) AS id FROM membership LEFT JOIN tenants ON tenant_id = tenants.id WHERE tenants.archived = FALSE) AS mem",
+		FromExpr:   "(SELECT membership.* FROM membership LEFT JOIN tenants ON tenant_id = tenants.id WHERE tenants.archived = FALSE) AS mem",
 		IDColumn:   "id",
 		ColumnFlagsFunc: func(col string) int {
 			if flags, ok := membershipsQueryColumns[col]; ok {
@@ -304,7 +303,7 @@ func (s *MembershipStorage) GetMemberships(ctx context.Context, q *query.Query) 
 	if lastItem != nil {
 		// Update query
 		ret := *q
-		ret.LastID = fmt.Sprintf("%s_%s", lastItem.UserID, lastItem.TenantID)
+		ret.LastID = lastItem.ID.String() // fmt.Sprintf("%s_%s", lastItem.UserID, lastItem.TenantID)
 		ret.Last = lastItem.SortedBy
 		ret.TotalCount = false
 

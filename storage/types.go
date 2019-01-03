@@ -90,6 +90,7 @@ func (u *User) IsOwner(id uuid.UUID) bool {
 }
 
 type Membership struct {
+	ID                uuid.UUID
 	Membership_type   string
 	TenantID          uuid.UUID
 	Membership_status string
