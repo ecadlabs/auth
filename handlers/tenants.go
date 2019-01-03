@@ -113,7 +113,7 @@ func (t *Tenants) DeleteTenant(w http.ResponseWriter, r *http.Request) {
 
 	// Log
 	if t.AuxLogger != nil {
-		t.AuxLogger.WithFields(logFields(EvArchiveTenant, member.UserID, uid, r)).Printf("User %v archived tenant %v", member.UserID, uid)
+		t.AuxLogger.WithFields(logFields(EvArchiveTenant, member.ID, uid, r)).Printf("User %v archived tenant %v", member.UserID, uid)
 	}
 
 	w.WriteHeader(http.StatusNoContent)
@@ -239,7 +239,7 @@ func (t *Tenants) CreateTenant(w http.ResponseWriter, r *http.Request) {
 
 	// Log
 	if t.AuxLogger != nil {
-		t.AuxLogger.WithFields(logFields(EvCreateTenant, member.UserID, newTenants.ID, r)).Printf("User %v create tenant %v", member.UserID, newTenants.ID)
+		t.AuxLogger.WithFields(logFields(EvCreateTenant, member.ID, newTenants.ID, r)).Printf("User %v create tenant %v", member.UserID, newTenants.ID)
 	}
 
 	utils.JSONResponse(w, 200, newTenants)
@@ -301,7 +301,7 @@ func (t *Tenants) UpdateTenant(w http.ResponseWriter, r *http.Request) {
 
 	if t.AuxLogger != nil {
 		if len(ops.Update) != 0 {
-			t.AuxLogger.WithFields(logFields(EvUpdateTenant, member.UserID, uid, r)).WithFields(log.Fields(ops.Update)).Printf("User %v updated tenant %v", member.UserID, uid)
+			t.AuxLogger.WithFields(logFields(EvUpdateTenant, member.ID, uid, r)).WithFields(log.Fields(ops.Update)).Printf("User %v updated tenant %v", member.UserID, uid)
 		}
 	}
 

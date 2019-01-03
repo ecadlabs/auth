@@ -393,7 +393,7 @@ func BeforeTest(t *testing.T) (srv *httptest.Server, userList []*storage.User, t
 	defer db.Close()
 
 	_, err = db.Exec(`DROP TABLE IF EXISTS schema_migrations, users, membership, tenants, roles, log, bootstrap`)
-	_, err = db.Exec(`DROP TYPE IF EXISTS membership_type, membership_status, tenant_type`)
+	_, err = db.Exec(`DROP TYPE IF EXISTS membership_type, membership_status, tenant_type, log_id_type`)
 	if err != nil {
 		t.Error(err)
 		return

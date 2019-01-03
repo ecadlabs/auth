@@ -161,7 +161,7 @@ func (u *Users) Login(w http.ResponseWriter, r *http.Request) {
 
 	// Log
 	if u.AuxLogger != nil {
-		u.AuxLogger.WithFields(logFields(EvLogin, user.ID, user.ID, r)).WithField("email", user.Email).Printf("User %v logged in", user.ID)
+		u.AuxLogger.WithFields(logFields(EvLogin, membership.ID, membership.ID, r)).WithField("email", user.Email).Printf("User %v logged into tenant %v", user.ID, membership.TenantID)
 	}
 }
 
