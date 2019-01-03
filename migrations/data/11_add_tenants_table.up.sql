@@ -1,12 +1,15 @@
 BEGIN;
 
+CREATE TYPE tenant_type AS ENUM ('individual', 'organization');
+
 CREATE TABLE tenants(
 	id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
 	name TEXT NOT NULL,
 	added TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
 	modified TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
 	protected BOOLEAN NOT NULL DEFAULT FALSE,
-	archived BOOLEAN NOT NULL DEFAULT FALSE
+	archived BOOLEAN NOT NULL DEFAULT FALSE,
+	tenant_type tenant_type NOT NULL DEFAULT 'organization'
 );
 
 CREATE TYPE membership_type AS ENUM ('owner', 'member');
@@ -22,8 +25,8 @@ CREATE TABLE membership(
     PRIMARY KEY (user_id, tenant_id)
 );
 
-INSERT INTO tenants (name) 
-SELECT email AS name FROM users;
+INSERT INTO tenants (name, tenant_type) 
+SELECT email AS name, 'individual' as tenant_type FROM users;
 
 INSERT INTO membership (user_id, tenant_id, membership_type)
 SELECT users.id as user_id, tenants.id as tenant_id, 'owner' FROM users LEFT JOIN tenants ON users.email = tenants.name;

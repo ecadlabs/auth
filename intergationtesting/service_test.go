@@ -396,7 +396,7 @@ func TestService(t *testing.T) {
 	defer db.Close()
 
 	_, err = db.Exec(`DROP TABLE IF EXISTS schema_migrations, users, membership, tenants, roles, log, bootstrap`)
-	_, err = db.Exec(`DROP TYPE IF EXISTS membership_type, membership_status`)
+	_, err = db.Exec(`DROP TYPE IF EXISTS membership_type, membership_status, tenant_type`)
 	if err != nil {
 		t.Error(err)
 		return

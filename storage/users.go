@@ -219,7 +219,7 @@ func NewUserInt(ctx context.Context, tx *sqlx.Tx, user *CreateUser) (res *User, 
 	tModel := TenantModel{}
 
 	// Create tenant
-	rows, err = sqlx.NamedQueryContext(ctx, tx, "INSERT INTO tenants (name) VALUES (:email) RETURNING *", &model)
+	rows, err = sqlx.NamedQueryContext(ctx, tx, "INSERT INTO tenants (name, tenant_type) VALUES (:email, 'individual') RETURNING *", &model)
 	if err != nil {
 		return
 	}
@@ -235,20 +235,7 @@ func NewUserInt(ctx context.Context, tx *sqlx.Tx, user *CreateUser) (res *User, 
 		return
 	}
 
-	// // Create membership
-	// query, err := sqlx.NamedQueryContext(ctx, tx, "SELECT * FROM tenants where name like 'root' AND protected = TRUE LIMIT 1", &tModel)
-	// for query.Next() {
-	// 	if queryErr := query.StructScan(&tModel); queryErr != nil {
-	// 		return
-	// 	}
-	// }
-	// defer query.Close()
-
 	_, err = tx.ExecContext(ctx, "INSERT INTO membership (user_id, tenant_id, membership_type) VALUES ($1, $2, $3)", model.ID, tModel.ID, OwnerMembership)
-
-	// if len(user.Roles) == 0 {
-	// 	return
-	// }
 
 	user.Roles["owner"] = true
 

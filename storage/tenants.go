@@ -14,13 +14,14 @@ import (
 )
 
 type TenantModel struct {
-	ID        uuid.UUID `json:"id" db:"id"`
-	Name      string    `json:"name" db:"name"`
-	Added     time.Time `json:"added" db:"added"`
-	Modified  time.Time `json:"modified" db:"modified"`
-	Protected bool      `json:"-" db:"protected"`
-	Archived  bool      `json:"-" db:"archived"`
-	SortedBy  string    `json:"-" db:"sorted_by"`
+	ID          uuid.UUID `json:"id" db:"id"`
+	Name        string    `json:"name" db:"name"`
+	Added       time.Time `json:"added" db:"added"`
+	Modified    time.Time `json:"modified" db:"modified"`
+	Protected   bool      `json:"-" db:"protected"`
+	Archived    bool      `json:"-" db:"archived"`
+	Tenant_type string    `json:"type" db:"tenant_type"`
+	SortedBy    string    `json:"-" db:"sorted_by"`
 }
 
 func (t *TenantModel) Clone() *TenantModel {
@@ -130,7 +131,15 @@ func (s *TenantStorage) GetTenantsSoleMember(ctx context.Context, user_id uuid.U
 
 	for rows.Next() {
 		var tenant TenantModel
-		if err = rows.Scan(&tenant.ID, &tenant.Name, &tenant.Added, &tenant.Modified, &tenant.Protected, &tenant.Archived); err != nil {
+		if err = rows.Scan(
+			&tenant.ID,
+			&tenant.Name,
+			&tenant.Added,
+			&tenant.Modified,
+			&tenant.Protected,
+			&tenant.Archived,
+			&tenant.Tenant_type,
+		); err != nil {
 			return
 		}
 
