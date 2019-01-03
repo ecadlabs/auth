@@ -17,15 +17,21 @@ CREATE TABLE membership(
 	tenant_id UUID REFERENCES tenants(id) ON UPDATE CASCADE ON DELETE CASCADE,
 	added TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
 	modified TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-	mem_type membership_type NOT NULL DEFAULT 'member',
-	mem_status membership_status NOT NULL DEFAULT 'active',
+	membership_type membership_type NOT NULL DEFAULT 'member',
+	membership_status membership_status NOT NULL DEFAULT 'active',
     PRIMARY KEY (user_id, tenant_id)
 );
 
-INSERT INTO tenants (name, protected) VALUES ('root', TRUE);
+-- INSERT INTO tenants (name, protected) VALUES ('root', TRUE);
 
-/* Add all previous users to the root tenant */
-INSERT INTO membership (user_id, tenant_id)
-SELECT id AS user_id, (SELECT id AS tenant_id FROM tenants WHERE name like 'root' LIMIT 1) FROM users;
+-- /* Add all previous users to the root tenant */
+-- INSERT INTO membership (user_id, tenant_id)
+-- SELECT id AS user_id, (SELECT id AS tenant_id FROM tenants WHERE name like 'root' LIMIT 1) FROM users;
+
+INSERT INTO tenants (name) 
+SELECT email AS name FROM users;
+
+INSERT INTO membership (user_id, tenant_id, membership_type)
+SELECT users.id as user_id, tenants.id as tenant_id, 'owner' FROM users LEFT JOIN tenants ON users.email = tenants.name;
 
 COMMIT;

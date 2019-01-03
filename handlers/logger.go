@@ -19,6 +19,7 @@ const (
 	EvRemoveRole         = "remove_role"
 	EvDelete             = "delete"
 	EvArchiveTenant      = "archive_tenant"
+	EvMembershipDelete   = "delete_membership"
 	EvReset              = "reset"
 	EvResetRequest       = "reset_request"
 	EvLogin              = "login"

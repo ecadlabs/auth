@@ -42,7 +42,6 @@ func (u *userModel) toUser() *User {
 		Name:          u.Name,
 		Added:         u.Added,
 		Modified:      u.Modified,
-		Roles:         make(Roles, len(u.Roles)),
 		Memberships:   []*MembershipItem{},
 		EmailVerified: u.EmailVerified,
 		PasswordGen:   u.PasswordGen,
@@ -60,11 +59,6 @@ func (u *userModel) toUser() *User {
 	if u.RefreshTimestamp.UTC() != epoch {
 		ret.RefreshTimestamp = &u.RefreshTimestamp
 	}
-
-	for _, r := range u.Roles {
-		ret.Roles[r] = true
-	}
-
 	for _, m := range u.Memberships {
 		result := strings.Split(m, ",")
 		ret.Memberships = append(ret.Memberships, &MembershipItem{
@@ -83,7 +77,7 @@ type Storage struct {
 func (s *Storage) getUser(ctx context.Context, col string, val interface{}) (*User, error) {
 	var u userModel
 
-	q := "SELECT users.*, ra.roles, mem.memberships FROM users LEFT JOIN (SELECT user_id, array_agg(tenant_id || ',' || mem_type) AS memberships FROM membership LEFT JOIN tenants on tenants.id = tenant_id WHERE tenants.archived = FALSE AND membership.mem_status = 'active' GROUP BY user_id) AS mem ON mem.user_id = users.id LEFT JOIN (SELECT user_id, array_agg(role) AS roles FROM roles GROUP BY user_id) AS ra ON ra.user_id = users.id WHERE users." + pq.QuoteIdentifier(col) + " = $1"
+	q := "SELECT users.*, ra.roles, mem.memberships FROM users LEFT JOIN (SELECT user_id, array_agg(tenant_id || ',' || membership_type) AS memberships FROM membership LEFT JOIN tenants on tenants.id = tenant_id WHERE tenants.archived = FALSE AND membership.membership_status = 'active' GROUP BY user_id) AS mem ON mem.user_id = users.id LEFT JOIN (SELECT user_id, array_agg(role) AS roles FROM roles GROUP BY user_id) AS ra ON ra.user_id = users.id WHERE users." + pq.QuoteIdentifier(col) + " = $1"
 	if err := s.DB.GetContext(ctx, &u, q, val); err != nil {
 		if err == sql.ErrNoRows {
 			err = errors.ErrUserNotFound
@@ -124,7 +118,7 @@ func (s *Storage) GetUsers(ctx context.Context, q *query.Query) (users []*User, 
 
 	selOpt := query.SelectOptions{
 		SelectExpr: "users.*, ra.roles, mem.memberships, users." + pq.QuoteIdentifier(q.SortBy) + " AS sorted_by",
-		FromExpr:   "users LEFT JOIN (SELECT user_id, array_agg(tenant_id || ',' || mem_type) AS memberships FROM membership LEFT JOIN tenants on tenants.id = tenant_id WHERE tenants.archived = FALSE AND membership.mem_status = 'active' GROUP BY user_id) AS mem ON mem.user_id = users.id LEFT JOIN (SELECT user_id, array_agg(role) AS roles FROM roles GROUP BY user_id) AS ra ON ra.user_id = users.id",
+		FromExpr:   "users LEFT JOIN (SELECT user_id, array_agg(tenant_id || ',' || membership_type) AS memberships FROM membership LEFT JOIN tenants on tenants.id = tenant_id WHERE tenants.archived = FALSE AND membership.membership_status = 'active' GROUP BY user_id) AS mem ON mem.user_id = users.id LEFT JOIN (SELECT user_id, array_agg(role) AS roles FROM roles GROUP BY user_id) AS ra ON ra.user_id = users.id",
 		IDColumn:   "id",
 		ColumnFlagsFunc: func(col string) int {
 			if flags, ok := userQueryColumns[col]; ok {
@@ -191,7 +185,7 @@ func isUniqueViolation(err error, constraint string) bool {
 	return ok && e.Code.Name() == "unique_violation" && e.Constraint == constraint
 }
 
-func NewUserInt(ctx context.Context, tx *sqlx.Tx, user *User) (res *User, err error) {
+func NewUserInt(ctx context.Context, tx *sqlx.Tx, user *CreateUser) (res *User, err error) {
 	model := userModel{
 		ID:            uuid.NewV4(),
 		Email:         user.Email,
@@ -222,43 +216,61 @@ func NewUserInt(ctx context.Context, tx *sqlx.Tx, user *User) (res *User, err er
 
 	res = model.toUser()
 
-	if len(user.Roles) == 0 {
-		return
-	}
-
-	res.Roles = user.Roles
-
 	tModel := TenantModel{}
 
-	// Create membership
-	query, err := sqlx.NamedQueryContext(ctx, tx, "SELECT * FROM tenants where name like 'root' AND protected = TRUE LIMIT 1", &tModel)
-	for query.Next() {
-		if queryErr := query.StructScan(&tModel); queryErr != nil {
+	// Create tenant
+	rows, err = sqlx.NamedQueryContext(ctx, tx, "INSERT INTO tenants (name) VALUES (:email) RETURNING *", &model)
+	if err != nil {
+		return
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		if err = rows.StructScan(&tModel); err != nil {
 			return
 		}
 	}
-	defer query.Close()
 
-	_, err = tx.ExecContext(ctx, "INSERT INTO membership (user_id, tenant_id) VALUES ($1, $2)", model.ID, tModel.ID)
+	if err = rows.Err(); err != nil {
+		return
+	}
+
+	// // Create membership
+	// query, err := sqlx.NamedQueryContext(ctx, tx, "SELECT * FROM tenants where name like 'root' AND protected = TRUE LIMIT 1", &tModel)
+	// for query.Next() {
+	// 	if queryErr := query.StructScan(&tModel); queryErr != nil {
+	// 		return
+	// 	}
+	// }
+	// defer query.Close()
+
+	_, err = tx.ExecContext(ctx, "INSERT INTO membership (user_id, tenant_id, membership_type) VALUES ($1, $2, $3)", model.ID, tModel.ID, OwnerMembership)
+
+	// if len(user.Roles) == 0 {
+	// 	return
+	// }
+
+	user.Roles["owner"] = true
 
 	// Create roles
 	valuesExprs := make([]string, len(user.Roles))
-	args := make([]interface{}, len(user.Roles)+1)
+	args := make([]interface{}, len(user.Roles)+2)
 
 	args[0] = model.ID
+	args[1] = tModel.ID
 	var i int
 
 	for r := range user.Roles {
-		valuesExprs[i] = fmt.Sprintf("($1, $%d)", i+2)
-		args[i+1] = r
+		valuesExprs[i] = fmt.Sprintf("($1, $2, $%d)", i+3)
+		args[i+2] = r
 		i++
 	}
 
-	_, err = tx.ExecContext(ctx, "INSERT INTO roles (user_id, role) VALUES "+strings.Join(valuesExprs, ", "), args...)
+	_, err = tx.ExecContext(ctx, "INSERT INTO roles (user_id, tenant_id, role) VALUES "+strings.Join(valuesExprs, ", "), args...)
 	return
 }
 
-func (s *Storage) NewUser(ctx context.Context, user *User) (res *User, err error) {
+func (s *Storage) NewUser(ctx context.Context, user *CreateUser) (res *User, err error) {
 	tx, err := s.DB.Beginx()
 	if err != nil {
 		return
@@ -286,7 +298,7 @@ var updatePaths = map[string]struct{}{
 	"password_hash": struct{}{},
 }
 
-func (s *Storage) UpdateUser(ctx context.Context, id uuid.UUID, ops *UserOps) (user *User, err error) {
+func (s *Storage) UpdateUser(ctx context.Context, id uuid.UUID, ops *Ops) (user *User, err error) {
 	// Verify columns
 	for k := range ops.Update {
 		if _, ok := updatePaths[k]; !ok {
@@ -335,56 +347,6 @@ func (s *Storage) UpdateUser(ctx context.Context, id uuid.UUID, ops *UserOps) (u
 			err = errors.ErrUserNotFound
 		}
 		return nil, err
-	}
-
-	// Update roles
-	if len(ops.AddRoles) != 0 {
-		expr := "INSERT INTO roles (user_id, role) VALUES "
-		args := make([]interface{}, len(ops.AddRoles)+1)
-
-		for i, r := range ops.AddRoles {
-			if i != 0 {
-				expr += ", "
-			}
-			expr += fmt.Sprintf("($1, $%d)", i+2)
-			args[i+1] = r
-		}
-
-		args[0] = id
-
-		if _, err = tx.ExecContext(ctx, expr, args...); err != nil {
-			if isUniqueViolation(err, "roles_pkey") {
-				err = errors.ErrRoleExists
-			}
-			return nil, err
-		}
-	}
-
-	if len(ops.RemoveRoles) != 0 {
-		expr := "DELETE FROM roles WHERE user_id = $1 AND ("
-		args := make([]interface{}, len(ops.RemoveRoles)+1)
-
-		for i, r := range ops.RemoveRoles {
-			if i != 0 {
-				expr += " OR "
-			}
-			expr += fmt.Sprintf("role = $%d", i+2)
-			args[i+1] = r
-		}
-
-		expr += ")"
-		args[0] = id
-
-		if _, err = tx.ExecContext(ctx, expr, args...); err != nil {
-			return nil, err
-		}
-	}
-
-	// Get roles back
-	if err = tx.GetContext(ctx, &u, "SELECT array_agg(role) AS roles FROM roles WHERE user_id = $1 GROUP BY user_id", id); err != nil {
-		if err != sql.ErrNoRows {
-			return nil, err
-		}
 	}
 
 	return u.toUser(), nil

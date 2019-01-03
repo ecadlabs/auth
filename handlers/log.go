@@ -13,12 +13,12 @@ import (
 
 func (u *Users) GetLogs(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
-	self := r.Context().Value(UserContextKey).(*storage.User)
+	member := r.Context().Value(MembershipContextKey).(*storage.Membership)
 
 	ctx, cancel := u.context(r)
 	defer cancel()
 
-	role, err := u.Enforcer.GetRole(ctx, self.Roles.Get()...)
+	role, err := u.Enforcer.GetRole(ctx, member.Roles.Get()...)
 	if err != nil {
 		log.Error(err)
 		utils.JSONErrorResponse(w, err)

@@ -8,13 +8,13 @@ import (
 	"github.com/ecadlabs/auth/jsonpatch"
 )
 
-type UserOps struct {
+type RoleOps struct {
 	Update      map[string]interface{}
 	AddRoles    []string
 	RemoveRoles []string
 }
 
-type TenantOps struct {
+type Ops struct {
 	Update map[string]interface{}
 }
 
@@ -22,8 +22,8 @@ func errPatchOp(o *jsonpatch.Op) error {
 	return errors.Wrap(fmt.Errorf("Incorrect JSON patch op `%s' for path `%s'", o.Op, o.Path), errors.CodePatchFormat)
 }
 
-func TenantOpsFromPatch(patch jsonpatch.Patch) (*TenantOps, error) {
-	ret := TenantOps{
+func OpsFromPatch(patch jsonpatch.Patch) (*Ops, error) {
+	ret := Ops{
 		Update: make(map[string]interface{}, len(patch)),
 	}
 
@@ -42,8 +42,8 @@ func TenantOpsFromPatch(patch jsonpatch.Patch) (*TenantOps, error) {
 	return &ret, nil
 }
 
-func OpsFromPatch(patch jsonpatch.Patch) (*UserOps, error) {
-	ret := UserOps{
+func RoleOpsFromPatch(patch jsonpatch.Patch) (*RoleOps, error) {
+	ret := RoleOps{
 		Update:      make(map[string]interface{}, len(patch)),
 		AddRoles:    make([]string, 0, len(patch)),
 		RemoveRoles: make([]string, 0, len(patch)),
