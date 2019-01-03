@@ -250,8 +250,8 @@ func (s *MembershipStorage) GetMemberships(ctx context.Context, q *query.Query) 
 	}
 
 	selOpt := query.SelectOptions{
-		SelectExpr: "mem.*, " + pq.QuoteIdentifier(q.SortBy) + " AS sorted_by",
-		FromExpr:   "(SELECT membership.* FROM membership LEFT JOIN tenants ON tenant_id = tenants.id WHERE tenants.archived = FALSE) AS mem",
+		SelectExpr: "mem_role.*, " + pq.QuoteIdentifier(q.SortBy) + " AS sorted_by",
+		FromExpr:   "(SELECT mem.*, ra.roles FROM (SELECT membership.* FROM membership LEFT JOIN tenants ON membership.tenant_id = tenants.id WHERE tenants.archived = FALSE) AS mem LEFT JOIN (SELECT user_id, tenant_id, array_agg(role) AS roles FROM roles GROUP BY user_id, tenant_id) AS ra ON ra.user_id = mem.user_id AND ra.tenant_id = mem.tenant_id) AS mem_role",
 		IDColumn:   "id",
 		ColumnFlagsFunc: func(col string) int {
 			if flags, ok := membershipsQueryColumns[col]; ok {

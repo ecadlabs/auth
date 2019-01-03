@@ -90,14 +90,14 @@ func (u *User) IsOwner(id uuid.UUID) bool {
 }
 
 type Membership struct {
-	ID                uuid.UUID
-	Membership_type   string
-	TenantID          uuid.UUID
-	Membership_status string
-	UserID            uuid.UUID
-	Added             time.Time
-	Modified          time.Time
-	Roles             Roles
+	ID                uuid.UUID `json:"id"`
+	Membership_type   string    `json:"type"`
+	TenantID          uuid.UUID `json:"tenant_id"`
+	Membership_status string    `json:"status"`
+	UserID            uuid.UUID `json:"user_id"`
+	Added             time.Time `json:"added"`
+	Modified          time.Time `json:"modified"`
+	Roles             Roles     `json:"roles"`
 }
 
 func (u *Membership) CanDelegate(role rbac.Role, roles Roles, prefix string) (bool, error) {

@@ -57,7 +57,7 @@ func (s *TenantStorage) CreateTenant(ctx context.Context, name string, ownerId u
 		Name: name,
 	}
 
-	rows, err := sqlx.NamedQueryContext(ctx, tx, "INSERT INTO tenants (name) VALUES (:name) RETURNING id, added, modified, protected", &newTenant)
+	rows, err := sqlx.NamedQueryContext(ctx, tx, "INSERT INTO tenants (name) VALUES (:name) RETURNING id, added, modified, protected, tenant_type", &newTenant)
 
 	if err != nil {
 		return nil, err
