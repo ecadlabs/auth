@@ -29,6 +29,7 @@ type Config struct {
 	SessionMaxAge          int                   `yaml:"session_max_age"`
 	ResetTokenMaxAge       int                   `yaml:"reset_token_max_age"`
 	EmailUpdateTokenMaxAge int                   `yaml:"email_token_max_age"`
+	TenantInviteMaxAge     int                   `yaml:"tenant_invite_token_max_age"`
 	PostgresURL            string                `yaml:"db_url"`
 	PostgresRetriesNum     int                   `yaml:"db_retries_num"`
 	PostgresRetryDelay     int                   `yaml:"db_retry_delay"`

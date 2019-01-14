@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"time"
@@ -9,29 +10,32 @@ import (
 	"github.com/ecadlabs/auth/errors"
 	"github.com/ecadlabs/auth/storage"
 	"github.com/ecadlabs/auth/utils"
+	"github.com/gorilla/mux"
 	"github.com/satori/go.uuid"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
 )
 
 const (
+	//TokenContextKey Context value key for request token
 	TokenContextKey = "token"
 )
 
-func (u *Users) writeUserToken(w http.ResponseWriter, user *storage.User) error {
-	roles := make([]string, 0, len(user.Roles))
-	for r := range user.Roles {
+func (u *Users) writeUserToken(w http.ResponseWriter, user *storage.User, membership *storage.Membership) error {
+	roles := make([]string, 0, len(membership.Roles))
+	for r := range membership.Roles {
 		roles = append(roles, r)
 	}
 
 	now := time.Now()
 
 	claims := jwt.MapClaims{
-		"sub":                               user.ID,
-		"exp":                               now.Add(u.SessionMaxAge).Unix(),
-		"iat":                               now.Unix(),
-		"iss":                               u.BaseURL(),
-		"aud":                               u.BaseURL(),
+		"sub":    user.ID,
+		"exp":    now.Add(u.SessionMaxAge).Unix(),
+		"iat":    now.Unix(),
+		"iss":    u.BaseURL(),
+		"aud":    u.BaseURL(),
+		"tenant": membership.TenantID,
 		utils.NSClaim(u.Namespace, "email"): user.Email,
 		utils.NSClaim(u.Namespace, "name"):  user.Name,
 		utils.NSClaim(u.Namespace, "roles"): roles,
@@ -63,6 +67,42 @@ func (u *Users) writeUserToken(w http.ResponseWriter, user *storage.User) error 
 	utils.JSONResponse(w, http.StatusOK, &response)
 
 	return nil
+}
+
+func (u *Users) getTenantFromRequest(r *http.Request, user *storage.User) (uuid.UUID, error) {
+	var uid uuid.UUID
+	tenantID := mux.Vars(r)["id"]
+
+	if tenantID != "" {
+		tenantUUID, err := uuid.FromString(tenantID)
+		if err != nil {
+			return uuid.Nil, err
+		}
+		uid = tenantUUID
+	} else {
+		uid = user.GetDefaultMembership()
+	}
+
+	return uid, nil
+}
+
+func (u *Users) getMembershipLogin(ctx context.Context, tenantID, userID uuid.UUID) (*storage.Membership, error) {
+	membership, err := u.MembershipStorage.GetMembership(ctx, tenantID, userID)
+
+	if membership == nil {
+		return nil, errors.ErrMembershipNotFound
+	}
+
+	// Don't allow login with invited membership
+	if membership.MembershipStatus != storage.ActiveState {
+		return nil, errors.ErrMembershipNotActive
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return membership, nil
 }
 
 // Login is a login endpoint handler
@@ -114,12 +154,27 @@ func (u *Users) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := u.Storage.UpdateLoginInfo(ctx, user.ID, getRemoteAddr(r)); err != nil {
+	uid, err := u.getTenantFromRequest(r, user)
+
+	if err != nil {
+		log.Error(err)
+		utils.JSONError(w, err.Error(), errors.CodeBadRequest)
+		return
+	}
+
+	membership, err := u.getMembershipLogin(ctx, uid, user.ID)
+
+	if err != nil {
 		utils.JSONErrorResponse(w, err)
 		return
 	}
 
-	if err := u.writeUserToken(w, user); err != nil {
+	if err := u.writeUserToken(w, user, membership); err != nil {
+		utils.JSONErrorResponse(w, err)
+		return
+	}
+
+	if err := u.Storage.UpdateLoginInfo(ctx, user.ID, getRemoteAddr(r)); err != nil {
 		utils.JSONErrorResponse(w, err)
 		return
 	}
@@ -130,8 +185,10 @@ func (u *Users) Login(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+//Refresh is a refresh endpoint handler
 func (u *Users) Refresh(w http.ResponseWriter, r *http.Request) {
 	self := r.Context().Value(UserContextKey).(*storage.User)
+	member := r.Context().Value(MembershipContextKey).(*storage.Membership)
 
 	ctx, cancel := u.context(r)
 	defer cancel()
@@ -141,7 +198,7 @@ func (u *Users) Refresh(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := u.writeUserToken(w, self); err != nil {
+	if err := u.writeUserToken(w, self, member); err != nil {
 		utils.JSONErrorResponse(w, err)
 		return
 	}

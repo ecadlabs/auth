@@ -52,77 +52,84 @@ func (c Code) HTTPStatus() int {
 }
 
 const (
-	CodeUnknown            Code = "unknown"
-	CodeTenantNotFound     Code = "tenant_not_found"
-	CodeUserNotFound       Code = "user_not_found"
-	CodeResourceNotFound   Code = "resource_not_found"
-	CodeEmailInUse         Code = "email_in_use"
-	CodePatchFormat        Code = "patch_format"
-	CodeRoleExists         Code = "role_exists"
-	CodeTokenExpired       Code = "token_expired"
-	CodeBadRequest         Code = "bad_request"
-	CodeQuerySyntax        Code = "query_syntax"
-	CodeForbidden          Code = "forbidden"
-	CodeEmailFmt           Code = "email_format"
-	CodeUnauthorized       Code = "unauthorized"
-	CodeEmailEmpty         Code = "empty_email"
-	CodePasswordEmpty      Code = "empty_password"
-	CodeTokenEmpty         Code = "empty_token"
-	CodeRolesEmpty         Code = "empty_roles"
-	CodeInvalidToken       Code = "invalid_token"
-	CodeTokenFmt           Code = "nvalid_token_fmt"
-	CodeAudience           Code = "invalid_audience"
-	CodeEmailNotVerified   Code = "email_not_verified"
-	CodeRoleNotFound       Code = "role_not_found"
-	CodePermissionNotFound Code = "permission_not_found"
+	CodeUnknown             Code = "unknown"
+	CodeTenantNotFound      Code = "tenant_not_found"
+	CodeMembershipNotFound  Code = "membership_not_found"
+	CodeUserNotFound        Code = "user_not_found"
+	CodeResourceNotFound    Code = "resource_not_found"
+	CodeEmailInUse          Code = "email_in_use"
+	CodeMembershipExists    Code = "membership_exists"
+	CodePatchFormat         Code = "patch_format"
+	CodeRoleExists          Code = "role_exists"
+	CodeTokenExpired        Code = "token_expired"
+	CodeBadRequest          Code = "bad_request"
+	CodeQuerySyntax         Code = "query_syntax"
+	CodeForbidden           Code = "forbidden"
+	CodeEmailFmt            Code = "email_format"
+	CodeUnauthorized        Code = "unauthorized"
+	CodeEmailEmpty          Code = "empty_email"
+	CodePasswordEmpty       Code = "empty_password"
+	CodeTokenEmpty          Code = "empty_token"
+	CodeRolesEmpty          Code = "empty_roles"
+	CodeInvalidToken        Code = "invalid_token"
+	CodeTokenFmt            Code = "nvalid_token_fmt"
+	CodeAudience            Code = "invalid_audience"
+	CodeEmailNotVerified    Code = "email_not_verified"
+	CodeRoleNotFound        Code = "role_not_found"
+	CodePermissionNotFound  Code = "permission_not_found"
+	CodeMembershipNotActive Code = "membership_not_active"
 )
 
 var httpStatus = map[Code]int{
-	CodeUnknown:            http.StatusInternalServerError,
-	CodeUserNotFound:       http.StatusNotFound,
-	CodeTenantNotFound:     http.StatusNotFound,
-	CodeResourceNotFound:   http.StatusNotFound,
-	CodeEmailInUse:         http.StatusConflict,
-	CodeRoleExists:         http.StatusConflict,
-	CodePatchFormat:        http.StatusBadRequest,
-	CodeTokenExpired:       http.StatusBadRequest,
-	CodeBadRequest:         http.StatusBadRequest,
-	CodeQuerySyntax:        http.StatusBadRequest,
-	CodeForbidden:          http.StatusForbidden,
-	CodeEmailFmt:           http.StatusBadRequest,
-	CodeUnauthorized:       http.StatusUnauthorized,
-	CodeEmailEmpty:         http.StatusBadRequest,
-	CodePasswordEmpty:      http.StatusBadRequest,
-	CodeTokenEmpty:         http.StatusBadRequest,
-	CodeInvalidToken:       http.StatusUnauthorized,
-	CodeAudience:           http.StatusForbidden,
-	CodeTokenFmt:           http.StatusBadRequest,
-	CodeEmailNotVerified:   http.StatusForbidden,
-	CodeRolesEmpty:         http.StatusBadRequest,
-	CodeRoleNotFound:       http.StatusNotFound,
-	CodePermissionNotFound: http.StatusNotFound,
+	CodeUnknown:             http.StatusInternalServerError,
+	CodeUserNotFound:        http.StatusNotFound,
+	CodeTenantNotFound:      http.StatusNotFound,
+	CodeResourceNotFound:    http.StatusNotFound,
+	CodeEmailInUse:          http.StatusConflict,
+	CodeRoleExists:          http.StatusConflict,
+	CodePatchFormat:         http.StatusBadRequest,
+	CodeTokenExpired:        http.StatusBadRequest,
+	CodeBadRequest:          http.StatusBadRequest,
+	CodeQuerySyntax:         http.StatusBadRequest,
+	CodeForbidden:           http.StatusForbidden,
+	CodeEmailFmt:            http.StatusBadRequest,
+	CodeUnauthorized:        http.StatusUnauthorized,
+	CodeEmailEmpty:          http.StatusBadRequest,
+	CodePasswordEmpty:       http.StatusBadRequest,
+	CodeTokenEmpty:          http.StatusBadRequest,
+	CodeInvalidToken:        http.StatusUnauthorized,
+	CodeAudience:            http.StatusForbidden,
+	CodeTokenFmt:            http.StatusBadRequest,
+	CodeEmailNotVerified:    http.StatusForbidden,
+	CodeMembershipNotActive: http.StatusForbidden,
+	CodeRolesEmpty:          http.StatusBadRequest,
+	CodeRoleNotFound:        http.StatusNotFound,
+	CodePermissionNotFound:  http.StatusNotFound,
 }
 
 // Some predefined errors
 
 var (
-	ErrTenantName         = &Error{errors.New("Name is required"), CodeBadRequest}
-	ErrTenantNotFound     = &Error{errors.New("Tenant not found"), CodeTenantNotFound}
-	ErrUserNotFound       = &Error{errors.New("User not found"), CodeUserNotFound}
-	ErrResourceNotFound   = &Error{errors.New("Resource not found"), CodeResourceNotFound}
-	ErrEmailInUse         = &Error{errors.New("Email is in use"), CodeEmailInUse}
-	ErrPatchValue         = &Error{errors.New("Patch value is missed"), CodePatchFormat}
-	ErrRoleExists         = &Error{errors.New("Role exists"), CodeRoleExists}
-	ErrTokenExpired       = &Error{errors.New("Token is expired"), CodeTokenExpired}
-	ErrEmailFmt           = &Error{errors.New("Invalid email format"), CodeEmailFmt}
-	ErrEmailEmpty         = &Error{errors.New("Email value is empty"), CodeEmailEmpty}
-	ErrPasswordEmpty      = &Error{errors.New("Password value is empty"), CodePasswordEmpty}
-	ErrTokenEmpty         = &Error{errors.New("Token value is empty"), CodeTokenEmpty}
-	ErrInvalidToken       = &Error{errors.New("Invalid token"), CodeInvalidToken}
-	ErrAudience           = &Error{errors.New("Invalid token audience"), CodeAudience}
-	ErrEmailNotVerified   = &Error{errors.New("Email is not verified"), CodeEmailNotVerified}
-	ErrForbidden          = &Error{errors.New("Forbidden"), CodeForbidden}
-	ErrRolesEmpty         = &Error{errors.New("Roles value is empty"), CodeRolesEmpty}
-	ErrRoleNotFound       = &Error{errors.New("Role not found"), CodeRoleNotFound}
-	ErrPermissionNotFound = &Error{errors.New("Permission not found"), CodePermissionNotFound}
+	ErrMembershipExisits   = &Error{errors.New("Membership exists"), CodeMembershipExists}
+	ErrTenantName          = &Error{errors.New("Name is required"), CodeBadRequest}
+	ErrTenantNotFound      = &Error{errors.New("Tenant not found"), CodeTenantNotFound}
+	ErrMembershipNotFound  = &Error{errors.New("Membership not found"), CodeMembershipNotFound}
+	ErrUserNotFound        = &Error{errors.New("User not found"), CodeUserNotFound}
+	ErrResourceNotFound    = &Error{errors.New("Resource not found"), CodeResourceNotFound}
+	ErrEmailInUse          = &Error{errors.New("Email is in use"), CodeEmailInUse}
+	ErrPatchValue          = &Error{errors.New("Patch value is missed"), CodePatchFormat}
+	ErrRoleExists          = &Error{errors.New("Role exists"), CodeRoleExists}
+	ErrTokenExpired        = &Error{errors.New("Token is expired"), CodeTokenExpired}
+	ErrEmailFmt            = &Error{errors.New("Invalid email format"), CodeEmailFmt}
+	ErrEmailEmpty          = &Error{errors.New("Email value is empty"), CodeEmailEmpty}
+	ErrPasswordEmpty       = &Error{errors.New("Password value is empty"), CodePasswordEmpty}
+	ErrTokenEmpty          = &Error{errors.New("Token value is empty"), CodeTokenEmpty}
+	ErrInvalidToken        = &Error{errors.New("Invalid token"), CodeInvalidToken}
+	ErrAudience            = &Error{errors.New("Invalid token audience"), CodeAudience}
+	ErrEmailNotVerified    = &Error{errors.New("Email is not verified"), CodeEmailNotVerified}
+	ErrMembershipNotActive = &Error{errors.New("Membership not active"), CodeMembershipNotActive}
+	ErrForbidden           = &Error{errors.New("Forbidden"), CodeForbidden}
+	ErrRolesEmpty          = &Error{errors.New("Roles value is empty"), CodeRolesEmpty}
+	ErrRoleNotFound        = &Error{errors.New("Role not found"), CodeRoleNotFound}
+	ErrPermissionNotFound  = &Error{errors.New("Permission not found"), CodePermissionNotFound}
 )

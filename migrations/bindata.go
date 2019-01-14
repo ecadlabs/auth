@@ -4,6 +4,8 @@
 // data/10_add_email_gen_column.up.sql
 // data/11_add_tenants_table.down.sql
 // data/11_add_tenants_table.up.sql
+// data/12_role_per_tenant.down.sql
+// data/12_role_per_tenant.up.sql
 // data/1_add_users_table.down.sql
 // data/1_add_users_table.up.sql
 // data/2_add_roles_table.down.sql
@@ -129,7 +131,7 @@ func _10_add_email_gen_columnUpSql() (*asset, error) {
 	return a, nil
 }
 
-var __11_add_tenants_tableDownSql = []byte("\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\x72\x09\xf2\x0f\x50\x08\x71\x74\xf2\x71\x55\x28\x49\xcd\x4b\xcc\x2b\x29\xb6\xe6\x42\x12\xcb\x4d\xcd\x4d\x4a\x2d\x2a\xce\xc8\x2c\xb0\x06\x04\x00\x00\xff\xff\x84\xb1\xc8\xb1\x2a\x00\x00\x00")
+var __11_add_tenants_tableDownSql = []byte("\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\x72\x72\x75\xf7\xf4\xb3\xe6\xe2\x72\x09\xf2\x0f\x50\x08\x71\x74\xf2\x71\x55\xc8\x4d\xcd\x4d\x4a\x2d\x2a\xce\xc8\x2c\xb0\x46\x16\x2e\x49\xcd\x4b\xcc\x2b\x29\x86\xab\x8d\x0c\x70\x55\xf0\x74\x53\x70\x8d\xf0\x0c\x0e\x09\x46\xd2\x14\x5f\x52\x59\x90\xaa\x83\x2c\x50\x5c\x92\x58\x52\x5a\xac\x03\x35\x01\x2c\x6f\xcd\xc5\xe5\xec\xef\xeb\xeb\x19\x62\x0d\x08\x00\x00\xff\xff\xcd\xa6\xc0\x07\x81\x00\x00\x00")
 
 func _11_add_tenants_tableDownSqlBytes() ([]byte, error) {
 	return bindataRead(
@@ -144,12 +146,12 @@ func _11_add_tenants_tableDownSql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "11_add_tenants_table.down.sql", size: 42, mode: os.FileMode(420), modTime: time.Unix(1545660305, 0)}
+	info := bindataFileInfo{name: "11_add_tenants_table.down.sql", size: 129, mode: os.FileMode(420), modTime: time.Unix(1546529690, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
 
-var __11_add_tenants_tableUpSql = []byte("\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\xc4\x53\xc1\x6e\x9b\x40\x14\x3c\xc3\x57\xcc\x0d\x88\x90\xa2\x4a\xbd\xe5\xb4\x86\xe7\x66\xd5\x65\xb1\x60\xa9\xeb\x5e\x2c\x9a\xdd\xd6\xab\x1a\xb0\x00\xbb\xea\xdf\x57\x40\x8c\xeb\xc4\x52\xab\x5e\x72\xe4\x69\x66\x78\x6f\x66\x76\x41\x1f\xb8\x7c\x70\xdd\x28\x23\xa6\x08\x8a\x2d\x04\xa1\x37\x75\x59\xf7\x9d\xef\x3a\x56\xa3\x28\x78\x8c\x55\xc6\x13\x96\x6d\xf0\x91\x36\x88\x69\xc9\x0a\xa1\x70\x3c\x5a\xbd\xfd\x6e\x6a\xd3\x96\xbd\xd9\x9e\xde\xfb\x41\xe8\x3a\x75\x59\x19\x28\xfa\xac\x42\xd7\x29\xb5\x36\x1a\x8a\x27\x94\x2b\x96\xac\xb0\xe6\xea\x71\xfc\xc4\x97\x54\x12\x64\xaa\x20\x0b\x21\x66\x41\x99\xae\x47\x8d\xaa\xd1\xf6\x9b\xfd\x2f\xea\xa1\x6d\x7a\xf3\xd4\x1b\x8d\x45\x9a\x0a\x62\xf2\x35\x74\xc9\x44\x4e\xc3\x76\xed\xd3\xce\x9e\xfe\x8a\x74\x83\x3f\xdc\xd9\xac\x08\x95\xa9\xbe\x9a\xb6\xdb\xd9\xc3\xb6\xff\x75\x30\x60\x39\x48\x16\x09\x7c\xaf\xf9\x59\x9b\xd6\x0b\xe1\x4d\x10\x2f\x78\xe9\xeb\x85\xea\xbb\xce\xb1\x33\xed\xf6\xec\x6f\x46\x4b\xca\x48\x46\x94\x63\x98\x77\xbe\xd5\x01\x52\x89\x62\x15\x0f\xf4\x88\xe5\x11\x8b\x69\x98\xc4\x24\xe8\x32\x09\x5d\x67\x0a\xeb\x96\xd2\x39\xc6\x7f\xd7\x7a\x83\xc4\x2a\x53\x4d\x3e\xbe\xf4\xf5\x15\xe3\x6c\x6b\xe8\x02\xb8\x6a\xa4\xff\xec\x65\x88\xd9\x8c\x60\xcc\x8d\xcb\x9c\x32\x05\x2e\x55\x7a\x76\x03\xfe\x50\xd1\x10\x73\x53\x02\x7c\x62\xa2\xa0\x1c\xbe\xd7\x36\x4d\xef\x85\x50\x59\x41\x03\xfb\xfe\x0e\x4c\x6b\x94\xfb\x3d\x0e\xad\x39\xd9\xe6\xd8\x4d\xe9\xa0\x6f\xd0\xef\x0c\x06\xfc\xb3\x2e\xee\xee\xaf\xfe\x76\xb9\xe6\xf6\x76\x39\x09\x8a\x14\xac\x1e\xfa\x33\x03\xfc\xab\xf1\x25\xd9\x65\x96\x26\xf3\x01\xeb\x47\xca\x08\xe3\x43\xdb\xdb\x1f\x06\xd3\xda\x10\x3c\xe1\x0a\xef\x82\x09\x3c\xee\x39\xf4\x2f\x4d\x12\xae\x1e\x7e\x07\x00\x00\xff\xff\x54\xc7\xd4\x2d\xe7\x03\x00\x00")
+var __11_add_tenants_tableUpSql = []byte("\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\xc4\x54\xc1\x8e\x9b\x30\x10\x3d\x2f\x5f\x31\xb7\x80\x84\x7a\xea\x6d\xd5\x83\x93\x0c\xad\x5b\xb0\x53\x30\xda\xa6\x97\xc8\x8d\xdd\x5d\x4b\x0b\x44\x60\xa8\xda\xaf\xaf\x9c\x00\x21\xb0\x95\x56\x7b\xe9\x0d\x8f\xe6\xbd\xf1\xbc\xf7\xcc\x1a\x3f\x52\x76\xef\x79\x9b\x14\x89\x40\x10\xfb\x1d\x82\xd5\xa5\x2c\xed\xc1\xfe\x3e\x69\x20\x19\x20\xcb\x13\xf0\x57\xa6\x54\xa6\x33\xaa\x95\xcf\xab\x10\x56\x55\xfd\x28\x4b\xf3\x47\x5a\x53\x95\xab\x60\x42\x40\xd6\xf1\xc0\xd0\xf8\xde\x9d\x51\x90\xe7\x74\x0b\xbb\x94\x26\x24\xdd\xc3\x17\xdc\xc3\x16\x23\x92\xc7\x02\xda\xd6\xa8\xc3\xa3\x2e\x75\x2d\xad\x3e\x74\xef\xfd\x20\xf4\xee\x4a\x59\x68\x10\xf8\x4d\x00\xe3\x02\x58\x1e\xc7\xa1\x77\x27\x95\xd2\x0a\x04\x4d\x30\x13\x24\xd9\xc1\x03\x15\x9f\xce\x47\xf8\xce\x19\x8e\x9d\x23\x33\xe3\x0f\x67\xb2\xa2\x52\xe6\xa7\x79\x13\xf4\x54\x57\x56\x1f\xad\x56\xb0\xe6\x3c\x46\xc2\x96\xad\x11\x89\x33\x74\xb7\xab\x8f\x4f\xa6\x7b\x4d\xe7\x54\xd9\xe9\xf7\x02\x70\xab\xaf\x17\xcc\x1c\x2a\x74\xf1\x43\xd7\xcd\x93\x39\xcd\x5d\xaa\x7e\x95\xba\x76\x06\x5d\x5a\x9c\x35\xff\x00\x36\x56\xda\xb6\x99\x40\xe5\xd1\x9a\x4e\x3b\xac\x29\x3b\x63\xb5\x5a\xfa\x7a\x85\xbf\xc5\xda\xb6\xd1\xf5\x61\x40\xa5\x18\x61\x8a\x6c\x83\x19\xb8\x7a\xe3\x1b\x15\x00\x67\x90\xef\xb6\x6e\xde\x86\x64\x1b\xb2\x45\x57\xd9\x62\x8c\xd7\xca\x55\xc5\x17\x98\x86\xdc\xbd\x9e\xeb\x3f\x24\x6b\x6e\xde\xfc\xbc\x0c\x43\xef\xe5\x2d\xb6\xf7\x6f\x59\x59\xe2\x07\x67\x3d\x00\x80\x9c\xd1\xaf\x39\x82\xdf\xbb\x11\xc2\x28\x67\x70\xce\x19\x65\x19\xa6\x02\x28\x13\x7c\xd0\x13\x7c\xf7\x2a\xc3\x69\x64\x03\xf0\x32\x8c\x71\x23\x40\x17\xd2\x3c\xbb\x18\x5d\x7a\xa6\xff\x09\x90\xcd\x4d\xcc\xa3\x94\x27\x17\xb7\x67\x73\xae\x4b\xbc\x74\xaf\x70\x2e\x51\x30\xcc\x3e\x73\xbd\x33\xca\x0d\x9a\xe1\x86\xf2\x84\xa5\x7f\x1c\x93\x6b\x40\x8c\x91\x80\xcf\x9c\xb2\x71\x55\xce\x7a\xd6\xcb\x5e\x1f\x46\x3a\xb7\x9e\x7b\x0f\x3c\x49\xa8\xb8\xff\x1b\x00\x00\xff\xff\xa4\x10\x8f\xf5\x38\x05\x00\x00")
 
 func _11_add_tenants_tableUpSqlBytes() ([]byte, error) {
 	return bindataRead(
@@ -164,7 +166,47 @@ func _11_add_tenants_tableUpSql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "11_add_tenants_table.up.sql", size: 999, mode: os.FileMode(420), modTime: time.Unix(1545937686, 0)}
+	info := bindataFileInfo{name: "11_add_tenants_table.up.sql", size: 1336, mode: os.FileMode(420), modTime: time.Unix(1546529698, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
+var __12_role_per_tenantDownSql = []byte("\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\x6c\x90\x4d\x6a\xc3\x30\x10\x46\xf7\x73\x8a\x6f\x99\x40\x6f\xa0\x95\x22\x4d\xcb\x10\xfd\x84\xf1\x74\x91\x95\x29\x44\x8b\x40\x9b\x96\xc4\xbd\x7f\x89\x5d\x83\x31\x5e\xea\xf1\x10\xef\x9b\x03\xbf\x49\x71\x44\x3e\x19\x2b\xcc\x1f\x12\xe3\xfe\xfd\xd9\x1e\x88\x5a\x4f\x08\x35\xbd\xe7\x82\xa1\xdd\x3e\x6e\x43\x7f\xbd\x38\xa2\xa0\xec\x8d\x97\x6a\x3f\xb4\xaf\x1f\xec\x92\x1c\xff\xc1\xde\x11\x49\xe9\x58\x0d\x52\xac\x2e\xac\xdd\xef\xa3\xdd\xfb\xeb\xe5\x65\x64\x7b\xea\x38\x71\x30\x10\x00\x44\xe9\x4c\x4a\x30\xd4\x82\x95\x87\xf9\x39\x8a\x4f\x44\xaf\x5a\xf3\xf4\xb1\x23\x1a\x5b\x17\x45\x5b\x83\xa6\x4a\x52\x2e\x3e\x33\xe6\x2a\x87\xad\xed\x3e\x46\x9c\x54\xb2\xd7\x33\x8e\x7c\x5e\xe7\x3c\xaf\x50\x73\x16\x73\x7f\x01\x00\x00\xff\xff\xf0\xd1\x32\x15\x3f\x01\x00\x00")
+
+func _12_role_per_tenantDownSqlBytes() ([]byte, error) {
+	return bindataRead(
+		__12_role_per_tenantDownSql,
+		"12_role_per_tenant.down.sql",
+	)
+}
+
+func _12_role_per_tenantDownSql() (*asset, error) {
+	bytes, err := _12_role_per_tenantDownSqlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "12_role_per_tenant.down.sql", size: 319, mode: os.FileMode(420), modTime: time.Unix(1546448917, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
+var __12_role_per_tenantUpSql = []byte("\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\x74\x90\xbd\x6e\xc3\x20\x14\x85\x77\x3f\xc5\x19\x1d\x29\xf2\x0b\x58\x19\x08\x5c\xb7\xb4\xfc\x58\x80\x55\x65\xb2\x2c\x99\x01\x35\x71\xab\x90\x0e\x7d\xfb\xca\x8e\x93\x76\x68\x36\xf8\x38\xdc\x4f\xe7\xee\xe9\x49\x9a\xba\x28\x98\x0a\xe4\x10\xd8\x5e\x11\xce\x1f\xc7\x98\xc1\x84\x00\xb7\xaa\xd3\x06\x97\x38\x0d\xd3\xa5\x4f\x23\xba\x4e\x0a\x38\x6a\xc8\x91\xe1\xe4\xd7\x97\x5c\xa6\x71\x03\x6b\xd0\xb5\x82\x05\x02\x67\x9e\x33\x41\x33\x11\xa4\xe8\x97\xd4\x45\xb1\x46\xae\x0e\x4f\xe1\xcf\xf0\x1d\x4a\x4f\x8a\xf8\x8d\xe5\x2a\x8d\x68\x9c\xd5\xb7\x3b\x14\x35\x01\x2f\x56\x1a\x7c\xe5\x78\xce\xb3\x60\x39\x54\xf1\x34\xa4\x23\x76\xf7\x8f\xd3\x70\x8a\x78\x7b\x26\x47\x6b\x60\x19\xbf\x48\xab\x19\xf4\x69\xdc\xfc\xdb\x5a\x38\xdb\x82\x5b\xe3\x83\x63\xd2\x84\x2b\xed\x3f\xdf\xe3\x77\xfd\x60\x47\xad\x93\x9a\xb9\x03\x5e\xe9\x80\xf2\x5e\x66\x8b\x55\xb3\x5d\xa2\xb3\x8c\x5b\xad\x65\xa8\x7f\x02\x00\x00\xff\xff\xf7\x30\x63\x46\x72\x01\x00\x00")
+
+func _12_role_per_tenantUpSqlBytes() ([]byte, error) {
+	return bindataRead(
+		__12_role_per_tenantUpSql,
+		"12_role_per_tenant.up.sql",
+	)
+}
+
+func _12_role_per_tenantUpSql() (*asset, error) {
+	bytes, err := _12_role_per_tenantUpSqlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "12_role_per_tenant.up.sql", size: 370, mode: os.FileMode(420), modTime: time.Unix(1546481020, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -582,27 +624,29 @@ func AssetNames() []string {
 // _bindata is a table, holding each asset generator, mapped to its name.
 var _bindata = map[string]func() (*asset, error){
 	"10_add_email_gen_column.down.sql": _10_add_email_gen_columnDownSql,
-	"10_add_email_gen_column.up.sql":   _10_add_email_gen_columnUpSql,
-	"11_add_tenants_table.down.sql":    _11_add_tenants_tableDownSql,
-	"11_add_tenants_table.up.sql":      _11_add_tenants_tableUpSql,
-	"1_add_users_table.down.sql":       _1_add_users_tableDownSql,
-	"1_add_users_table.up.sql":         _1_add_users_tableUpSql,
-	"2_add_roles_table.down.sql":       _2_add_roles_tableDownSql,
-	"2_add_roles_table.up.sql":         _2_add_roles_tableUpSql,
-	"3_add_log_table.down.sql":         _3_add_log_tableDownSql,
-	"3_add_log_table.up.sql":           _3_add_log_tableUpSql,
-	"4_not_null.down.sql":              _4_not_nullDownSql,
-	"4_not_null.up.sql":                _4_not_nullUpSql,
-	"5_bootstrap.down.sql":             _5_bootstrapDownSql,
-	"5_bootstrap.up.sql":               _5_bootstrapUpSql,
-	"6_add_gen_column.down.sql":        _6_add_gen_columnDownSql,
-	"6_add_gen_column.up.sql":          _6_add_gen_columnUpSql,
-	"7_add_ip_column.down.sql":         _7_add_ip_columnDownSql,
-	"7_add_ip_column.up.sql":           _7_add_ip_columnUpSql,
+	"10_add_email_gen_column.up.sql": _10_add_email_gen_columnUpSql,
+	"11_add_tenants_table.down.sql": _11_add_tenants_tableDownSql,
+	"11_add_tenants_table.up.sql": _11_add_tenants_tableUpSql,
+	"12_role_per_tenant.down.sql": _12_role_per_tenantDownSql,
+	"12_role_per_tenant.up.sql": _12_role_per_tenantUpSql,
+	"1_add_users_table.down.sql": _1_add_users_tableDownSql,
+	"1_add_users_table.up.sql": _1_add_users_tableUpSql,
+	"2_add_roles_table.down.sql": _2_add_roles_tableDownSql,
+	"2_add_roles_table.up.sql": _2_add_roles_tableUpSql,
+	"3_add_log_table.down.sql": _3_add_log_tableDownSql,
+	"3_add_log_table.up.sql": _3_add_log_tableUpSql,
+	"4_not_null.down.sql": _4_not_nullDownSql,
+	"4_not_null.up.sql": _4_not_nullUpSql,
+	"5_bootstrap.down.sql": _5_bootstrapDownSql,
+	"5_bootstrap.up.sql": _5_bootstrapUpSql,
+	"6_add_gen_column.down.sql": _6_add_gen_columnDownSql,
+	"6_add_gen_column.up.sql": _6_add_gen_columnUpSql,
+	"7_add_ip_column.down.sql": _7_add_ip_columnDownSql,
+	"7_add_ip_column.up.sql": _7_add_ip_columnUpSql,
 	"8_add_user_addr_columns.down.sql": _8_add_user_addr_columnsDownSql,
-	"8_add_user_addr_columns.up.sql":   _8_add_user_addr_columnsUpSql,
-	"9_add_log_columns.down.sql":       _9_add_log_columnsDownSql,
-	"9_add_log_columns.up.sql":         _9_add_log_columnsUpSql,
+	"8_add_user_addr_columns.up.sql": _8_add_user_addr_columnsUpSql,
+	"9_add_log_columns.down.sql": _9_add_log_columnsDownSql,
+	"9_add_log_columns.up.sql": _9_add_log_columnsUpSql,
 }
 
 // AssetDir returns the file names below a certain
@@ -644,30 +688,31 @@ type bintree struct {
 	Func     func() (*asset, error)
 	Children map[string]*bintree
 }
-
 var _bintree = &bintree{nil, map[string]*bintree{
 	"10_add_email_gen_column.down.sql": &bintree{_10_add_email_gen_columnDownSql, map[string]*bintree{}},
-	"10_add_email_gen_column.up.sql":   &bintree{_10_add_email_gen_columnUpSql, map[string]*bintree{}},
-	"11_add_tenants_table.down.sql":    &bintree{_11_add_tenants_tableDownSql, map[string]*bintree{}},
-	"11_add_tenants_table.up.sql":      &bintree{_11_add_tenants_tableUpSql, map[string]*bintree{}},
-	"1_add_users_table.down.sql":       &bintree{_1_add_users_tableDownSql, map[string]*bintree{}},
-	"1_add_users_table.up.sql":         &bintree{_1_add_users_tableUpSql, map[string]*bintree{}},
-	"2_add_roles_table.down.sql":       &bintree{_2_add_roles_tableDownSql, map[string]*bintree{}},
-	"2_add_roles_table.up.sql":         &bintree{_2_add_roles_tableUpSql, map[string]*bintree{}},
-	"3_add_log_table.down.sql":         &bintree{_3_add_log_tableDownSql, map[string]*bintree{}},
-	"3_add_log_table.up.sql":           &bintree{_3_add_log_tableUpSql, map[string]*bintree{}},
-	"4_not_null.down.sql":              &bintree{_4_not_nullDownSql, map[string]*bintree{}},
-	"4_not_null.up.sql":                &bintree{_4_not_nullUpSql, map[string]*bintree{}},
-	"5_bootstrap.down.sql":             &bintree{_5_bootstrapDownSql, map[string]*bintree{}},
-	"5_bootstrap.up.sql":               &bintree{_5_bootstrapUpSql, map[string]*bintree{}},
-	"6_add_gen_column.down.sql":        &bintree{_6_add_gen_columnDownSql, map[string]*bintree{}},
-	"6_add_gen_column.up.sql":          &bintree{_6_add_gen_columnUpSql, map[string]*bintree{}},
-	"7_add_ip_column.down.sql":         &bintree{_7_add_ip_columnDownSql, map[string]*bintree{}},
-	"7_add_ip_column.up.sql":           &bintree{_7_add_ip_columnUpSql, map[string]*bintree{}},
+	"10_add_email_gen_column.up.sql": &bintree{_10_add_email_gen_columnUpSql, map[string]*bintree{}},
+	"11_add_tenants_table.down.sql": &bintree{_11_add_tenants_tableDownSql, map[string]*bintree{}},
+	"11_add_tenants_table.up.sql": &bintree{_11_add_tenants_tableUpSql, map[string]*bintree{}},
+	"12_role_per_tenant.down.sql": &bintree{_12_role_per_tenantDownSql, map[string]*bintree{}},
+	"12_role_per_tenant.up.sql": &bintree{_12_role_per_tenantUpSql, map[string]*bintree{}},
+	"1_add_users_table.down.sql": &bintree{_1_add_users_tableDownSql, map[string]*bintree{}},
+	"1_add_users_table.up.sql": &bintree{_1_add_users_tableUpSql, map[string]*bintree{}},
+	"2_add_roles_table.down.sql": &bintree{_2_add_roles_tableDownSql, map[string]*bintree{}},
+	"2_add_roles_table.up.sql": &bintree{_2_add_roles_tableUpSql, map[string]*bintree{}},
+	"3_add_log_table.down.sql": &bintree{_3_add_log_tableDownSql, map[string]*bintree{}},
+	"3_add_log_table.up.sql": &bintree{_3_add_log_tableUpSql, map[string]*bintree{}},
+	"4_not_null.down.sql": &bintree{_4_not_nullDownSql, map[string]*bintree{}},
+	"4_not_null.up.sql": &bintree{_4_not_nullUpSql, map[string]*bintree{}},
+	"5_bootstrap.down.sql": &bintree{_5_bootstrapDownSql, map[string]*bintree{}},
+	"5_bootstrap.up.sql": &bintree{_5_bootstrapUpSql, map[string]*bintree{}},
+	"6_add_gen_column.down.sql": &bintree{_6_add_gen_columnDownSql, map[string]*bintree{}},
+	"6_add_gen_column.up.sql": &bintree{_6_add_gen_columnUpSql, map[string]*bintree{}},
+	"7_add_ip_column.down.sql": &bintree{_7_add_ip_columnDownSql, map[string]*bintree{}},
+	"7_add_ip_column.up.sql": &bintree{_7_add_ip_columnUpSql, map[string]*bintree{}},
 	"8_add_user_addr_columns.down.sql": &bintree{_8_add_user_addr_columnsDownSql, map[string]*bintree{}},
-	"8_add_user_addr_columns.up.sql":   &bintree{_8_add_user_addr_columnsUpSql, map[string]*bintree{}},
-	"9_add_log_columns.down.sql":       &bintree{_9_add_log_columnsDownSql, map[string]*bintree{}},
-	"9_add_log_columns.up.sql":         &bintree{_9_add_log_columnsUpSql, map[string]*bintree{}},
+	"8_add_user_addr_columns.up.sql": &bintree{_8_add_user_addr_columnsUpSql, map[string]*bintree{}},
+	"9_add_log_columns.down.sql": &bintree{_9_add_log_columnsDownSql, map[string]*bintree{}},
+	"9_add_log_columns.up.sql": &bintree{_9_add_log_columnsUpSql, map[string]*bintree{}},
 }}
 
 // RestoreAsset restores an asset under the given directory
@@ -716,3 +761,4 @@ func _filePath(dir, name string) string {
 	cannonicalName := strings.Replace(name, "\\", "/", -1)
 	return filepath.Join(append([]string{dir}, strings.Split(cannonicalName, "/")...)...)
 }
+
