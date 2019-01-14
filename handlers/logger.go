@@ -11,16 +11,34 @@ import (
 )
 
 const (
-	EvCreate             = "create"
-	EvUpdate             = "update"
-	EvAddRole            = "add_role"
-	EvRemoveRole         = "remove_role"
-	EvDelete             = "delete"
-	EvReset              = "reset"
-	EvResetRequest       = "reset_request"
-	EvLogin              = "login"
+	//EvCreate constant for the create user event
+	EvCreate = "create"
+	//EvCreateTenant constant for the create tenant event
+	EvCreateTenant = "create_tenant"
+	//EvUpdate constant for the update user event
+	EvUpdate = "update"
+	//EvUpdateTenant constant for the update tenant event
+	EvUpdateTenant = "update_tenant"
+	//EvAddRole constant for the add role event
+	EvAddRole = "add_role"
+	//EvRemoveRole constant for the remove role event
+	EvRemoveRole = "remove_role"
+	//EvDelete constant for the delete user event
+	EvDelete = "delete"
+	//EvArchiveTenant constant for the archive tenant event
+	EvArchiveTenant = "archive_tenant"
+	//EvMembershipDelete constant for the delete membership event
+	EvMembershipDelete = "delete_membership"
+	//EvReset constant for the reset password event
+	EvReset = "reset"
+	//EvResetRequest constant for the request reset password event
+	EvResetRequest = "reset_request"
+	//EvLogin constant for the login event
+	EvLogin = "login"
+	//EvEmailUpdateRequest constant for request email update event
 	EvEmailUpdateRequest = "email_update_request"
-	EvEmailUpdate        = "email_update"
+	//EvEmailUpdate constant for email update event
+	EvEmailUpdate = "email_update"
 )
 
 func getRemoteAddr(r *http.Request) string {

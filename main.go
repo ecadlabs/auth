@@ -74,6 +74,7 @@ func main() {
 	flag.StringVar(&config.JWTNamespace, "namespace", service.DefaultNamespace, "JWT namespace prefix.")
 	flag.IntVar(&config.SessionMaxAge, "max_age", 60*60*72, "Session max age, sec.")
 	flag.IntVar(&config.ResetTokenMaxAge, "reset_token_max_age", 60*60*3, "Password reset token max age, sec.")
+	flag.IntVar(&config.TenantInviteMaxAge, "tenant_invite_max_age", 60*60*24, "Tenant invite token max age, sec.")
 	flag.IntVar(&config.EmailUpdateTokenMaxAge, "email_token_max_age", 60*60*3, "Email update token max age, sec.")
 	flag.StringVar(&config.PostgresURL, "db", "postgres://localhost/users?connect_timeout=10&sslmode=disable", "PostgreSQL server URL.")
 	flag.IntVar(&config.PostgresRetriesNum, "db_retries_num", 5, "Number of attempts to establish PostgreSQL connection")
@@ -125,7 +126,7 @@ func main() {
 	}
 
 	// Service instance
-	svc, err := service.New(&config, ac)
+	svc, err := service.New(&config, ac, true)
 	if err != nil {
 		log.Fatal(err)
 	}

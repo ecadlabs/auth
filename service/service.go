@@ -2,12 +2,15 @@ package service
 
 import (
 	"database/sql"
+	"io/ioutil"
 	"net/http"
 	"net/mail"
 	"net/url"
 	"strconv"
 	"time"
 
+	"github.com/auth0/go-jwt-middleware"
+	"github.com/dgrijalva/jwt-go"
 	"github.com/ecadlabs/auth/errors"
 	"github.com/ecadlabs/auth/handlers"
 	"github.com/ecadlabs/auth/logger"
@@ -16,8 +19,6 @@ import (
 	"github.com/ecadlabs/auth/rbac"
 	"github.com/ecadlabs/auth/storage"
 	"github.com/ecadlabs/auth/utils"
-	"github.com/auth0/go-jwt-middleware"
-	"github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/mux"
 	"github.com/jmoiron/sqlx"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -32,14 +33,17 @@ const (
 var JWTSigningMethod = jwt.SigningMethodHS256
 
 type Service struct {
-	config   Config
-	storage  *storage.Storage
-	notifier notification.Notifier
-	DB       *sql.DB
-	ac       rbac.RBAC
+	config            Config
+	storage           *storage.Storage
+	tenantStorage     *storage.TenantStorage
+	membershipStorage *storage.MembershipStorage
+	notifier          notification.Notifier
+	DB                *sql.DB
+	ac                rbac.RBAC
+	enableLog         bool
 }
 
-func New(c *Config, ac rbac.RBAC) (*Service, error) {
+func New(c *Config, ac rbac.RBAC, enableLog bool) (*Service, error) {
 	url, err := url.Parse(c.PostgresURL)
 	if err != nil {
 		return nil, err
@@ -70,12 +74,17 @@ func New(c *Config, ac rbac.RBAC) (*Service, error) {
 		}
 	}
 
+	var dbCon = sqlx.NewDb(db, "postgres")
+
 	return &Service{
-		config:   *c,
-		storage:  &storage.Storage{DB: sqlx.NewDb(db, "postgres")},
-		DB:       db,
-		notifier: notifier,
-		ac:       ac,
+		config:            *c,
+		storage:           &storage.Storage{DB: dbCon},
+		tenantStorage:     &storage.TenantStorage{DB: dbCon},
+		membershipStorage: &storage.MembershipStorage{DB: dbCon},
+		DB:                db,
+		notifier:          notifier,
+		ac:                ac,
+		enableLog:         enableLog,
 	}, nil
 }
 
@@ -83,13 +92,29 @@ func (s *Service) APIHandler() http.Handler {
 	baseURLFunc := s.config.GetBaseURLFunc()
 
 	dbLogger := logrus.New()
+	if !s.enableLog {
+		dbLogger.Out = ioutil.Discard
+	}
 	dbLogger.AddHook(&logger.Hook{
 		DB: s.DB,
 	})
 
+	tokenFactory := &handlers.TokenFactory{
+		Namespace: s.config.Namespace(),
+		JWTSecretGetter: func() ([]byte, error) {
+			return []byte(s.config.JWTSecret), nil
+		},
+		JWTSigningMethod: JWTSigningMethod,
+
+		BaseURL:       baseURLFunc,
+		SessionMaxAge: time.Duration(s.config.SessionMaxAge) * time.Second,
+	}
+
 	usersHandler := &handlers.Users{
-		Storage: s.storage,
-		Timeout: time.Duration(s.config.DBTimeout) * time.Second,
+		Storage:           s.storage,
+		TenantStorage:     s.tenantStorage,
+		MembershipStorage: s.membershipStorage,
+		Timeout:           time.Duration(s.config.DBTimeout) * time.Second,
 
 		JWTSecretGetter: func() ([]byte, error) {
 			return []byte(s.config.JWTSecret), nil
@@ -114,6 +139,34 @@ func (s *Service) APIHandler() http.Handler {
 		Notifier:  s.notifier,
 	}
 
+	tenantsHandler := &handlers.Tenants{
+		UserStorage:       s.storage,
+		Storage:           s.tenantStorage,
+		MembershipStorage: s.membershipStorage,
+		Timeout:           time.Duration(s.config.DBTimeout) * time.Second,
+		Enforcer:          s.ac,
+
+		BaseURL:            baseURLFunc,
+		TenantsPath:        "/tenants/",
+		InvitePath:         "/tenants/accept_invite",
+		TokenFactory:       tokenFactory,
+		AuxLogger:          dbLogger,
+		Notifier:           s.notifier,
+		TenantInviteMaxAge: time.Duration(s.config.TenantInviteMaxAge) * time.Second,
+	}
+
+	membershipsHandler := &handlers.Memberships{
+		UserStorage:       s.storage,
+		Storage:           s.tenantStorage,
+		MembershipStorage: s.membershipStorage,
+		Timeout:           time.Duration(s.config.DBTimeout) * time.Second,
+		Enforcer:          s.ac,
+		BaseURL:           baseURLFunc,
+		TenantsPath:       "/tenants/",
+		UsersPath:         "/users/",
+		AuxLogger:         dbLogger,
+	}
+
 	jwtOptions := jwtmiddleware.Options{
 		ValidationKeyGetter: func(token *jwt.Token) (interface{}, error) { return []byte(s.config.JWTSecret), nil },
 		SigningMethod:       JWTSigningMethod,
@@ -132,13 +185,16 @@ func (s *Service) APIHandler() http.Handler {
 
 	m := mux.NewRouter()
 
-	m.Use((&middleware.Logging{}).Handler)
+	if s.enableLog {
+		m.Use((&middleware.Logging{}).Handler)
+	}
 	m.Use(middleware.NewPrometheus().Handler)
 	m.Use((&middleware.Recover{}).Handler)
 
 	// Login API
 	m.Methods("POST").Path("/password_reset").HandlerFunc(usersHandler.ResetPassword)
 	m.Methods("GET", "POST").Path("/request_password_reset").HandlerFunc(usersHandler.SendResetRequest)
+	m.Methods("GET", "POST").Path("/login/{id}").HandlerFunc(usersHandler.Login)
 	m.Methods("GET", "POST").Path("/login").HandlerFunc(usersHandler.Login)
 
 	userdata := &middleware.UserData{
@@ -147,7 +203,14 @@ func (s *Service) APIHandler() http.Handler {
 		Storage:         s.storage,
 	}
 
-	m.Methods("GET").Path("/refresh").Handler(jwtMiddleware.Handler(aud.Handler(userdata.Handler(http.HandlerFunc(usersHandler.Refresh)))))
+	membershipData := &middleware.MembershipData{
+		MembershipContextKey: handlers.MembershipContextKey,
+		TokenContextKey:      handlers.TokenContextKey,
+		Storage:              s.membershipStorage,
+		Namespace:            s.config.Namespace(),
+	}
+
+	m.Methods("GET").Path("/refresh").Handler(jwtMiddleware.Handler(aud.Handler(userdata.Handler(membershipData.Handler(http.HandlerFunc(usersHandler.Refresh))))))
 
 	// Users API
 	m.Methods("POST").Path("/request_email_update").Handler(jwtMiddleware.Handler(aud.Handler(userdata.Handler(http.HandlerFunc(usersHandler.SendUpdateEmailRequest)))))
@@ -157,12 +220,35 @@ func (s *Service) APIHandler() http.Handler {
 	umux.Use(jwtMiddleware.Handler)
 	umux.Use(aud.Handler)
 	umux.Use(userdata.Handler)
+	umux.Use(membershipData.Handler)
 
 	umux.Methods("POST").Path("/").HandlerFunc(usersHandler.NewUser)
 	umux.Methods("GET").Path("/").HandlerFunc(usersHandler.GetUsers)
 	umux.Methods("GET").Path("/{id}").HandlerFunc(usersHandler.GetUser)
 	umux.Methods("PATCH").Path("/{id}").HandlerFunc(usersHandler.PatchUser)
 	umux.Methods("DELETE").Path("/{id}").HandlerFunc(usersHandler.DeleteUser)
+	umux.Methods("GET").Path("/{userId}/memberships").HandlerFunc(membershipsHandler.FindUserMemberships)
+
+	// Tenants API
+	tmux := m.PathPrefix("/tenants").Subrouter()
+	tmux.Use(jwtMiddleware.Handler)
+	tmux.Use(aud.Handler)
+	tmux.Use(membershipData.Handler)
+
+	tmux.Methods("POST").Path("/").HandlerFunc(tenantsHandler.CreateTenant)
+	tmux.Methods("GET").Path("/{id}").HandlerFunc(tenantsHandler.FindTenant)
+	tmux.Methods("GET").Path("/").HandlerFunc(tenantsHandler.FindTenants)
+	tmux.Methods("DELETE").Path("/{id}").HandlerFunc(tenantsHandler.DeleteTenant)
+	tmux.Methods("PATCH").Path("/{id}").HandlerFunc(tenantsHandler.UpdateTenant)
+
+	tmux.Methods("POST").Path("/{id}/members").Handler(userdata.Handler(http.HandlerFunc(tenantsHandler.InviteExistingUser)))
+	tmux.Methods("GET").Path("/{tenantId}/members").HandlerFunc(membershipsHandler.FindTenantMemberships)
+	tmux.Methods("PATCH").Path("/{tenantId}/members/{userId}").HandlerFunc(membershipsHandler.PatchMembership)
+	tmux.Methods("DELETE").Path("/{tenantId}/members/{userId}").HandlerFunc(membershipsHandler.DeleteMembership)
+
+	amux := m.PathPrefix("/tenants/accept_invite").Subrouter()
+
+	amux.Methods("POST").Path("").HandlerFunc(tenantsHandler.AcceptInvite)
 
 	// Log API
 	lmux := m.PathPrefix("/logs").Subrouter()

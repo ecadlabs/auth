@@ -10,6 +10,7 @@ import (
 type NotificationData struct {
 	Addr        string
 	Email       string
+	Tenant      *storage.TenantModel
 	CurrentUser *storage.User
 	TargetUser  *storage.User
 	To          []string
@@ -19,6 +20,7 @@ type NotificationData struct {
 
 const (
 	NotificationInvite             = "invite"
+	NotificationTenantInvite       = "tenant_invite"
 	NotificationReset              = "reset"
 	NotificationEmailUpdateRequest = "email_update_request"
 	NotificationEmailUpdate        = "email_update"

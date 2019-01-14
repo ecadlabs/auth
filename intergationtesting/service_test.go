@@ -11,12 +11,12 @@ import (
 	"net/url"
 	"testing"
 
+	"github.com/dgrijalva/jwt-go"
 	"github.com/ecadlabs/auth/migrations"
 	"github.com/ecadlabs/auth/notification"
 	"github.com/ecadlabs/auth/rbac"
 	"github.com/ecadlabs/auth/service"
 	"github.com/ecadlabs/auth/storage"
-	"github.com/dgrijalva/jwt-go"
 	"github.com/golang-migrate/migrate"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
@@ -31,7 +31,7 @@ const (
 )
 
 var (
-	dbURL = flag.String("db", "postgres://localhost/userstest?connect_timeout=10&sslmode=disable", "PostgreSQL server URL")
+	dbURL = flag.String("db", "postgres://auth:auth@localhost/userstest?connect_timeout=10&sslmode=disable", "PostgreSQL server URL")
 )
 
 func init() {
@@ -53,8 +53,8 @@ func genTestName(n int) string {
 	return fmt.Sprintf("Test Тест 日本語 ☺☻☹ %d", n)
 }
 
-func genTestUser(n int) *storage.User {
-	return &storage.User{
+func genTestUser(n int) *storage.CreateUser {
+	return &storage.CreateUser{
 		Email: genTestEmail(n),
 		Name:  genTestName(n),
 		Roles: storage.Roles{
@@ -63,7 +63,7 @@ func genTestUser(n int) *storage.User {
 	}
 }
 
-func createUser(srv *httptest.Server, u *storage.User, token string, tokenCh chan string) (int, *storage.User, error) {
+func createUser(srv *httptest.Server, u *storage.CreateUser, token string, tokenCh chan string) (int, *storage.User, error) {
 	buf, err := json.Marshal(u)
 	if err != nil {
 		return 0, nil, err
@@ -131,7 +131,7 @@ type tokenResponse struct {
 	RefreshURL string `json:"refresh"`
 }
 
-func doLogin(srv *httptest.Server, email, password string) (code int, token string, refresh string, err error) {
+func doLogin(srv *httptest.Server, email, password string, tenantId *uuid.UUID) (code int, token string, refresh string, err error) {
 	req := struct {
 		Name     string `json:"name"`
 		Password string `json:"password"`
@@ -145,7 +145,13 @@ func doLogin(srv *httptest.Server, email, password string) (code int, token stri
 		return 0, "", "", err
 	}
 
-	resp, err := srv.Client().Post(srv.URL+"/login", "application/json", bytes.NewReader(buf))
+	var url = ""
+	if tenantId == nil {
+		url = srv.URL + "/login"
+	} else {
+		url = fmt.Sprintf(srv.URL+"/login/%s", *tenantId)
+	}
+	resp, err := srv.Client().Post(url, "application/json", bytes.NewReader(buf))
 	if err != nil {
 		return 0, "", "", err
 	}
@@ -163,6 +169,25 @@ func doLogin(srv *httptest.Server, email, password string) (code int, token stri
 	}
 
 	return resp.StatusCode, res.Token, res.RefreshURL, nil
+}
+
+func deleteUser(srv *httptest.Server, token string, uid uuid.UUID) (int, error) {
+	req, err := http.NewRequest("DELETE", srv.URL+"/users/"+uid.String(), nil)
+	if err != nil {
+		return 0, err
+	}
+
+	if token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
+
+	resp, err := srv.Client().Do(req)
+	if err != nil {
+		return 0, err
+	}
+	defer resp.Body.Close()
+
+	return resp.StatusCode, nil
 }
 
 func getUser(srv *httptest.Server, token string, uid uuid.UUID) (int, *storage.User, error) {
@@ -255,21 +280,86 @@ func getList(srv *httptest.Server, token string, query url.Values) (int, []*stor
 	return http.StatusOK, result, nil
 }
 
+type tenantsAndUsers struct {
+	Tenants []*storage.TenantModel
+	Users   []*storage.User
+}
+
+func (t *tenantsAndUsers) GetUser(email string) *storage.User {
+	for _, val := range t.Users {
+		if val.Email == email {
+			return val
+		}
+	}
+	return nil
+}
+
+func (t *tenantsAndUsers) GetTenantbyName(email string) *storage.TenantModel {
+	for _, val := range t.Tenants {
+		if val.Name == email {
+			return val
+		}
+	}
+	return nil
+}
+
+var res *tenantsAndUsers
+
+func fetchTenantAndUsers(srv *httptest.Server, refresh bool) (*tenantsAndUsers, error) {
+	code, token, _, err := doLogin(srv, superUserEmail, testPassword, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if code != http.StatusOK {
+		return nil, err
+	}
+
+	_, list, err := getTenantList(srv, token, url.Values{})
+	if err != nil {
+		return nil, err
+	}
+
+	_, userList, err := getList(srv, token, url.Values{})
+	if err != nil {
+		return nil, err
+	}
+
+	return &tenantsAndUsers{
+		Users:   userList,
+		Tenants: list,
+	}, nil
+}
+
 var testRBAC = rbac.StaticRBAC{
 	Roles: map[string]*rbac.StaticRole{
 		"admin": &rbac.StaticRole{
 			RoleName:    "admin",
 			Description: "A super user that has all access",
 			Permissions: map[string]struct{}{
-				"com.ecadlabs.users.delegate:admin": struct{}{},
-				"com.ecadlabs.users.delegate:noc":   struct{}{},
-				"com.ecadlabs.users.delegate:ops":   struct{}{},
-				"com.ecadlabs.users.full_control":   struct{}{},
+				"com.ecadlabs.users.delegate:admin":   struct{}{},
+				"com.ecadlabs.users.delegate:noc":     struct{}{},
+				"com.ecadlabs.users.delegate:owner":   struct{}{},
+				"com.ecadlabs.users.delegate:regular": struct{}{},
+				"com.ecadlabs.users.full_control":     struct{}{},
+				"com.ecadlabs.tenants.full_control":   struct{}{},
+			},
+		},
+		"owner": &rbac.StaticRole{
+			RoleName:    "owner",
+			Description: "Tenant owner",
+			Permissions: map[string]struct{}{
+				"com.ecadlabs.users.delegate:owner":   struct{}{},
+				"com.ecadlabs.users.delegate:regular": struct{}{},
+				"com.ecadlabs.tenants.read_owned":     struct{}{},
+				"com.ecadlabs.tenants.write_owned":    struct{}{},
+				"com.ecadlabs.users.read_self":        struct{}{},
+				"com.ecadlabs.users.write_self":       struct{}{},
 			},
 		},
 		"regular": &rbac.StaticRole{
 			RoleName:    "regular",
-			Description: "Network Operation Staff",
+			Description: "Regular member",
 			Permissions: map[string]struct{}{
 				"com.ecadlabs.users.read_self":  struct{}{},
 				"com.ecadlabs.users.write_self": struct{}{},
@@ -279,17 +369,21 @@ var testRBAC = rbac.StaticRBAC{
 	Permissions: map[string]string{
 		"com.ecadlabs.users.delegate:admin": "Assign `admin' role",
 		"com.ecadlabs.users.delegate:noc":   "Assign `noc' role",
+		"com.ecadlabs.users.delegate:owner": "Assign `owner' role",
 		"com.ecadlabs.users.delegate:ops":   "Assign `ops' role",
 		"com.ecadlabs.users.full_control":   "Allows user to manage all accounts",
+		"com.ecadlabs.tenants.full_control": "Allows user to manage all tenants",
 		"com.ecadlabs.users.read":           "Allows user to view users",
 		"com.ecadlabs.users.read_logs":      "Allows user to access logs",
 		"com.ecadlabs.users.read_self":      "Allows user to view their own user resource record",
 		"com.ecadlabs.users.write":          "Allows user to create new users",
 		"com.ecadlabs.users.write_self":     "Allows user to edit their own user resource record",
+		"com.ecadlabs.tenants.read_self":    "Allows user to read their own tenant resource record",
+		"com.ecadlabs.tenants.write_self":   "Allows user to write their own tenant resource record",
 	},
 }
 
-func TestService(t *testing.T) {
+func BeforeTest(t *testing.T) (srv *httptest.Server, userList []*storage.User, token string, tokenCh chan string, results *tenantsAndUsers) {
 	// Clear everything
 	db, err := sqlx.Open("postgres", *dbURL)
 	if err != nil {
@@ -298,7 +392,8 @@ func TestService(t *testing.T) {
 	}
 	defer db.Close()
 
-	_, err = db.Exec("DROP TABLE IF EXISTS schema_migrations, users, roles, log, bootstrap")
+	_, err = db.Exec(`DROP TABLE IF EXISTS schema_migrations, users, membership, tenants, roles, log, bootstrap`)
+	_, err = db.Exec(`DROP TYPE IF EXISTS membership_type, membership_status, tenant_type`)
 	if err != nil {
 		t.Error(err)
 		return
@@ -316,23 +411,22 @@ func TestService(t *testing.T) {
 		return
 	}
 
-	tokenCh := make(chan string, 10)
+	tokenCh = make(chan string, 10)
 
 	// Create test server
-	var srv *httptest.Server
-
 	config := service.Config{
 		BaseURLFunc:            func() string { return srv.URL },
 		JWTSecret:              testJWTSecret,
 		SessionMaxAge:          259200,
 		ResetTokenMaxAge:       259200,
+		TenantInviteMaxAge:     259200,
 		EmailUpdateTokenMaxAge: 259200,
 		PostgresURL:            *dbURL,
-		DBTimeout:              10,
+		DBTimeout:              10 * 60 * 60,
 		Notifier:               testNotifier(tokenCh),
 	}
 
-	svc, err := service.New(&config, &testRBAC)
+	svc, err := service.New(&config, &testRBAC, false)
 	if err != nil {
 		t.Error(err)
 		return
@@ -346,16 +440,13 @@ func TestService(t *testing.T) {
 	}
 
 	srv = httptest.NewServer(svc.APIHandler())
-	defer srv.Close()
 
 	// Login as superuser
-	code, token, _, err := doLogin(srv, superUserEmail, testPassword)
+	code, token, _, err := doLogin(srv, superUserEmail, testPassword, nil)
 	if err != nil {
 		t.Error(err)
 		return
 	}
-
-	//fmt.Println(token)
 
 	if code != http.StatusOK {
 		t.Error(code)
@@ -382,9 +473,21 @@ func TestService(t *testing.T) {
 		usersList = append(usersList, res)
 	}
 
+	results, err = fetchTenantAndUsers(srv, false)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	return
+}
+
+func TestService(t *testing.T) {
+	srv, usersList, _, _, _ := BeforeTest(t)
+
 	// Run all other tests in parallel
 	t.Run("TestRegularUser", func(t *testing.T) {
-		code, token, refresh, err := doLogin(srv, genTestEmail(0), testPassword)
+		code, token, refresh, err := doLogin(srv, genTestEmail(0), testPassword, nil)
 		if err != nil {
 			t.Error(err)
 			return
@@ -488,10 +591,41 @@ func TestService(t *testing.T) {
 				return
 			}
 		})
+
+		t.Run("TestCreateTenant", func(t *testing.T) {
+			model := createTenantModel{Name: "test"}
+			code, _, err := createTenant(srv, &model, token)
+			if err != nil {
+				t.Error(err)
+				return
+			}
+
+			if code != http.StatusForbidden {
+				t.Error(code)
+				return
+			}
+		})
+
+		t.Run("TestListTenant", func(t *testing.T) {
+			code, list, err := getTenantList(srv, token, url.Values{})
+			if err != nil {
+				t.Error(err)
+				return
+			}
+
+			if len(list) != 1 {
+				t.Error("Len is not one")
+			}
+
+			if code != http.StatusOK {
+				t.Error(code)
+				return
+			}
+		})
 	})
 
 	t.Run("TestSupesUser", func(t *testing.T) {
-		code, token, _, err := doLogin(srv, superUserEmail, testPassword)
+		code, token, _, err := doLogin(srv, superUserEmail, testPassword, nil)
 		if err != nil {
 			t.Error(err)
 			return
@@ -571,10 +705,41 @@ func TestService(t *testing.T) {
 				}
 			}
 		})
+
+		t.Run("TestCreateTenant", func(t *testing.T) {
+			model := createTenantModel{Name: "test"}
+			code, _, err := createTenant(srv, &model, token)
+			if err != nil {
+				t.Error(err)
+				return
+			}
+
+			if code != http.StatusOK {
+				t.Error(code)
+				return
+			}
+		})
+
+		t.Run("TestListTenant", func(t *testing.T) {
+			code, list, err := getTenantList(srv, token, url.Values{})
+			if err != nil {
+				t.Error(err)
+				return
+			}
+
+			if len(list) != 12 {
+				t.Error("Len is not 12", len(list))
+			}
+
+			if code != http.StatusOK {
+				t.Error(code)
+				return
+			}
+		})
 	})
 
 	t.Run("TestWrongUserNameLogin", func(t *testing.T) {
-		code, _, _, err := doLogin(srv, "_dummy_@domain.com", "_dummy_")
+		code, _, _, err := doLogin(srv, "_dummy_@domain.com", "_dummy_", nil)
 		if err != nil {
 			t.Error(err)
 			return
@@ -587,7 +752,7 @@ func TestService(t *testing.T) {
 	})
 
 	t.Run("TestWrongPasswordLogin", func(t *testing.T) {
-		code, _, _, err := doLogin(srv, "user0@example.com", "_dummy_")
+		code, _, _, err := doLogin(srv, "user0@example.com", "_dummy_", nil)
 		if err != nil {
 			t.Error(err)
 			return
