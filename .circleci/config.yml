@@ -13,6 +13,9 @@ jobs:
     steps:
       - checkout
       - run:
+          name: Install dependencies
+          command: go get -u golang.org/x/lint/golint
+      - run:
           name: Lint
           command: find . -type f -name \*.go | grep -v bindata.go | xargs golint -set_exit_status
   daemon-test:
