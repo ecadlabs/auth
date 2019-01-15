@@ -42,7 +42,7 @@ func (u *userModel) toUser() *User {
 		Name:          u.Name,
 		Added:         u.Added,
 		Modified:      u.Modified,
-		Memberships:   []*MembershipItem{},
+		Memberships:   []*membershipItem{},
 		EmailVerified: u.EmailVerified,
 		PasswordGen:   u.PasswordGen,
 		LoginAddr:     u.LoginAddr,
@@ -61,15 +61,16 @@ func (u *userModel) toUser() *User {
 	}
 	for _, m := range u.Memberships {
 		result := strings.Split(m, ",")
-		ret.Memberships = append(ret.Memberships, &MembershipItem{
-			Membership_type: result[1],
-			TenantID:        uuid.FromStringOrNil(result[0]),
+		ret.Memberships = append(ret.Memberships, &membershipItem{
+			MembershipType: result[1],
+			TenantID:       uuid.FromStringOrNil(result[0]),
 		})
 	}
 
 	return ret
 }
 
+// Storage service that manage database operation for the user resource
 type Storage struct {
 	DB *sqlx.DB
 }
@@ -89,10 +90,12 @@ func (s *Storage) getUser(ctx context.Context, col string, val interface{}) (*Us
 	return u.toUser(), nil
 }
 
+// GetUserByID retrieve a user by his ID
 func (s *Storage) GetUserByID(ctx context.Context, id uuid.UUID) (*User, error) {
 	return s.getUser(ctx, "id", id)
 }
 
+// GetUserByEmail retrieve a user by his Email
 func (s *Storage) GetUserByEmail(ctx context.Context, email string) (*User, error) {
 	return s.getUser(ctx, "email", email)
 }
@@ -111,6 +114,7 @@ var userQueryColumns = map[string]int{
 	"refresh_ts":     query.ColQuery | query.ColSort,
 }
 
+// GetUsers retrieve a users according to a query and return a paged results
 func (s *Storage) GetUsers(ctx context.Context, q *query.Query) (users []*User, count int, next *query.Query, err error) {
 	if q.SortBy == "" {
 		q.SortBy = UsersDefaultSortColumn
@@ -185,6 +189,7 @@ func isUniqueViolation(err error, constraint string) bool {
 	return ok && e.Code.Name() == "unique_violation" && e.Constraint == constraint
 }
 
+// NewUserInt insert a new user in the database along with his initial tenant
 func NewUserInt(ctx context.Context, tx *sqlx.Tx, user *CreateUser) (res *User, err error) {
 	model := userModel{
 		ID:            uuid.NewV4(),
@@ -257,6 +262,8 @@ func NewUserInt(ctx context.Context, tx *sqlx.Tx, user *CreateUser) (res *User, 
 	return
 }
 
+// NewUser insert a new user in the database along with his initial tenant
+// Wrap the database queries with a transaction
 func (s *Storage) NewUser(ctx context.Context, user *CreateUser) (res *User, err error) {
 	tx, err := s.DB.Beginx()
 	if err != nil {
@@ -285,6 +292,7 @@ var updatePaths = map[string]struct{}{
 	"password_hash": struct{}{},
 }
 
+// UpdateUser update user according to patch operations
 func (s *Storage) UpdateUser(ctx context.Context, id uuid.UUID, ops *Ops) (user *User, err error) {
 	// Verify columns
 	for k := range ops.Update {
@@ -339,6 +347,7 @@ func (s *Storage) UpdateUser(ctx context.Context, id uuid.UUID, ops *Ops) (user 
 	return u.toUser(), nil
 }
 
+// DeleteUser delete user with the specified ID
 func (s *Storage) DeleteUser(ctx context.Context, id uuid.UUID) (err error) {
 	tx, err := s.DB.Beginx()
 	if err != nil {
@@ -376,6 +385,7 @@ func (s *Storage) DeleteUser(ctx context.Context, id uuid.UUID) (err error) {
 	return nil
 }
 
+// UpdatePasswordWithGen set a new password according to the hash parameter
 func (s *Storage) UpdatePasswordWithGen(ctx context.Context, id uuid.UUID, hash []byte, expectedGen int) (err error) {
 	tx, err := s.DB.Beginx()
 	if err != nil {
@@ -421,6 +431,7 @@ func (s *Storage) UpdatePasswordWithGen(ctx context.Context, id uuid.UUID, hash 
 	return nil
 }
 
+// UpdateEmailWithGen update the email
 func (s *Storage) UpdateEmailWithGen(ctx context.Context, id uuid.UUID, email string, expectedGen int) (user *User, oldEmail string, err error) {
 	tx, err := s.DB.Beginx()
 	if err != nil {
@@ -467,16 +478,19 @@ func (s *Storage) UpdateEmailWithGen(ctx context.Context, id uuid.UUID, email st
 	return u.toUser(), prev.Email, nil
 }
 
+// UpdateLoginInfo update the address and time of last login
 func (s *Storage) UpdateLoginInfo(ctx context.Context, id uuid.UUID, addr string) error {
 	_, err := s.DB.ExecContext(ctx, "UPDATE users SET login_addr = $1, login_ts = NOW() WHERE id = $2", addr, id)
 	return err
 }
 
+// UpdateRefreshInfo update the address and time of last refresh
 func (s *Storage) UpdateRefreshInfo(ctx context.Context, id uuid.UUID, addr string) error {
 	_, err := s.DB.ExecContext(ctx, "UPDATE users SET refresh_addr = $1, refresh_ts = NOW() WHERE id = $2", addr, id)
 	return err
 }
 
+// Ping ping the database
 func (s *Storage) Ping(ctx context.Context) error {
 	if err := s.DB.PingContext(ctx); err != nil {
 		return err

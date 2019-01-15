@@ -73,7 +73,7 @@ func (s *Service) Bootstrap() (user *storage.User, err error) {
 
 	hash, _ := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 
-	u := storage.User{
+	u := storage.CreateUser{
 		Email:         email,
 		PasswordHash:  hash,
 		EmailVerified: true, // Allow logging in !!!

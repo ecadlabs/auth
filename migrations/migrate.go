@@ -14,6 +14,7 @@ const (
 	defaultConnectTimeout = 10
 )
 
+// NewDB Create new Migrate service from existing db
 func NewDB(db *sql.DB) (*migrate.Migrate, error) {
 	drv, err := postgres.WithInstance(db, &postgres.Config{})
 	if err != nil {
@@ -30,9 +31,10 @@ func NewDB(db *sql.DB) (*migrate.Migrate, error) {
 	return migrate.NewWithInstance("go-bindata", source, "postgres", drv)
 }
 
-func New(databaseUrl string) (*migrate.Migrate, error) {
+// New Create new Migrate service from databaseUrl
+func New(databaseURL string) (*migrate.Migrate, error) {
 	// Set connection timeout
-	url, err := url.Parse(databaseUrl)
+	url, err := url.Parse(databaseURL)
 	if err != nil {
 		return nil, err
 	}

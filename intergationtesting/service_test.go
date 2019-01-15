@@ -727,8 +727,8 @@ func TestService(t *testing.T) {
 				return
 			}
 
-			if len(list) != 13 {
-				t.Error("Len is not 13", len(list))
+			if len(list) != 12 {
+				t.Error("Len is not 12", len(list))
 			}
 
 			if code != http.StatusOK {

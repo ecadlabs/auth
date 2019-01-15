@@ -1,11 +1,20 @@
 version: 2
 
 defaults: &defaults
-    working_directory: ~/auth
-    docker:
-      - image: circleci/node:10-browsers-legacy
+  working_directory: ~/auth
+  docker:
+    - image: circleci/node:10-browsers-legacy
 
 jobs:
+  daemon-lint:
+    docker:
+      - image: circleci/golang:1.10.4
+    working_directory: /go/src/github.com/ecadlabs/auth
+    steps:
+      - checkout
+      - run:
+          name: Lint
+          command: find . -type f -name \*.go | grep -v bindata.go | xargs golint -set_exit_status
   daemon-test:
     docker:
       - image: circleci/golang:1.10.4
@@ -56,10 +65,10 @@ jobs:
       - run:
           name: Login to Docker Hub
           command: docker login -u $DOCKER_USER -p $DOCKER_PASS
-      - run: 
+      - run:
           name: Publish image to Docker Hub
           command: docker push ecadlabs/auth:$CIRCLE_TAG
-      - run: 
+      - run:
           name: Add latest tag to docker image
           command: docker tag ecadlabs/auth:$CIRCLE_TAG ecadlabs/auth:latest && docker push ecadlabs/auth:latest
   webapp-publish:
@@ -76,9 +85,12 @@ jobs:
       - run:
           name: Publish package
           command: cd webapp/dist/ecad-angular-auth && npm publish
-            
+
 workflows:
   version: 2
+  lint:
+    jobs:
+      - daemon-lint
   test:
     jobs:
       - daemon-test

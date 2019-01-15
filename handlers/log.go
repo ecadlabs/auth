@@ -11,6 +11,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+//GetLogs Endpoint handler to get list of logs
 func (u *Users) GetLogs(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	member := r.Context().Value(MembershipContextKey).(*storage.Membership)
@@ -70,15 +71,15 @@ func (u *Users) GetLogs(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if nextQuery != nil {
-		nextUrl, err := url.Parse(u.LogURL())
+		nextURL, err := url.Parse(u.LogURL())
 		if err != nil {
 			log.Error(err)
 			utils.JSONErrorResponse(w, err)
 			return
 		}
 
-		nextUrl.RawQuery = nextQuery.Values().Encode()
-		res.Next = nextUrl.String()
+		nextURL.RawQuery = nextQuery.Values().Encode()
+		res.Next = nextURL.String()
 	}
 
 	utils.JSONResponse(w, http.StatusOK, &res)

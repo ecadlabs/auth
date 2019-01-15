@@ -5,9 +5,12 @@ permissions:
   com.ecadlabs.users.write_self: Allows user to edit their own user resource record
   com.ecadlabs.users.full_control: Allows user to manage all accounts
   com.ecadlabs.tenants.full_control: Allows user to manage all tenants
+  com.ecadlabs.tenants.write_owned: Allows user to write to owned tenants
+  com.ecadlabs.tenants.read_owned: Allows user to read owned tenants
   com.ecadlabs.users.read_logs: Allows user to access logs
   com.ecadlabs.users.delegate:noc: Assign `noc' role
   com.ecadlabs.users.delegate:admin: Assign `admin' role
+  com.ecadlabs.users.delegate:owner: Assign `owner' role
   com.ecadlabs.users.delegate:ops: Assign `ops' role
   # The org permsissions are speculative/future looking permissions included
   # here to provoke analysis/critical evaluation
@@ -31,6 +34,17 @@ roles:
       - com.ecadlabs.users.delegate:noc
       - com.ecadlabs.users.delegate:admin
       - com.ecadlabs.users.delegate:ops
+      - com.ecadlabs.users.delegate:owner
+  owner:
+    description: Tenant owner
+    permissions:
+      - com.ecadlabs.users.delegate:owner
+      - com.ecadlabs.users.delegate:noc
+      - com.ecadlabs.users.delegate:ops
+      - com.ecadlabs.tenants.read_owned
+      - com.ecadlabs.tenants.write_owned
+      - com.ecadlabs.users.read_self
+      - com.ecadlabs.users.write_self
   noc:
     description: Network Operation Staff
     permissions:

@@ -420,7 +420,8 @@ func (u *Users) PatchUser(w http.ResponseWriter, r *http.Request) {
 	// Log
 	if u.AuxLogger != nil {
 		if len(ops.Update) != 0 {
-			u.AuxLogger.WithFields(logFields(EvUpdate, member.ID, uid, r)).WithFields(log.Fields(ops.Update)).Printf("User %v updated account %v from tenant %v", self.ID, uid, member.ID)
+			u.AuxLogger.WithFields(logFields(EvUpdate, member.ID, uid, r)).WithFields(log.Fields(ops.Update)).Printf("User %v updated account %v from tenant %v", self.ID, uid, member.TenantID)
+
 		}
 	}
 
@@ -491,6 +492,27 @@ func (u *Users) DeleteUser(w http.ResponseWriter, r *http.Request) {
 			// Log
 			if deleteErr == nil && u.AuxLogger != nil {
 				u.AuxLogger.WithFields(logFields(EvArchiveTenant, member.ID, tenant.ID, r)).Printf("User %v from tenant %v archived tenant %v", self.ID, member.TenantID, tenant.ID)
+			}
+
+			if deleteErr != nil {
+				err = deleteErr
+			}
+		}
+
+		if err != nil {
+			log.Error(err)
+			utils.JSONErrorResponse(w, err)
+			return
+		}
+	}
+
+	// Archive any tenant made orphan by this deletion
+	if len(tenants) > 0 {
+		for _, tenant := range tenants {
+			deleteErr := u.TenantStorage.DeleteTenant(ctx, tenant.ID)
+			// Log
+			if deleteErr == nil && u.AuxLogger != nil {
+				u.AuxLogger.WithFields(logFields(EvArchiveTenant, self.ID, tenant.ID, r)).Printf("User %v archived tenant %v", self.ID, tenant.ID)
 			}
 
 			if deleteErr != nil {

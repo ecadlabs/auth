@@ -19,6 +19,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+//Memberships is a handler for memberships
 type Memberships struct {
 	UserStorage       *storage.Storage
 	Storage           *storage.TenantStorage
@@ -32,45 +33,46 @@ type Memberships struct {
 	AuxLogger   *log.Logger
 }
 
-func (t *Memberships) MembershipsUrl(tenantId uuid.UUID) string {
-	return fmt.Sprintf("%s%s/members", t.BaseURL()+t.TenantsPath, tenantId)
+func (m *Memberships) membershipsURL(tenantID uuid.UUID) string {
+	return fmt.Sprintf("%s%s/members", m.BaseURL()+m.TenantsPath, tenantID)
 }
 
-func (m *Memberships) UsersURL() string {
+func (m *Memberships) usersURL() string {
 	return m.BaseURL() + m.UsersPath
 }
 
-func (t *Memberships) context(r *http.Request) (context.Context, context.CancelFunc) {
-	if t.Timeout != 0 {
-		return context.WithTimeout(r.Context(), t.Timeout)
+func (m *Memberships) context(r *http.Request) (context.Context, context.CancelFunc) {
+	if m.Timeout != 0 {
+		return context.WithTimeout(r.Context(), m.Timeout)
 	}
 	return r.Context(), func() {}
 }
 
-func (t *Memberships) PatchMembership(w http.ResponseWriter, r *http.Request) {
+// PatchMembership is an endpoint handler to update membership item
+func (m *Memberships) PatchMembership(w http.ResponseWriter, r *http.Request) {
 	member := r.Context().Value(MembershipContextKey).(*storage.Membership)
 
-	ctx, cancel := t.context(r)
+	ctx, cancel := m.context(r)
 	defer cancel()
 
-	tenantId, err := uuid.FromString(mux.Vars(r)["tenantId"])
+	tenantID, err := uuid.FromString(mux.Vars(r)["tenantId"])
 	if err != nil {
 		utils.JSONError(w, err.Error(), errors.CodeBadRequest)
 		return
 	}
 
-	userId, err := uuid.FromString(mux.Vars(r)["userId"])
+	userID, err := uuid.FromString(mux.Vars(r)["userId"])
 	if err != nil {
 		utils.JSONError(w, err.Error(), errors.CodeBadRequest)
 		return
 	}
 
-	role, err := t.Enforcer.GetRole(ctx, member.Roles.Get()...)
+	role, err := m.Enforcer.GetRole(ctx, member.Roles.Get()...)
 
 	allowedRoles := []string{permissionTenantsFull, permissionTenantsWrite}
 
 	// Tenant owner are allowed to update member from their own tenant
-	if tenantId == member.TenantID {
+	if tenantID == member.TenantID {
 		allowedRoles = append(allowedRoles, permissionTenantsWriteOwned)
 	}
 
@@ -130,7 +132,7 @@ func (t *Memberships) PatchMembership(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	updatedMember, err := t.MembershipStorage.UpdateMembership(ctx, tenantId, userId, ops)
+	updatedMember, err := m.MembershipStorage.UpdateMembership(ctx, tenantID, userID, ops)
 	if err != nil {
 		log.Error(err)
 		utils.JSONErrorResponse(w, err)
@@ -138,52 +140,53 @@ func (t *Memberships) PatchMembership(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Log
-	if t.AuxLogger != nil {
+	if m.AuxLogger != nil {
 		if len(ops.Update) != 0 {
-			t.AuxLogger.WithFields(logFields(EvUpdate, member.ID, updatedMember.ID, r)).WithFields(log.Fields(ops.Update)).Printf("User %v updated account %v in tenant %v", member.UserID, userId, tenantId)
+			m.AuxLogger.WithFields(logFields(EvUpdate, member.UserID, userID, r)).WithFields(log.Fields(ops.Update)).Printf("User %v updated account %v in tenant %v", member.UserID, userID, tenantID)
 		}
 
 		for _, role := range ops.AddRoles {
-			t.AuxLogger.WithFields(logFields(EvAddRole, member.ID, updatedMember.ID, r)).WithField("role", role).Printf("User %v added role `%s' to account %v in tenant %v", member.UserID, userId, tenantId)
+			m.AuxLogger.WithFields(logFields(EvAddRole, member.UserID, userID, r)).WithField("role", role).Printf("User %v added role `%s' to account %v in tenant %v", member.UserID, userID, tenantID)
 		}
 
 		for _, role := range ops.RemoveRoles {
-			t.AuxLogger.WithFields(logFields(EvRemoveRole, member.ID, updatedMember.ID, r)).WithField("role", role).Printf("User %v removed role `%s' from account %v in tenant %v", member.UserID, role, userId, tenantId)
+			m.AuxLogger.WithFields(logFields(EvRemoveRole, member.UserID, userID, r)).WithField("role", role).Printf("User %v removed role `%s' from account %v in tenant %v", member.UserID, role, userID, tenantID)
 		}
 	}
 
 	utils.JSONResponse(w, http.StatusOK, updatedMember)
 }
 
-func (t *Memberships) DeleteMembership(w http.ResponseWriter, r *http.Request) {
+// DeleteMembership is an endpoint handler to delete membership item
+func (m *Memberships) DeleteMembership(w http.ResponseWriter, r *http.Request) {
 	member := r.Context().Value(MembershipContextKey).(*storage.Membership)
 
-	ctx, cancel := t.context(r)
+	ctx, cancel := m.context(r)
 	defer cancel()
 
-	tenantId, err := uuid.FromString(mux.Vars(r)["tenantId"])
+	tenantID, err := uuid.FromString(mux.Vars(r)["tenantId"])
 	if err != nil {
 		utils.JSONError(w, err.Error(), errors.CodeBadRequest)
 		return
 	}
 
-	userId, err := uuid.FromString(mux.Vars(r)["userId"])
+	userID, err := uuid.FromString(mux.Vars(r)["userId"])
 	if err != nil {
 		utils.JSONError(w, err.Error(), errors.CodeBadRequest)
 		return
 	}
 
-	role, err := t.Enforcer.GetRole(ctx, member.Roles.Get()...)
+	role, err := m.Enforcer.GetRole(ctx, member.Roles.Get()...)
 
 	allowedRoles := []string{permissionTenantsFull, permissionTenantsWrite}
 
 	// Every user are able to delete their own membership
-	if userId == member.UserID {
+	if userID == member.UserID {
 		allowedRoles = append(allowedRoles, permissionWriteSelf)
 	}
 
 	// Tenant owner are allowed to delete member from their own tenant
-	if tenantId == member.TenantID {
+	if tenantID == member.TenantID {
 		allowedRoles = append(allowedRoles, permissionTenantsWriteOwned)
 	}
 
@@ -199,39 +202,40 @@ func (t *Memberships) DeleteMembership(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = t.MembershipStorage.DeleteMembership(ctx, tenantId, userId)
+	err = m.MembershipStorage.DeleteMembership(ctx, tenantID, userID)
 
 	if err != nil {
 		utils.JSONErrorResponse(w, err)
 	}
 
 	// Log
-	if t.AuxLogger != nil {
-		t.AuxLogger.WithFields(logFields(EvMembershipDelete, member.ID, tenantId, r)).Printf("User %v removed member %v in tenant %v", member.UserID, userId, tenantId)
+	if m.AuxLogger != nil {
+		m.AuxLogger.WithFields(logFields(EvMembershipDelete, member.UserID, userID, r)).Printf("User %v removed member %v in tenant %v", member.UserID, userID, tenantID)
 	}
 
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func (t *Memberships) FindTenantMemberships(w http.ResponseWriter, r *http.Request) {
+// FindTenantMemberships is an endpoint handler to get list of membership item for a particular tenant
+func (m *Memberships) FindTenantMemberships(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	member := r.Context().Value(MembershipContextKey).(*storage.Membership)
 
-	ctx, cancel := t.context(r)
+	ctx, cancel := m.context(r)
 	defer cancel()
 
-	tenantId, err := uuid.FromString(mux.Vars(r)["tenantId"])
+	tenantID, err := uuid.FromString(mux.Vars(r)["tenantId"])
 	if err != nil {
 		utils.JSONError(w, err.Error(), errors.CodeBadRequest)
 		return
 	}
 
-	role, err := t.Enforcer.GetRole(ctx, member.Roles.Get()...)
+	role, err := m.Enforcer.GetRole(ctx, member.Roles.Get()...)
 
 	allowedRoles := []string{permissionTenantsFull, permissionTenantsRead}
 
 	// Tenant owner are allowed to read member from their own tenant
-	if tenantId == member.TenantID {
+	if tenantID == member.TenantID {
 		allowedRoles = append(allowedRoles, permissionTenantsReadOwned)
 	}
 
@@ -248,7 +252,7 @@ func (t *Memberships) FindTenantMemberships(w http.ResponseWriter, r *http.Reque
 	}
 
 	// Scope down the request to this particular tenant
-	r.Form.Set("tenant_id[eq]", tenantId.String())
+	r.Form.Set("tenant_id[eq]", tenantID.String())
 
 	q, err := query.FromValues(r.Form, nil)
 	if err != nil {
@@ -261,7 +265,7 @@ func (t *Memberships) FindTenantMemberships(w http.ResponseWriter, r *http.Reque
 		q.Limit = DefaultLimit
 	}
 
-	memberships, count, nextQuery, err := t.MembershipStorage.GetMemberships(ctx, q)
+	memberships, count, nextQuery, err := m.MembershipStorage.GetMemberships(ctx, q)
 
 	if err != nil {
 		log.Error(err)
@@ -284,28 +288,29 @@ func (t *Memberships) FindTenantMemberships(w http.ResponseWriter, r *http.Reque
 	}
 
 	if nextQuery != nil {
-		nextUrl, err := url.Parse(t.MembershipsUrl(tenantId))
+		nextURL, err := url.Parse(m.membershipsURL(tenantID))
 		if err != nil {
 			log.Error(err)
 			utils.JSONErrorResponse(w, err)
 			return
 		}
 
-		nextUrl.RawQuery = nextQuery.Values().Encode()
-		res.Next = nextUrl.String()
+		nextURL.RawQuery = nextQuery.Values().Encode()
+		res.Next = nextURL.String()
 	}
 
 	utils.JSONResponse(w, http.StatusOK, &res)
 }
 
-func (u *Memberships) FindUserMemberships(w http.ResponseWriter, r *http.Request) {
+// FindUserMemberships is an endpoint handler to get list of membership item for a particular user
+func (m *Memberships) FindUserMemberships(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	member := r.Context().Value(MembershipContextKey).(*storage.Membership)
 
-	ctx, cancel := u.context(r)
+	ctx, cancel := m.context(r)
 	defer cancel()
 
-	role, err := u.Enforcer.GetRole(ctx, member.Roles.Get()...)
+	role, err := m.Enforcer.GetRole(ctx, member.Roles.Get()...)
 	granted, err := role.IsAnyGranted(permissionTenantsFull, permissionRead)
 
 	if err != nil {
@@ -313,13 +318,13 @@ func (u *Memberships) FindUserMemberships(w http.ResponseWriter, r *http.Request
 		utils.JSONError(w, err.Error(), errors.CodeUnknown)
 	}
 
-	userId, err := uuid.FromString(mux.Vars(r)["userId"])
+	userID, err := uuid.FromString(mux.Vars(r)["userId"])
 	if err != nil {
 		utils.JSONError(w, err.Error(), errors.CodeBadRequest)
 		return
 	}
 
-	if !granted && userId == member.UserID {
+	if !granted && userID == member.UserID {
 		granted, err = role.IsAllGranted(permissionReadSelf)
 		if err != nil {
 			log.Error(err)
@@ -333,7 +338,7 @@ func (u *Memberships) FindUserMemberships(w http.ResponseWriter, r *http.Request
 	}
 
 	// Scope down the request to this particular user
-	r.Form.Set("user_id[eq]", userId.String())
+	r.Form.Set("user_id[eq]", userID.String())
 
 	q, err := query.FromValues(r.Form, nil)
 	if err != nil {
@@ -346,7 +351,7 @@ func (u *Memberships) FindUserMemberships(w http.ResponseWriter, r *http.Request
 		q.Limit = DefaultLimit
 	}
 
-	memberships, count, nextQuery, err := u.MembershipStorage.GetMemberships(ctx, q)
+	memberships, count, nextQuery, err := m.MembershipStorage.GetMemberships(ctx, q)
 
 	if err != nil {
 		log.Error(err)
@@ -369,15 +374,15 @@ func (u *Memberships) FindUserMemberships(w http.ResponseWriter, r *http.Request
 	}
 
 	if nextQuery != nil {
-		nextUrl, err := url.Parse(fmt.Sprintf("%s/%s/memberships", u.UsersURL(), userId))
+		nextURL, err := url.Parse(fmt.Sprintf("%s/%s/memberships", m.usersURL(), userID))
 		if err != nil {
 			log.Error(err)
 			utils.JSONErrorResponse(w, err)
 			return
 		}
 
-		nextUrl.RawQuery = nextQuery.Values().Encode()
-		res.Next = nextUrl.String()
+		nextURL.RawQuery = nextQuery.Values().Encode()
+		res.Next = nextURL.String()
 	}
 
 	utils.JSONResponse(w, http.StatusOK, &res)
