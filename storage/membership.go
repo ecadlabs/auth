@@ -45,25 +45,6 @@ func (m *membershipModel) toMembership() *Membership {
 	return ret
 }
 
-func (m *membershipModel) toMembership() *Membership {
-	ret := &Membership{
-		ID:               m.ID,
-		MembershipStatus: m.MembershipStatus,
-		MembershipType:   m.MembershipType,
-		UserID:           m.UserID,
-		TenantID:         m.TenantID,
-		Added:            m.Added,
-		Modified:         m.Modified,
-		Roles:            make(Roles, len(m.Roles)),
-	}
-
-	for _, r := range m.Roles {
-		ret.Roles[r] = true
-	}
-
-	return ret
-}
-
 // MembershipStorage is a storage service for memberships
 type MembershipStorage struct {
 	DB *sqlx.DB
