@@ -736,6 +736,23 @@ func TestService(t *testing.T) {
 				return
 			}
 		})
+
+		t.Run("TestLogList", func(t *testing.T) {
+			code, list, err := getLogsList(srv, token, url.Values{})
+			if err != nil {
+				t.Error(err)
+				return
+			}
+
+			if len(list) != 25 {
+				t.Error("Len is not 25", len(list))
+			}
+
+			if code != http.StatusOK {
+				t.Error(code)
+				return
+			}
+		})
 	})
 
 	t.Run("TestWrongUserNameLogin", func(t *testing.T) {
