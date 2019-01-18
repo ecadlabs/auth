@@ -17,6 +17,7 @@ import (
 
 type userModel struct {
 	ID               uuid.UUID      `db:"id"`
+	Type             string         `db:"account_type"`
 	Email            string         `db:"email"`
 	EmailGen         int            `db:"email_gen"`
 	PasswordHash     []byte         `db:"password_hash"`
@@ -32,22 +33,25 @@ type userModel struct {
 	LoginTimestamp   time.Time      `db:"login_ts"`
 	RefreshAddr      string         `db:"refresh_addr"`
 	RefreshTimestamp time.Time      `db:"refresh_ts"`
+	AddressWhiteList pq.StringArray `db:"ip_whitelist"`
 }
 
 func (u *userModel) toUser() *User {
 	ret := &User{
-		ID:            u.ID,
-		Email:         u.Email,
-		PasswordHash:  u.PasswordHash,
-		Name:          u.Name,
-		Added:         u.Added,
-		Modified:      u.Modified,
-		Memberships:   []*membershipItem{},
-		EmailVerified: u.EmailVerified,
-		PasswordGen:   u.PasswordGen,
-		LoginAddr:     u.LoginAddr,
-		RefreshAddr:   u.RefreshAddr,
-		EmailGen:      u.EmailGen,
+		ID:               u.ID,
+		Type:             u.Type,
+		Email:            u.Email,
+		PasswordHash:     u.PasswordHash,
+		Name:             u.Name,
+		Added:            u.Added,
+		Modified:         u.Modified,
+		Memberships:      []*MembershipItem{},
+		EmailVerified:    u.EmailVerified,
+		PasswordGen:      u.PasswordGen,
+		LoginAddr:        u.LoginAddr,
+		RefreshAddr:      u.RefreshAddr,
+		EmailGen:         u.EmailGen,
+		AddressWhiteList: u.AddressWhiteList,
 	}
 
 	epoch := time.Unix(0, 0).UTC()
@@ -59,9 +63,10 @@ func (u *userModel) toUser() *User {
 	if u.RefreshTimestamp.UTC() != epoch {
 		ret.RefreshTimestamp = &u.RefreshTimestamp
 	}
+
 	for _, m := range u.Memberships {
 		result := strings.Split(m, ",")
-		ret.Memberships = append(ret.Memberships, &membershipItem{
+		ret.Memberships = append(ret.Memberships, &MembershipItem{
 			MembershipType: result[1],
 			TenantID:       uuid.FromStringOrNil(result[0]),
 		})
@@ -77,8 +82,7 @@ type Storage struct {
 
 func (s *Storage) getUser(ctx context.Context, col string, val interface{}) (*User, error) {
 	var u userModel
-
-	q := "SELECT users.*, ra.roles, mem.memberships FROM users LEFT JOIN (SELECT user_id, array_agg(tenant_id || ',' || membership_type) AS memberships FROM membership LEFT JOIN tenants on tenants.id = tenant_id WHERE tenants.archived = FALSE AND membership.membership_status = 'active' GROUP BY user_id) AS mem ON mem.user_id = users.id LEFT JOIN (SELECT user_id, array_agg(role) AS roles FROM roles GROUP BY user_id) AS ra ON ra.user_id = users.id WHERE users." + pq.QuoteIdentifier(col) + " = $1"
+	q := "SELECT users.*, ra.roles, mem.memberships, ips.ip_whitelist FROM users LEFT JOIN (SELECT user_id, array_agg(tenant_id || ',' || membership_type) AS memberships FROM membership LEFT JOIN tenants on tenants.id = tenant_id WHERE tenants.archived = FALSE AND membership.membership_status = 'active' GROUP BY user_id) AS mem ON mem.user_id = users.id LEFT JOIN (SELECT user_id, array_agg(role) AS roles FROM roles GROUP BY user_id) AS ra ON ra.user_id = users.id LEFT JOIN (SELECT user_id, array_agg(addr) AS ip_whitelist FROM service_account_ip GROUP BY user_id) AS ips ON ips.user_id = users.id WHERE users." + pq.QuoteIdentifier(col) + " = $1"
 	if err := s.DB.GetContext(ctx, &u, q, val); err != nil {
 		if err == sql.ErrNoRows {
 			err = errors.ErrUserNotFound
@@ -98,6 +102,22 @@ func (s *Storage) GetUserByID(ctx context.Context, id uuid.UUID) (*User, error) 
 // GetUserByEmail retrieve a user by his Email
 func (s *Storage) GetUserByEmail(ctx context.Context, email string) (*User, error) {
 	return s.getUser(ctx, "email", email)
+}
+
+// GetUserByIPAddress retrieve a user by whitelisted IP address if any
+func (s *Storage) GetUserByIPAddress(ctx context.Context, address string) (*User, error) {
+	var u userModel
+
+	q := "SELECT users.*, ra.roles, mem.memberships, ips.ip_whitelist FROM users LEFT JOIN (SELECT user_id, array_agg(tenant_id || ',' || membership_type) AS memberships FROM membership LEFT JOIN tenants on tenants.id = tenant_id WHERE tenants.archived = FALSE AND membership.membership_status = 'active' GROUP BY user_id) AS mem ON mem.user_id = users.id LEFT JOIN (SELECT user_id, array_agg(role) AS roles FROM roles GROUP BY user_id) AS ra ON ra.user_id = users.id LEFT JOIN (SELECT user_id, array_agg(addr) AS ip_whitelist FROM service_account_ip GROUP BY user_id) AS ips ON ips.user_id = users.id WHERE $1 = ANY(ips.ip_whitelist)"
+	if err := s.DB.GetContext(ctx, &u, q, address); err != nil {
+		if err == sql.ErrNoRows {
+			err = errors.ErrUserNotFound
+		}
+
+		return nil, err
+	}
+
+	return u.toUser(), nil
 }
 
 var userQueryColumns = map[string]int{
@@ -121,8 +141,8 @@ func (s *Storage) GetUsers(ctx context.Context, q *query.Query) (users []*User, 
 	}
 
 	selOpt := query.SelectOptions{
-		SelectExpr: "users.*, ra.roles, mem.memberships, users." + pq.QuoteIdentifier(q.SortBy) + " AS sorted_by",
-		FromExpr:   "users LEFT JOIN (SELECT user_id, array_agg(tenant_id || ',' || membership_type) AS memberships FROM membership LEFT JOIN tenants on tenants.id = tenant_id WHERE tenants.archived = FALSE AND membership.membership_status = 'active' GROUP BY user_id) AS mem ON mem.user_id = users.id LEFT JOIN (SELECT user_id, array_agg(role) AS roles FROM roles GROUP BY user_id) AS ra ON ra.user_id = users.id",
+		SelectExpr: "users.*, ra.roles, mem.memberships, ips.ip_whitelist, users." + pq.QuoteIdentifier(q.SortBy) + " AS sorted_by",
+		FromExpr:   "users LEFT JOIN (SELECT user_id, array_agg(tenant_id || ',' || membership_type) AS memberships FROM membership LEFT JOIN tenants on tenants.id = tenant_id WHERE tenants.archived = FALSE AND membership.membership_status = 'active' GROUP BY user_id) AS mem ON mem.user_id = users.id LEFT JOIN (SELECT user_id, array_agg(role) AS roles FROM roles GROUP BY user_id) AS ra ON ra.user_id = users.id LEFT JOIN (SELECT user_id, array_agg(addr) AS ip_whitelist FROM service_account_ip GROUP BY user_id) AS ips ON ips.user_id = users.id",
 		IDColumn:   "id",
 		ColumnFlagsFunc: func(col string) int {
 			if flags, ok := userQueryColumns[col]; ok {

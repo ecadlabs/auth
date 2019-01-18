@@ -39,7 +39,7 @@ const (
 // Roles type for holding roles map
 type Roles map[string]interface{}
 
-type membershipItem struct {
+type MembershipItem struct {
 	MembershipType string    `json:"type"`
 	TenantID       uuid.UUID `json:"tenantID"`
 }
@@ -63,6 +63,7 @@ type CreateUser struct {
 // User struct representing a user
 type User struct {
 	ID               uuid.UUID         `json:"id" schema:"id"`
+	Type             string            `json:"type" schema:"type"`
 	Email            string            `json:"email" schema:"email"`
 	EmailGen         int               `json:"-"`
 	Name             string            `json:"name,omitempty" schema:"name"`
@@ -70,12 +71,13 @@ type User struct {
 	Added            time.Time         `json:"added" schema:"added"`
 	Modified         time.Time         `json:"modified" schema:"modified"`
 	EmailVerified    bool              `json:"email_verified" schema:"email_verified"`
-	Memberships      []*membershipItem `json:"memberships"`
+	Memberships      []*MembershipItem `json:"memberships"`
 	PasswordGen      int               `json:"-"`
 	LoginAddr        string            `json:"login_addr,omitempty"`
 	LoginTimestamp   *time.Time        `json:"login_ts,omitempty"`
 	RefreshAddr      string            `json:"refresh_addr,omitempty"`
 	RefreshTimestamp *time.Time        `json:"refresh_ts,omitempty"`
+	AddressWhiteList []string          `json:"address_whitelist,omitempty"`
 }
 
 // GetDefaultMembership retrive the default membership of this user

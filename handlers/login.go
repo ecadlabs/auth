@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
@@ -21,7 +22,7 @@ const (
 	TokenContextKey = "token"
 )
 
-func (u *Users) writeUserToken(w http.ResponseWriter, user *storage.User, membership *storage.Membership) error {
+func (u *Users) writeUserToken(w http.ResponseWriter, addr string, user *storage.User, membership *storage.Membership) error {
 	roles := make([]string, 0, len(membership.Roles))
 	for r := range membership.Roles {
 		roles = append(roles, r)
@@ -30,15 +31,19 @@ func (u *Users) writeUserToken(w http.ResponseWriter, user *storage.User, member
 	now := time.Now()
 
 	claims := jwt.MapClaims{
-		"sub":    user.ID,
-		"exp":    now.Add(u.SessionMaxAge).Unix(),
-		"iat":    now.Unix(),
-		"iss":    u.BaseURL(),
-		"aud":    u.BaseURL(),
-		"tenant": membership.TenantID,
-		utils.NSClaim(u.Namespace, "email"): user.Email,
-		utils.NSClaim(u.Namespace, "name"):  user.Name,
-		utils.NSClaim(u.Namespace, "roles"): roles,
+		"sub":                                user.ID,
+		"exp":                                now.Add(u.SessionMaxAge).Unix(),
+		"iat":                                now.Unix(),
+		"iss":                                u.BaseURL(),
+		"aud":                                u.BaseURL(),
+		utils.NSClaim(u.Namespace, "tenant"): membership.TenantID,
+		utils.NSClaim(u.Namespace, "email"):  user.Email,
+		utils.NSClaim(u.Namespace, "name"):   user.Name,
+		utils.NSClaim(u.Namespace, "roles"):  roles,
+	}
+
+	if addr != "" {
+		claims[utils.NSClaim(u.Namespace, "address")] = addr
 	}
 
 	token := jwt.NewWithClaims(u.JWTSigningMethod, claims)
@@ -107,51 +112,79 @@ func (u *Users) getMembershipLogin(ctx context.Context, tenantID, userID uuid.UU
 
 // Login is a login endpoint handler
 func (u *Users) Login(w http.ResponseWriter, r *http.Request) {
-	var request struct {
+	type loginRequest struct {
 		Name     string `json:"name"`
 		Password string `json:"password"`
 	}
 
+	var request *loginRequest
+
 	if name, password, ok := r.BasicAuth(); ok {
-		request.Name = name
-		request.Password = password
-	} else {
+		request = &loginRequest{
+			Name:     name,
+			Password: password,
+		}
+	} else if strings.HasPrefix(r.Header.Get("Content-Type"), "application/json") {
 		if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
 			utils.JSONError(w, err.Error(), errors.CodeBadRequest)
 			return
 		}
 	}
 
-	if request.Name == "" || request.Password == "" {
-		utils.JSONError(w, "", errors.CodeUnauthorized)
-		return
-	}
-
 	ctx, cancel := u.context(r)
 	defer cancel()
 
-	user, err := u.Storage.GetUserByEmail(ctx, request.Name)
-	if err != nil {
-		log.Error(err)
-		utils.JSONError(w, "", errors.CodeUnauthorized)
-		return
-	}
+	var (
+		user       *storage.User
+		remoteAddr string
+	)
 
-	if len(user.PasswordHash) == 0 {
-		utils.JSONError(w, "", errors.CodeUnauthorized)
-		return
-	}
+	if request == nil {
+		// Try login by IP
+		var err error
+		remoteAddr = utils.GetRemoteAddr(r)
+		log.WithField("address", remoteAddr).Println("Empty login request")
 
-	if err := bcrypt.CompareHashAndPassword(user.PasswordHash, []byte(request.Password)); err != nil {
-		log.Error(err)
-		utils.JSONError(w, "", errors.CodeUnauthorized)
-		return
-	}
+		user, err = u.Storage.GetUserByIPAddress(ctx, remoteAddr)
+		if err != nil {
+			if err != errors.ErrUserNotFound {
+				log.Error(err)
+			}
 
-	// Don't allow unverified users to log in
-	if !user.EmailVerified {
-		utils.JSONErrorResponse(w, errors.ErrEmailNotVerified)
-		return
+			utils.JSONError(w, "", errors.CodeUnauthorized)
+			return
+		}
+	} else {
+		// Normal login
+		if request.Name == "" || request.Password == "" {
+			utils.JSONError(w, "", errors.CodeUnauthorized)
+			return
+		}
+
+		var err error
+		user, err = u.Storage.GetUserByEmail(ctx, request.Name)
+		if err != nil {
+			log.Error(err)
+			utils.JSONError(w, "", errors.CodeUnauthorized)
+			return
+		}
+
+		if len(user.PasswordHash) == 0 {
+			utils.JSONError(w, "", errors.CodeUnauthorized)
+			return
+		}
+
+		if err = bcrypt.CompareHashAndPassword(user.PasswordHash, []byte(request.Password)); err != nil {
+			log.Error(err)
+			utils.JSONError(w, "", errors.CodeUnauthorized)
+			return
+		}
+
+		// Don't allow unverified users to log in
+		if !user.EmailVerified {
+			utils.JSONErrorResponse(w, errors.ErrEmailNotVerified)
+			return
+		}
 	}
 
 	uid, err := u.getTenantFromRequest(r, user)
@@ -169,12 +202,12 @@ func (u *Users) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := u.writeUserToken(w, user, membership); err != nil {
+	if err := u.writeUserToken(w, remoteAddr, user, membership); err != nil {
 		utils.JSONErrorResponse(w, err)
 		return
 	}
 
-	if err := u.Storage.UpdateLoginInfo(ctx, user.ID, getRemoteAddr(r)); err != nil {
+	if err := u.Storage.UpdateLoginInfo(ctx, user.ID, utils.GetRemoteAddr(r)); err != nil {
 		utils.JSONErrorResponse(w, err)
 		return
 	}
@@ -193,12 +226,12 @@ func (u *Users) Refresh(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := u.context(r)
 	defer cancel()
 
-	if err := u.Storage.UpdateRefreshInfo(ctx, self.ID, getRemoteAddr(r)); err != nil {
+	if err := u.Storage.UpdateRefreshInfo(ctx, self.ID, utils.GetRemoteAddr(r)); err != nil {
 		utils.JSONErrorResponse(w, err)
 		return
 	}
 
-	if err := u.writeUserToken(w, self, member); err != nil {
+	if err := u.writeUserToken(w, "", self, member); err != nil {
 		utils.JSONErrorResponse(w, err)
 		return
 	}

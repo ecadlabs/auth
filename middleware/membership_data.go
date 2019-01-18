@@ -32,9 +32,9 @@ func (m *MembershipData) Handler(h http.Handler) http.Handler {
 
 				if id, err = uuid.FromString(sub); err == nil {
 
-					if tenantIdStr, ok := claims["tenant"].(string); ok {
-						if tenantId, err := uuid.FromString(tenantIdStr); err == nil {
-							membership, err := m.Storage.GetMembership(r.Context(), tenantId, id)
+					if tenantIDStr, ok := claims[utils.NSClaim(m.Namespace, "tenant")].(string); ok {
+						if tenantID, err := uuid.FromString(tenantIDStr); err == nil {
+							membership, err := m.Storage.GetMembership(r.Context(), tenantID, id)
 
 							if err == nil {
 								req := r.WithContext(context.WithValue(r.Context(), m.MembershipContextKey, membership))

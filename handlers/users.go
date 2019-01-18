@@ -206,11 +206,11 @@ func (u *Users) resetToken(user *storage.User) (string, error) {
 	now := time.Now()
 
 	claims := jwt.MapClaims{
-		"sub": user.ID,
-		"exp": now.Add(u.ResetTokenMaxAge).Unix(),
-		"iat": now.Unix(),
-		"iss": u.BaseURL(),
-		"aud": u.ResetURL(),
+		"sub":                             user.ID,
+		"exp":                             now.Add(u.ResetTokenMaxAge).Unix(),
+		"iat":                             now.Unix(),
+		"iss":                             u.BaseURL(),
+		"aud":                             u.ResetURL(),
 		utils.NSClaim(u.Namespace, "gen"): user.PasswordGen,
 	}
 
@@ -309,7 +309,7 @@ func (u *Users) NewUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err = u.Notifier.Notify(ctx, notification.NotificationInvite, &notification.NotificationData{
-		Addr:        getRemoteAddr(r),
+		Addr:        utils.GetRemoteAddr(r),
 		CurrentUser: self,
 		TargetUser:  ret,
 		Token:       token,
@@ -652,7 +652,7 @@ func (u *Users) SendResetRequest(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err = u.Notifier.Notify(r.Context(), notification.NotificationReset, &notification.NotificationData{
-		Addr:        getRemoteAddr(r),
+		Addr:        utils.GetRemoteAddr(r),
 		CurrentUser: user,
 		TargetUser:  user,
 		Token:       token,
@@ -731,11 +731,11 @@ func (u *Users) SendUpdateEmailRequest(w http.ResponseWriter, r *http.Request) {
 	now := time.Now()
 
 	claims := jwt.MapClaims{
-		"sub": user.ID,
-		"exp": now.Add(u.EmailUpdateTokenMaxAge).Unix(),
-		"iat": now.Unix(),
-		"iss": u.BaseURL(),
-		"aud": u.EmailUpdateURL(),
+		"sub":                               user.ID,
+		"exp":                               now.Add(u.EmailUpdateTokenMaxAge).Unix(),
+		"iat":                               now.Unix(),
+		"iss":                               u.BaseURL(),
+		"aud":                               u.EmailUpdateURL(),
 		utils.NSClaim(u.Namespace, "email"): request.Email,
 		utils.NSClaim(u.Namespace, "gen"):   user.EmailGen,
 	}
@@ -757,7 +757,7 @@ func (u *Users) SendUpdateEmailRequest(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err = u.Notifier.Notify(ctx, notification.NotificationEmailUpdateRequest, &notification.NotificationData{
-		Addr:        getRemoteAddr(r),
+		Addr:        utils.GetRemoteAddr(r),
 		To:          []string{request.Email},
 		Email:       request.Email,
 		CurrentUser: user,
@@ -858,7 +858,7 @@ func (u *Users) UpdateEmail(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err = u.Notifier.Notify(ctx, notification.NotificationEmailUpdate, &notification.NotificationData{
-		Addr:        getRemoteAddr(r),
+		Addr:        utils.GetRemoteAddr(r),
 		Email:       prevEmail,
 		To:          []string{prevEmail, user.Email},
 		CurrentUser: user,
