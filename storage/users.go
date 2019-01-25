@@ -397,11 +397,6 @@ func (s *Storage) DeleteUser(ctx context.Context, id uuid.UUID) (err error) {
 		return errors.ErrUserNotFound
 	}
 
-	_, err = tx.ExecContext(ctx, "DELETE FROM roles WHERE user_id = $1", id)
-	if err != nil {
-		return err
-	}
-
 	return nil
 }
 
