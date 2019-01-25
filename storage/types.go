@@ -40,8 +40,8 @@ const (
 type Roles map[string]interface{}
 
 type MembershipItem struct {
-	MembershipType string    `json:"type"`
-	TenantID       uuid.UUID `json:"tenantID"`
+	Type     string    `json:"type"`
+	TenantID uuid.UUID `json:"tenant_id"`
 }
 
 // CreateUser struct representing data necessary to create a new user
