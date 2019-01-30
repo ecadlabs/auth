@@ -10,6 +10,8 @@
 // data/13_ip_whitelist.up.sql
 // data/14_roles_ref.down.sql
 // data/14_roles_ref.up.sql
+// data/15_role_membership_ref.down.sql
+// data/15_role_membership_ref.up.sql
 // data/1_add_users_table.down.sql
 // data/1_add_users_table.up.sql
 // data/2_add_roles_table.down.sql
@@ -291,6 +293,46 @@ func _14_roles_refUpSql() (*asset, error) {
 	}
 
 	info := bindataFileInfo{name: "14_roles_ref.up.sql", size: 136, mode: os.FileMode(420), modTime: time.Unix(1548437898, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
+var __15_role_membership_refDownSql = []byte("\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\x94\xcc\x41\x0a\xc2\x30\x10\x46\xe1\x7d\x4f\xf1\x2f\x15\xbc\x81\xab\x31\x33\x82\x10\x9b\x92\x26\xeb\xa2\x64\xc0\x80\xad\x92\xd4\xfb\x8b\x8a\x08\xe2\xc6\xed\x7b\xf0\x91\x0d\xe2\x11\x68\x63\x05\xe5\x72\xd6\xda\x00\x00\x31\xc3\x38\x1b\xf7\x2d\x6e\x55\xcb\x90\x13\x62\xdc\x31\xbc\x6c\xc5\x4b\x6b\xa4\x7f\xf6\xba\xc8\x69\x09\xd7\x22\x76\x4c\x41\x60\xa8\x37\xc4\xf2\x28\x2c\x56\x3e\x65\xf5\xad\xce\x3a\x1d\xa6\xf9\x97\xfb\x3a\x7f\xca\xec\x5d\xf7\xa6\x47\x1d\x8f\x5a\xea\x29\x5f\x87\x9c\xd6\xcd\x3d\x00\x00\xff\xff\xce\x10\x1c\xcd\xe1\x00\x00\x00")
+
+func _15_role_membership_refDownSqlBytes() ([]byte, error) {
+	return bindataRead(
+		__15_role_membership_refDownSql,
+		"15_role_membership_ref.down.sql",
+	)
+}
+
+func _15_role_membership_refDownSql() (*asset, error) {
+	bytes, err := _15_role_membership_refDownSqlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "15_role_membership_ref.down.sql", size: 225, mode: os.FileMode(420), modTime: time.Unix(1548444992, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
+var __15_role_membership_refUpSql = []byte("\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\x8c\x90\xc1\x4e\xc3\x30\x10\x44\xef\xfe\x8a\x3d\xb6\x52\xd5\x1f\x88\x38\xb8\xf6\xa6\x58\x24\xeb\xe2\xac\x85\x38\x45\xa0\x1a\x11\x41\x0b\x4a\xca\x81\xbf\x47\x71\xdc\x2a\x4d\x38\xf4\xe8\x37\xb3\xe3\xd9\xdd\xe0\xd6\x50\x26\x84\x2c\x18\x1d\xb0\xdc\x14\x08\xed\xd7\x67\xe8\x40\x6a\x0d\xca\x16\xbe\x24\x38\x84\xc3\x6b\x68\xbb\xf7\xe6\xbb\x6e\xf6\xe0\xbd\xd1\x99\x10\x7e\xa7\x25\x27\xb3\x00\x00\xa8\x90\x27\xce\xbb\xd1\x7b\xdd\xec\xa3\x2b\x77\xb6\x1c\xe1\xc8\x9e\xee\xd1\xa5\xa4\xf5\x4f\x17\xda\xd9\xec\x19\x4a\xd2\xc9\x76\x0a\xc7\x97\xe3\x69\x66\xbc\xe0\xff\x56\x8a\x7f\x69\x67\x77\xe7\xbd\x52\xec\x6a\x26\x5c\x62\x06\x69\x38\x05\x55\xec\xa4\x21\x1e\xc2\xea\xab\x55\xeb\xb7\x8f\xf0\x0b\xb9\x75\x68\xb6\x04\x0f\xf8\x0c\x8b\x2b\x7d\x09\x0e\x73\x74\x48\x0a\xab\x51\xdf\x45\xaf\x58\x02\x8d\x05\x32\x82\x92\x95\x92\x1a\x7b\x92\xae\x9b\xc8\xcd\x35\x7a\x56\xf7\x55\x3c\x99\x47\x8f\x93\x16\xab\x38\xb3\xcc\x84\x50\xb6\x2c\x0d\x67\xe2\x2f\x00\x00\xff\xff\x88\x2d\x38\x7e\xff\x01\x00\x00")
+
+func _15_role_membership_refUpSqlBytes() ([]byte, error) {
+	return bindataRead(
+		__15_role_membership_refUpSql,
+		"15_role_membership_ref.up.sql",
+	)
+}
+
+func _15_role_membership_refUpSql() (*asset, error) {
+	bytes, err := _15_role_membership_refUpSqlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "15_role_membership_ref.up.sql", size: 511, mode: os.FileMode(420), modTime: time.Unix(1548718874, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -717,6 +759,8 @@ var _bindata = map[string]func() (*asset, error){
 	"13_ip_whitelist.up.sql": _13_ip_whitelistUpSql,
 	"14_roles_ref.down.sql": _14_roles_refDownSql,
 	"14_roles_ref.up.sql": _14_roles_refUpSql,
+	"15_role_membership_ref.down.sql": _15_role_membership_refDownSql,
+	"15_role_membership_ref.up.sql": _15_role_membership_refUpSql,
 	"1_add_users_table.down.sql": _1_add_users_tableDownSql,
 	"1_add_users_table.up.sql": _1_add_users_tableUpSql,
 	"2_add_roles_table.down.sql": _2_add_roles_tableDownSql,
@@ -787,6 +831,8 @@ var _bintree = &bintree{nil, map[string]*bintree{
 	"13_ip_whitelist.up.sql": &bintree{_13_ip_whitelistUpSql, map[string]*bintree{}},
 	"14_roles_ref.down.sql": &bintree{_14_roles_refDownSql, map[string]*bintree{}},
 	"14_roles_ref.up.sql": &bintree{_14_roles_refUpSql, map[string]*bintree{}},
+	"15_role_membership_ref.down.sql": &bintree{_15_role_membership_refDownSql, map[string]*bintree{}},
+	"15_role_membership_ref.up.sql": &bintree{_15_role_membership_refUpSql, map[string]*bintree{}},
 	"1_add_users_table.down.sql": &bintree{_1_add_users_tableDownSql, map[string]*bintree{}},
 	"1_add_users_table.up.sql": &bintree{_1_add_users_tableUpSql, map[string]*bintree{}},
 	"2_add_roles_table.down.sql": &bintree{_2_add_roles_tableDownSql, map[string]*bintree{}},
