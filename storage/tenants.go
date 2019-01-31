@@ -43,21 +43,7 @@ type TenantStorage struct {
 	DB *sqlx.DB
 }
 
-// CreateTenant insert a tenant in the database and return it
-func (s *TenantStorage) CreateTenant(ctx context.Context, name string, ownerID uuid.UUID) (*TenantModel, error) {
-	tx, err := s.DB.Beginx()
-	if err != nil {
-		return nil, err
-	}
-
-	defer func() {
-		if err != nil {
-			tx.Rollback()
-			return
-		}
-
-		err = tx.Commit()
-	}()
+func (s *TenantStorage) CreateTenantInt(ctx context.Context, tx *sqlx.Tx, name string) (*TenantModel, error) {
 
 	newTenant := TenantModel{
 		Name: name,
@@ -76,6 +62,46 @@ func (s *TenantStorage) CreateTenant(ctx context.Context, name string, ownerID u
 		}
 	}
 
+	return &newTenant, nil
+}
+
+func (s *TenantStorage) CreateTenant(ctx context.Context, name string) (*TenantModel, error) {
+	tx, err := s.DB.Beginx()
+	if err != nil {
+		return nil, err
+	}
+
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+			return
+		}
+
+		err = tx.Commit()
+	}()
+
+	newTenant, err := s.CreateTenantInt(ctx, tx, name)
+	return newTenant, err
+}
+
+// CreateTenant insert a tenant in the database and return it
+func (s *TenantStorage) CreateTenantWithOwner(ctx context.Context, name string, ownerID uuid.UUID) (*TenantModel, error) {
+	tx, err := s.DB.Beginx()
+	if err != nil {
+		return nil, err
+	}
+
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+			return
+		}
+
+		err = tx.Commit()
+	}()
+
+	newTenant, err := s.CreateTenantInt(ctx, tx, name)
+
 	_, err = tx.ExecContext(ctx, "INSERT INTO membership (tenant_id, user_id, membership_status, membership_type) VALUES ($1, $2, $3, $4)", newTenant.ID, ownerID, ActiveState, OwnerMembership)
 
 	if err != nil {
@@ -88,7 +114,7 @@ func (s *TenantStorage) CreateTenant(ctx context.Context, name string, ownerID u
 		return nil, err
 	}
 
-	return &newTenant, nil
+	return newTenant, nil
 }
 
 // GetTenant fetch a tenant from the database and return it
