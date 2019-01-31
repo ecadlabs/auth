@@ -14,7 +14,7 @@ import (
 )
 
 type createTenantModel struct {
-	Name string `json:name`
+	Name string `json:"name"`
 }
 
 func createTenant(srv *httptest.Server, tenant *createTenantModel, token string) (int, *storage.TenantModel, error) {
@@ -79,8 +79,8 @@ func getTenant(srv *httptest.Server, token string, uid uuid.UUID) (int, *storage
 	return resp.StatusCode, &t, nil
 }
 
-func DeleteMembership(srv *httptest.Server, token string, uid, userId uuid.UUID) (int, error) {
-	req, err := http.NewRequest("DELETE", srv.URL+"/tenants/"+uid.String()+"/members/"+userId.String(), nil)
+func deleteMembership(srv *httptest.Server, token string, uid, userID uuid.UUID) (int, error) {
+	req, err := http.NewRequest("DELETE", srv.URL+"/tenants/"+uid.String()+"/members/"+userID.String(), nil)
 	if err != nil {
 		return 0, err
 	}
@@ -98,12 +98,12 @@ func DeleteMembership(srv *httptest.Server, token string, uid, userId uuid.UUID)
 	return resp.StatusCode, nil
 }
 
-func inviteTenant(srv *httptest.Server, token, tenantId string, email string) (int, error) {
+func inviteTenant(srv *httptest.Server, token, tenantID string, email string) (int, error) {
 	roles := make(storage.Roles, 1)
 	roles["regular"] = "true"
 	data := struct {
 		Email string        `json:"email"`
-		Roles storage.Roles `json:"roles`
+		Roles storage.Roles `json:"roles"`
 	}{
 		Email: email,
 		Roles: roles,
@@ -114,7 +114,7 @@ func inviteTenant(srv *httptest.Server, token, tenantId string, email string) (i
 		return 0, err
 	}
 
-	req, err := http.NewRequest("POST", fmt.Sprintf(srv.URL+"/tenants/%s/members", tenantId), bytes.NewReader(buf))
+	req, err := http.NewRequest("POST", fmt.Sprintf(srv.URL+"/tenants/%s/members", tenantID), bytes.NewReader(buf))
 	if err != nil {
 		return 0, err
 	}
@@ -164,7 +164,7 @@ func acceptInvite(srv *httptest.Server, token string) (int, error) {
 	return resp.StatusCode, nil
 }
 
-func patchMembership(srv *httptest.Server, token string, userId, tenantId uuid.UUID) (int, error) {
+func patchMembership(srv *httptest.Server, token string, userID, tenantID uuid.UUID) (int, error) {
 	var p jsonpatch.Patch = []*jsonpatch.Op{
 		&jsonpatch.Op{
 			Op:    "replace",
@@ -188,7 +188,7 @@ func patchMembership(srv *httptest.Server, token string, userId, tenantId uuid.U
 		return 0, err
 	}
 
-	req, err := http.NewRequest("PATCH", fmt.Sprintf(srv.URL+"/tenants/%v/members/%v", tenantId, userId), bytes.NewReader(buf))
+	req, err := http.NewRequest("PATCH", fmt.Sprintf(srv.URL+"/tenants/%v/members/%v", tenantID, userID), bytes.NewReader(buf))
 	if err != nil {
 		return 0, err
 	}
@@ -208,19 +208,19 @@ func patchMembership(srv *httptest.Server, token string, userId, tenantId uuid.U
 }
 
 func getTenantList(srv *httptest.Server, token string, query url.Values) (int, []*storage.TenantModel, error) {
-	tmpUrl, err := url.Parse(srv.URL)
+	tmpURL, err := url.Parse(srv.URL)
 	if err != nil {
 		return 0, nil, err
 	}
 
-	tmpUrl.Path = "/tenants/"
-	tmpUrl.RawQuery = query.Encode()
-	reqUrl := tmpUrl.String()
+	tmpURL.Path = "/tenants/"
+	tmpURL.RawQuery = query.Encode()
+	reqURL := tmpURL.String()
 
 	result := make([]*storage.TenantModel, 0)
 
 	for {
-		req, err := http.NewRequest("GET", reqUrl, nil)
+		req, err := http.NewRequest("GET", reqURL, nil)
 		if err != nil {
 			return 0, nil, err
 		}
@@ -260,27 +260,27 @@ func getTenantList(srv *httptest.Server, token string, query url.Values) (int, [
 			break
 		}
 
-		reqUrl = res.Next
+		reqURL = res.Next
 		result = append(result, res.Value...)
 	}
 
 	return http.StatusOK, result, nil
 }
 
-func getTenantMembershipsList(srv *httptest.Server, token string, tenantId uuid.UUID, query url.Values) (int, []*storage.Membership, error) {
-	tmpUrl, err := url.Parse(srv.URL)
+func getTenantMembershipsList(srv *httptest.Server, token string, tenantID uuid.UUID, query url.Values) (int, []*storage.Membership, error) {
+	tmpURL, err := url.Parse(srv.URL)
 	if err != nil {
 		return 0, nil, err
 	}
 
-	tmpUrl.Path = fmt.Sprintf("/tenants/%s/members", tenantId)
-	tmpUrl.RawQuery = query.Encode()
-	reqUrl := tmpUrl.String()
+	tmpURL.Path = fmt.Sprintf("/tenants/%s/members", tenantID)
+	tmpURL.RawQuery = query.Encode()
+	reqURL := tmpURL.String()
 
 	result := make([]*storage.Membership, 0)
 
 	for {
-		req, err := http.NewRequest("GET", reqUrl, nil)
+		req, err := http.NewRequest("GET", reqURL, nil)
 		if err != nil {
 			return 0, nil, err
 		}
@@ -320,27 +320,27 @@ func getTenantMembershipsList(srv *httptest.Server, token string, tenantId uuid.
 			break
 		}
 
-		reqUrl = res.Next
+		reqURL = res.Next
 		result = append(result, res.Value...)
 	}
 
 	return http.StatusOK, result, nil
 }
 
-func getUserMembershipsList(srv *httptest.Server, token string, userId uuid.UUID, query url.Values) (int, []*storage.Membership, error) {
-	tmpUrl, err := url.Parse(srv.URL)
+func getUserMembershipsList(srv *httptest.Server, token string, userID uuid.UUID, query url.Values) (int, []*storage.Membership, error) {
+	tmpURL, err := url.Parse(srv.URL)
 	if err != nil {
 		return 0, nil, err
 	}
 
-	tmpUrl.Path = fmt.Sprintf("/users/%s/memberships", userId)
-	tmpUrl.RawQuery = query.Encode()
-	reqUrl := tmpUrl.String()
+	tmpURL.Path = fmt.Sprintf("/users/%s/memberships", userID)
+	tmpURL.RawQuery = query.Encode()
+	reqURL := tmpURL.String()
 
 	result := make([]*storage.Membership, 0)
 
 	for {
-		req, err := http.NewRequest("GET", reqUrl, nil)
+		req, err := http.NewRequest("GET", reqURL, nil)
 		if err != nil {
 			return 0, nil, err
 		}
@@ -380,7 +380,7 @@ func getUserMembershipsList(srv *httptest.Server, token string, userId uuid.UUID
 			break
 		}
 
-		reqUrl = res.Next
+		reqURL = res.Next
 		result = append(result, res.Value...)
 	}
 
