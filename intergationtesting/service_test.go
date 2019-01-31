@@ -433,7 +433,7 @@ func BeforeTest(t *testing.T) (srv *httptest.Server, userList []*storage.User, t
 	}
 
 	// Bootstrap
-	superuser, err := svc.Bootstrap()
+	_, err = svc.Bootstrap()
 	if err != nil {
 		t.Error(err)
 		return
@@ -457,7 +457,7 @@ func BeforeTest(t *testing.T) (srv *httptest.Server, userList []*storage.User, t
 	for i := 0; i < usersNum; i++ {
 		u := genTestUser(i)
 
-		code, res, err := createUser(srv, u, token, tokenCh)
+		code, _, err := createUser(srv, u, token, tokenCh)
 		if err != nil {
 			t.Error(err)
 			return
