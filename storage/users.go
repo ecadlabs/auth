@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -27,9 +28,7 @@ type userModel struct {
 	Modified         time.Time      `db:"modified"`
 	EmailVerified    bool           `db:"email_verified"`
 	SortedBy         string         `db:"sorted_by"` // Output only
-	Roles            pq.StringArray `db:"roles"`
-	Tenants          pq.StringArray `db:"tenant_ids"`
-	MembershipTypes  pq.StringArray `db:"membership_types"`
+	Membership       []byte         `db:"membership"`
 	LoginAddr        string         `db:"login_addr"`
 	LoginTimestamp   time.Time      `db:"login_ts"`
 	RefreshAddr      string         `db:"refresh_addr"`
@@ -46,7 +45,6 @@ func (u *userModel) toUser() *User {
 		Name:             u.Name,
 		Added:            u.Added,
 		Modified:         u.Modified,
-		Memberships:      []*MembershipItem{},
 		EmailVerified:    u.EmailVerified,
 		PasswordGen:      u.PasswordGen,
 		LoginAddr:        u.LoginAddr,
@@ -65,12 +63,9 @@ func (u *userModel) toUser() *User {
 		ret.RefreshTimestamp = &u.RefreshTimestamp
 	}
 
-	ret.Memberships = make([]*MembershipItem, len(u.Tenants))
-
-	for i, m := range u.Tenants {
-		ret.Memberships[i] = &MembershipItem{
-			TenantID: uuid.FromStringOrNil(m),
-			Type:     u.MembershipTypes[i],
+	if len(u.Membership) != 0 {
+		if err := json.Unmarshal(u.Membership, &ret.Membership); err != nil {
+			log.Warn(err)
 		}
 	}
 
@@ -83,9 +78,56 @@ type Storage struct {
 }
 
 func (s *Storage) getUser(ctx context.Context, col string, val interface{}) (*User, error) {
+	f := `
+	SELECT
+	  users.*,
+	  m.membership,
+	  ips.ip_whitelist
+	FROM
+	  users
+	  LEFT JOIN (
+	    SELECT
+	      membership.user_id,
+	      json_agg(
+	        json_build_object(
+	          'tenant_id',
+	          membership.tenant_id,
+	          'type',
+	          membership.membership_type,
+	          'roles',
+	          r.roles
+	        )
+	      ) AS membership
+	    FROM
+	      membership
+	      LEFT JOIN (
+	        SELECT
+	          membership_id,
+	          json_agg(role) AS roles
+	        FROM
+	          roles
+	        GROUP BY
+	          membership_id
+	      ) AS r ON membership.id = r.membership_id
+	    WHERE
+	      membership.membership_status = 'active'
+	    GROUP BY
+	      membership.user_id
+	  ) AS m ON m.user_id = users.id
+	  LEFT JOIN (
+	    SELECT
+	      user_id,
+	      array_agg(addr) AS ip_whitelist
+	    FROM
+	      service_account_ip
+	    GROUP BY
+	      user_id
+	  ) AS ips ON ips.user_id = users.id
+	WHERE
+	  users.%s = $1`
+
 	var u userModel
-	q := "SELECT users.*, ra.roles, mem.tenant_ids, mem.membership_types, ips.ip_whitelist FROM users LEFT JOIN (SELECT user_id, array_agg(tenant_id) AS tenant_ids, array_agg(membership_type) AS membership_types FROM membership LEFT JOIN tenants on tenants.id = tenant_id WHERE tenants.archived = FALSE AND membership.membership_status = 'active' GROUP BY user_id) AS mem ON mem.user_id = users.id LEFT JOIN (SELECT user_id, array_agg(role) AS roles FROM roles GROUP BY user_id) AS ra ON ra.user_id = users.id LEFT JOIN (SELECT user_id, array_agg(addr) AS ip_whitelist FROM service_account_ip GROUP BY user_id) AS ips ON ips.user_id = users.id WHERE users." + pq.QuoteIdentifier(col) + " = $1"
-	if err := s.DB.GetContext(ctx, &u, q, val); err != nil {
+	if err := s.DB.GetContext(ctx, &u, fmt.Sprintf(f, pq.QuoteIdentifier(col)), val); err != nil {
 		if err == sql.ErrNoRows {
 			err = errors.ErrUserNotFound
 		}
@@ -108,9 +150,46 @@ func (s *Storage) GetUserByEmail(ctx context.Context, email string) (*User, erro
 
 // GetUserByIPAddress retrieve a user by whitelisted IP address if any
 func (s *Storage) GetUserByIPAddress(ctx context.Context, address string) (*User, error) {
-	var u userModel
+	q := `
+	SELECT
+	  users.*,
+	  m.membership
+	FROM
+	  users
+	  INNER JOIN service_account_ip ON service_account_ip.user_id = users.id
+	  LEFT JOIN (
+	    SELECT
+	      membership.user_id,
+	      json_agg(
+	        json_build_object(
+	          'tenant_id',
+	          membership.tenant_id,
+	          'type',
+	          membership.membership_type,
+	          'roles',
+	          r.roles
+	        )
+	      ) AS membership
+	    FROM
+	      membership
+	      LEFT JOIN (
+	        SELECT
+	          membership_id,
+	          json_agg(role) AS roles
+	        FROM
+	          roles
+	        GROUP BY
+	          membership_id
+	      ) AS r ON membership.id = r.membership_id
+	    WHERE
+	      membership.membership_status = 'active'
+	    GROUP BY
+	      membership.user_id
+	  ) AS m ON m.user_id = users.id
+	WHERE
+	  service_account_ip.addr = $1`
 
-	q := "SELECT users.*, ra.roles, mem.tenant_ids, mem.membership_types, ips.ip_whitelist FROM users LEFT JOIN (SELECT user_id, array_agg(tenant_id) AS tenant_ids, array_agg(membership_type) AS membership_types FROM membership LEFT JOIN tenants on tenants.id = tenant_id WHERE tenants.archived = FALSE AND membership.membership_status = 'active' GROUP BY user_id) AS mem ON mem.user_id = users.id LEFT JOIN (SELECT user_id, array_agg(role) AS roles FROM roles GROUP BY user_id) AS ra ON ra.user_id = users.id LEFT JOIN (SELECT user_id, array_agg(addr) AS ip_whitelist FROM service_account_ip GROUP BY user_id) AS ips ON ips.user_id = users.id WHERE $1 = ANY(ips.ip_whitelist)"
+	var u userModel
 	if err := s.DB.GetContext(ctx, &u, q, address); err != nil {
 		if err == sql.ErrNoRows {
 			err = errors.ErrUserNotFound
@@ -128,7 +207,6 @@ var userQueryColumns = map[string]int{
 	"name":           query.ColQuery | query.ColSort,
 	"added":          query.ColQuery | query.ColSort,
 	"modified":       query.ColQuery | query.ColSort,
-	"roles":          query.ColQuery,
 	"email_verified": query.ColQuery | query.ColSort,
 	"login_addr":     query.ColQuery | query.ColSort,
 	"login_ts":       query.ColQuery | query.ColSort,
@@ -143,9 +221,48 @@ func (s *Storage) GetUsers(ctx context.Context, q *query.Query) (users []*User, 
 	}
 
 	selOpt := query.SelectOptions{
-		SelectExpr: "users.*, ra.roles, mem.tenant_ids, mem.membership_types, ips.ip_whitelist, users." + pq.QuoteIdentifier(q.SortBy) + " AS sorted_by",
-		FromExpr:   "users LEFT JOIN (SELECT user_id, array_agg(tenant_id) AS tenant_ids, array_agg(membership_type) AS membership_types FROM membership LEFT JOIN tenants on tenants.id = tenant_id WHERE tenants.archived = FALSE AND membership.membership_status = 'active' GROUP BY user_id) AS mem ON mem.user_id = users.id LEFT JOIN (SELECT user_id, array_agg(role) AS roles FROM roles GROUP BY user_id) AS ra ON ra.user_id = users.id LEFT JOIN (SELECT user_id, array_agg(addr) AS ip_whitelist FROM service_account_ip GROUP BY user_id) AS ips ON ips.user_id = users.id",
-		IDColumn:   "id",
+		SelectExpr: "users.*, m.membership, ips.ip_whitelist, users." + pq.QuoteIdentifier(q.SortBy) + " AS sorted_by",
+		FromExpr: `
+			users
+			LEFT JOIN (
+			  SELECT
+				membership.user_id,
+				json_agg(
+				  json_build_object(
+					'tenant_id',
+					membership.tenant_id,
+					'type',
+					membership.membership_type,
+					'roles',
+					r.roles
+				  )
+				) AS membership
+			  FROM
+				membership
+				LEFT JOIN (
+				  SELECT
+					membership_id,
+					json_agg(role) AS roles
+				  FROM
+					roles
+				  GROUP BY
+					membership_id
+				) AS r ON membership.id = r.membership_id
+			  WHERE
+				membership.membership_status = 'active'
+			  GROUP BY
+				membership.user_id
+			) AS m ON m.user_id = users.id
+			LEFT JOIN (
+			  SELECT
+				user_id,
+				array_agg(addr) AS ip_whitelist
+			  FROM
+				service_account_ip
+			  GROUP BY
+				user_id
+			) AS ips ON ips.user_id = users.id`,
+		IDColumn: "id",
 		ColumnFlagsFunc: func(col string) int {
 			if flags, ok := userQueryColumns[col]; ok {
 				return flags
@@ -262,25 +379,27 @@ func NewUserInt(ctx context.Context, tx *sqlx.Tx, user *CreateUser) (res *User, 
 		return
 	}
 
-	_, err = tx.ExecContext(ctx, "INSERT INTO membership (user_id, tenant_id, membership_type) VALUES ($1, $2, $3)", model.ID, tModel.ID, OwnerMembership)
+	var mid uuid.UUID
+	if err = tx.GetContext(ctx, &mid, "INSERT INTO membership (user_id, tenant_id, membership_type) VALUES ($1, $2, $3) RETURNING id", model.ID, tModel.ID, OwnerMembership); err != nil {
+		return
+	}
 
 	user.Roles["owner"] = true
 
 	// Create roles
 	valuesExprs := make([]string, len(user.Roles))
-	args := make([]interface{}, len(user.Roles)+2)
+	args := make([]interface{}, len(user.Roles)+1)
 
-	args[0] = model.ID
-	args[1] = tModel.ID
+	args[0] = mid
 	var i int
 
 	for r := range user.Roles {
-		valuesExprs[i] = fmt.Sprintf("($1, $2, $%d)", i+3)
-		args[i+2] = r
+		valuesExprs[i] = fmt.Sprintf("($1, $%d)", i+2)
+		args[i+1] = r
 		i++
 	}
 
-	_, err = tx.ExecContext(ctx, "INSERT INTO roles (user_id, tenant_id, role) VALUES "+strings.Join(valuesExprs, ", "), args...)
+	_, err = tx.ExecContext(ctx, "INSERT INTO roles (membership_id, role) VALUES "+strings.Join(valuesExprs, ", "), args...)
 	return
 }
 
@@ -483,13 +602,6 @@ func (s *Storage) UpdateEmailWithGen(ctx context.Context, id uuid.UUID, email st
 			err = errors.ErrUserNotFound
 		}
 		return nil, "", err
-	}
-
-	// Get roles back
-	if err = tx.GetContext(ctx, &u, "SELECT array_agg(role) AS roles FROM roles WHERE user_id = $1 GROUP BY user_id", id); err != nil {
-		if err != sql.ErrNoRows {
-			return nil, "", err
-		}
 	}
 
 	return u.toUser(), prev.Email, nil

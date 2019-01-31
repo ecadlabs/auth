@@ -103,8 +103,27 @@ func (s *MembershipStorage) AddMembership(ctx context.Context, id uuid.UUID, use
 
 // GetMembership retrive a membership from the database
 func (s *MembershipStorage) GetMembership(ctx context.Context, id uuid.UUID, userID uuid.UUID) (*Membership, error) {
-	model := membershipModel{}
-	err := s.DB.GetContext(ctx, &model, "SELECT membership.*, ra.roles FROM membership LEFT JOIN (SELECT membership_id, array_agg(role) AS roles FROM roles GROUP BY membership_id) AS ra ON ra.membership_id = membership.id WHERE membership.tenant_id = $1 AND membership.user_id = $2", id, userID)
+	q := `
+	SELECT
+	  membership.*,
+	  r.roles
+	FROM
+	  membership
+	  LEFT JOIN (
+	    SELECT
+	      membership_id,
+	      array_agg(role) AS roles
+	    FROM
+	      roles
+	    GROUP BY
+	      membership_id
+	  ) AS r ON r.membership_id = membership.id
+	WHERE
+	  membership.tenant_id = $1
+	  AND membership.user_id = $2`
+
+	var model membershipModel
+	err := s.DB.GetContext(ctx, &model, q, id, userID)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -243,6 +262,7 @@ var membershipsQueryColumns = map[string]int{
 	"modified":          query.ColQuery | query.ColSort,
 	"membership_type":   query.ColQuery | query.ColSort,
 	"membership_status": query.ColQuery | query.ColSort,
+	"roles":             query.ColQuery,
 }
 
 // GetMemberships get memberships from the database as a paged result
@@ -252,9 +272,21 @@ func (s *MembershipStorage) GetMemberships(ctx context.Context, q *query.Query) 
 	}
 
 	selOpt := query.SelectOptions{
-		SelectExpr: "mem_role.*, " + pq.QuoteIdentifier(q.SortBy) + " AS sorted_by",
-		FromExpr:   "(SELECT mem.*, ra.roles FROM (SELECT membership.* FROM membership LEFT JOIN tenants ON membership.tenant_id = tenants.id WHERE tenants.archived = FALSE) AS mem LEFT JOIN (SELECT membership_id, array_agg(role) AS roles FROM roles GROUP BY membership_id) AS ra ON ra.membership_id = mem.id) AS mem_role",
-		IDColumn:   "id",
+		SelectExpr: "membership.*, r.roles, membership." + pq.QuoteIdentifier(q.SortBy) + " AS sorted_by",
+		FromExpr: `
+			membership
+			INNER JOIN tenants ON tenants.id = membership.tenant_id
+			AND tenants.archived = FALSE
+			LEFT JOIN (
+		  	SELECT
+		    	membership_id,
+		    	array_agg(role) AS roles
+		  	FROM
+		    	roles
+		  	GROUP BY
+		    	membership_id
+				) AS r ON r.membership_id = membership.id`,
+		IDColumn: "id",
 		ColumnFlagsFunc: func(col string) int {
 			if flags, ok := membershipsQueryColumns[col]; ok {
 				return flags
@@ -355,13 +387,28 @@ func (s *MembershipStorage) DeleteMembership(ctx context.Context, id uuid.UUID, 
 }
 
 func (s *MembershipStorage) hasAMinimumOfOneOwner(ctx context.Context, tx *sqlx.Tx, id uuid.UUID) error {
-	rows, err := tx.QueryContext(ctx, "SELECT * FROM roles LEFT JOIN membership ON membership.id = roles.membership_id WHERE membership.tenant_id = $1 AND membership_status = $2 AND membership_type = $3 AND roles.role = $4", id, ActiveState, OwnerMembership, OwnerMembership)
-	if err != nil {
+	q := `
+		SELECT
+		  EXISTS(
+		    SELECT
+		      TRUE
+		    FROM
+		      membership
+		      INNER JOIN tenants ON tenants.id = membership.tenant_id
+		      INNER JOIN roles ON roles.membership_id = membership.id
+		    WHERE
+		      membership.tenant_id = $1
+		      AND membership.membership_status = $2
+		      AND membership_type = $3
+		      AND roles.role = $4
+		  )`
+
+	var exists bool
+	if err := tx.GetContext(ctx, &exists, q, id, ActiveState, OwnerMembership, OwnerMembership); err != nil {
 		return err
 	}
 
-	defer rows.Close()
-	if !rows.Next() {
+	if !exists {
 		return errors.ErrMembershipNotFound
 	}
 

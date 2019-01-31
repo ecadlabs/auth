@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/ecadlabs/auth/rbac"
@@ -39,25 +40,37 @@ const (
 // Roles type for holding roles map
 type Roles map[string]interface{}
 
+func (r *Roles) UnmarshalJSON(data []byte) error {
+	if err := json.Unmarshal(data, (*map[string]interface{})(r)); err == nil {
+		return nil
+	}
+
+	var tmp []string
+	if err := json.Unmarshal(data, &tmp); err != nil {
+		return err
+	}
+
+	*r = make(Roles, len(tmp))
+	for _, v := range tmp {
+		(*r)[v] = true
+	}
+
+	return nil
+}
+
 type MembershipItem struct {
 	Type     string    `json:"type"`
 	TenantID uuid.UUID `json:"tenant_id"`
+	Roles    Roles     `json:"roles,omitempty"`
 }
 
 // CreateUser struct representing data necessary to create a new user
 type CreateUser struct {
-	Email            string     `json:"email" schema:"email"`
-	Name             string     `json:"name,omitempty" schema:"name"`
-	ID               uuid.UUID  `json:"id" schema:"id"`
-	PasswordHash     []byte     `json:"-" schema:"-"`
-	Added            time.Time  `json:"added" schema:"added"`
-	Modified         time.Time  `json:"modified" schema:"modified"`
-	EmailVerified    bool       `json:"email_verified" schema:"email_verified"`
-	LoginAddr        string     `json:"login_addr,omitempty"`
-	LoginTimestamp   *time.Time `json:"login_ts,omitempty"`
-	RefreshAddr      string     `json:"refresh_addr,omitempty"`
-	RefreshTimestamp *time.Time `json:"refresh_ts,omitempty"`
-	Roles            Roles      `json:"roles,omitempty"`
+	Email         string `json:"email" schema:"email"`
+	Name          string `json:"name,omitempty" schema:"name"`
+	PasswordHash  []byte `json:"-" schema:"-"`
+	EmailVerified bool   `json:"email_verified" schema:"email_verified"`
+	Roles         Roles  `json:"roles,omitempty"`
 }
 
 // User struct representing a user
@@ -71,7 +84,7 @@ type User struct {
 	Added            time.Time         `json:"added" schema:"added"`
 	Modified         time.Time         `json:"modified" schema:"modified"`
 	EmailVerified    bool              `json:"email_verified" schema:"email_verified"`
-	Memberships      []*MembershipItem `json:"memberships"`
+	Membership       []*MembershipItem `json:"membership,omitempty"`
 	PasswordGen      int               `json:"-"`
 	LoginAddr        string            `json:"login_addr,omitempty"`
 	LoginTimestamp   *time.Time        `json:"login_ts,omitempty"`
@@ -82,7 +95,7 @@ type User struct {
 
 // GetDefaultMembership retrive the default membership of this user
 func (u *User) GetDefaultMembership() (id uuid.UUID) {
-	return u.Memberships[0].TenantID
+	return u.Membership[0].TenantID
 }
 
 // Membership struct representing a user
