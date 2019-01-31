@@ -6,6 +6,8 @@
 // data/11_add_tenants_table.up.sql
 // data/12_role_per_tenant.down.sql
 // data/12_role_per_tenant.up.sql
+// data/13_update_log_table.down.sql
+// data/13_update_log_table.up.sql
 // data/1_add_users_table.down.sql
 // data/1_add_users_table.up.sql
 // data/2_add_roles_table.down.sql
@@ -207,6 +209,46 @@ func _12_role_per_tenantUpSql() (*asset, error) {
 	}
 
 	info := bindataFileInfo{name: "12_role_per_tenant.up.sql", size: 370, mode: os.FileMode(420), modTime: time.Unix(1546481020, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
+var __13_update_log_tableDownSql = []byte("\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\x72\x72\x75\xf7\xf4\xb3\xe6\xe2\x72\x09\xf2\x0f\x50\x08\x89\x0c\x70\x55\xf0\x74\x53\x70\x8d\xf0\x0c\x0e\x09\x56\xc8\xc9\x4f\x8f\xcf\x4c\x89\x2f\xa9\x2c\x48\xb5\xe6\xe2\x72\xf4\x09\x71\x0d\x52\x08\x71\x74\xf2\x71\x05\xc9\x28\x80\x75\x38\xfb\xfb\x84\xfa\xfa\x29\x14\xe7\x97\x16\x25\xa7\x42\x55\xe2\x53\x58\x92\x58\x94\x9e\x5a\x82\x43\x61\x90\xab\x9f\xa3\xaf\x2b\x9a\x99\x99\x29\x0a\x21\xfe\x0a\xa5\xc5\xa9\x45\xf1\x99\x29\xd6\x5c\x5c\xce\xfe\xbe\xbe\x9e\x21\xd6\x80\x00\x00\x00\xff\xff\x6d\x36\xc3\x5b\xb8\x00\x00\x00")
+
+func _13_update_log_tableDownSqlBytes() ([]byte, error) {
+	return bindataRead(
+		__13_update_log_tableDownSql,
+		"13_update_log_table.down.sql",
+	)
+}
+
+func _13_update_log_tableDownSql() (*asset, error) {
+	bytes, err := _13_update_log_tableDownSqlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "13_update_log_table.down.sql", size: 184, mode: os.FileMode(420), modTime: time.Unix(1546529662, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
+var __13_update_log_tableUpSql = []byte("\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\xa4\xd0\xbd\xaa\x83\x40\x10\x05\xe0\xde\xa7\x98\x6e\xef\x85\xfb\x06\x56\xab\xce\x0d\xc2\xfe\x04\x33\x5b\xa4\x12\x13\x07\xb3\x10\x7f\x58\xd7\x22\x6f\x1f\x8c\x08\xa9\xd2\xa4\x9b\x62\xf8\xce\xe1\x64\x78\x28\x4d\x9a\x24\x79\x85\x92\x10\xe8\x7c\x44\xb8\x8f\x5d\xed\xdb\x3a\x3e\x26\x06\x79\x02\x34\x4e\xc3\x8f\x58\x66\x0e\xe2\x0f\x44\xe4\xa1\x19\xe2\x7a\xf5\xdc\x5f\x38\xcc\x37\x3f\x89\xdf\x34\x91\x8a\xb0\x02\x92\x99\x7a\x09\x20\x8b\x02\x72\xab\x9c\x36\x30\x8f\x4b\xb8\xf2\x06\xbe\xe3\xc6\x12\x18\xa7\x14\x14\xf8\x2f\x9d\x22\xd8\x42\x3e\x5a\xb1\x09\x1d\xc7\x2f\xac\x0a\x8d\xd4\xb8\x73\xeb\x53\xed\x5b\x20\xbb\xb7\xf4\xed\x3a\x87\xd5\xba\xa4\xf4\x19\x00\x00\xff\xff\x12\x83\xc9\x9d\x1e\x01\x00\x00")
+
+func _13_update_log_tableUpSqlBytes() ([]byte, error) {
+	return bindataRead(
+		__13_update_log_tableUpSql,
+		"13_update_log_table.up.sql",
+	)
+}
+
+func _13_update_log_tableUpSql() (*asset, error) {
+	bytes, err := _13_update_log_tableUpSqlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "13_update_log_table.up.sql", size: 286, mode: os.FileMode(420), modTime: time.Unix(1546529712, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -629,6 +671,8 @@ var _bindata = map[string]func() (*asset, error){
 	"11_add_tenants_table.up.sql": _11_add_tenants_tableUpSql,
 	"12_role_per_tenant.down.sql": _12_role_per_tenantDownSql,
 	"12_role_per_tenant.up.sql": _12_role_per_tenantUpSql,
+	"13_update_log_table.down.sql": _13_update_log_tableDownSql,
+	"13_update_log_table.up.sql": _13_update_log_tableUpSql,
 	"1_add_users_table.down.sql": _1_add_users_tableDownSql,
 	"1_add_users_table.up.sql": _1_add_users_tableUpSql,
 	"2_add_roles_table.down.sql": _2_add_roles_tableDownSql,
@@ -695,6 +739,8 @@ var _bintree = &bintree{nil, map[string]*bintree{
 	"11_add_tenants_table.up.sql": &bintree{_11_add_tenants_tableUpSql, map[string]*bintree{}},
 	"12_role_per_tenant.down.sql": &bintree{_12_role_per_tenantDownSql, map[string]*bintree{}},
 	"12_role_per_tenant.up.sql": &bintree{_12_role_per_tenantUpSql, map[string]*bintree{}},
+	"13_update_log_table.down.sql": &bintree{_13_update_log_tableDownSql, map[string]*bintree{}},
+	"13_update_log_table.up.sql": &bintree{_13_update_log_tableUpSql, map[string]*bintree{}},
 	"1_add_users_table.down.sql": &bintree{_1_add_users_tableDownSql, map[string]*bintree{}},
 	"1_add_users_table.up.sql": &bintree{_1_add_users_tableUpSql, map[string]*bintree{}},
 	"2_add_roles_table.down.sql": &bintree{_2_add_roles_tableDownSql, map[string]*bintree{}},

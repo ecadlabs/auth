@@ -165,6 +165,7 @@ func (s *MembershipStorage) UpdateMembership(ctx context.Context, id uuid.UUID, 
 
 	updateCount := len(ops.Update)
 	expr += fmt.Sprintf("modified = DEFAULT WHERE user_id = $%d AND tenant_id = $%d RETURNING *", updateCount+1, updateCount+2)
+
 	args[updateCount] = userID
 	args[updateCount+1] = id
 
@@ -222,6 +223,7 @@ func (s *MembershipStorage) UpdateMembership(ctx context.Context, id uuid.UUID, 
 	}
 
 	// Get roles back
+
 	if err = tx.GetContext(ctx, &u, "SELECT array_agg(role) AS roles FROM roles WHERE user_id = $1 AND tenant_id = $2 GROUP BY user_id, tenant_id", userID, id); err != nil {
 		if err != sql.ErrNoRows {
 			return nil, err

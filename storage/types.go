@@ -119,14 +119,16 @@ type Member struct {
 
 // LogEntry struct representing a log entry
 type LogEntry struct {
-	ID        uuid.UUID              `json:"id"`
-	Timestamp time.Time              `json:"ts"`
-	Event     string                 `json:"event"`
-	UserID    uuid.UUID              `json:"user_id,omitempty"`
-	TargerID  uuid.UUID              `json:"target_id,omitempty"`
-	Address   string                 `json:"addr,omitempty"`
-	Message   string                 `json:"msg,omitempty"`
-	Data      map[string]interface{} `json:"data,omitempty"`
+	ID         uuid.UUID              `json:"id"`
+	Timestamp  time.Time              `json:"ts"`
+	Event      string                 `json:"event"`
+	SourceID   uuid.UUID              `json:"source_id,omitempty"`
+	TargerID   uuid.UUID              `json:"target_id,omitempty"`
+	SourceType string                 `json:"source_type,omitempty"`
+	TargetType string                 `json:"target_type,omitempty"`
+	Address    string                 `json:"addr,omitempty"`
+	Message    string                 `json:"msg,omitempty"`
+	Data       map[string]interface{} `json:"data,omitempty"`
 }
 
 // Get retrieve a list of roles

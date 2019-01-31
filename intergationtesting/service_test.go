@@ -393,7 +393,7 @@ func BeforeTest(t *testing.T) (srv *httptest.Server, userList []*storage.User, t
 	defer db.Close()
 
 	_, err = db.Exec(`DROP TABLE IF EXISTS schema_migrations, users, membership, tenants, roles, log, bootstrap`)
-	_, err = db.Exec(`DROP TYPE IF EXISTS membership_type, membership_status, tenant_type`)
+	_, err = db.Exec(`DROP TYPE IF EXISTS membership_type, membership_status, tenant_type, log_id_type`)
 	if err != nil {
 		t.Error(err)
 		return
@@ -729,6 +729,23 @@ func TestService(t *testing.T) {
 
 			if len(list) != 12 {
 				t.Error("Len is not 12", len(list))
+			}
+
+			if code != http.StatusOK {
+				t.Error(code)
+				return
+			}
+		})
+
+		t.Run("TestLogList", func(t *testing.T) {
+			code, list, err := getLogsList(srv, token, url.Values{})
+			if err != nil {
+				t.Error(err)
+				return
+			}
+
+			if len(list) != 25 {
+				t.Error("Len is not 25", len(list))
 			}
 
 			if code != http.StatusOK {
