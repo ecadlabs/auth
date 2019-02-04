@@ -48,9 +48,9 @@ func LoadYAML(name string) (*StaticRBAC, error) {
 		}
 
 		role := StaticRole{
-			RoleName:    name,
-			Description: role.Description,
-			Permissions: perms,
+			RoleName:        name,
+			Description:     role.Description,
+			RolePermissions: perms,
 		}
 
 		roles[name] = &role

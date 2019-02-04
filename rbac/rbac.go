@@ -12,6 +12,7 @@ type Role interface {
 	Name() string
 	IsAnyGranted(...string) (bool, error)
 	IsAllGranted(...string) (bool, error)
+	Permissions() []string
 }
 
 // e.g. user data or parsed token
@@ -30,14 +31,14 @@ type RBAC interface {
 }
 
 type StaticRole struct {
-	RoleName    string
-	Description string
-	Permissions map[string]struct{}
+	RoleName        string
+	Description     string
+	RolePermissions map[string]struct{}
 }
 
-func (s *StaticRole) permissions() []string {
-	res := make([]string, 0, len(s.Permissions))
-	for p := range s.Permissions {
+func (s *StaticRole) Permissions() []string {
+	res := make([]string, 0, len(s.RolePermissions))
+	for p := range s.RolePermissions {
 		res = append(res, p)
 	}
 	sort.Strings(res)
@@ -51,7 +52,7 @@ func (s *StaticRole) Name() string {
 
 func (s *StaticRole) IsAllGranted(perm ...string) (bool, error) {
 	for _, p := range perm {
-		if _, ok := s.Permissions[p]; !ok {
+		if _, ok := s.RolePermissions[p]; !ok {
 			return false, nil
 		}
 	}
@@ -61,7 +62,7 @@ func (s *StaticRole) IsAllGranted(perm ...string) (bool, error) {
 
 func (s *StaticRole) IsAnyGranted(perm ...string) (bool, error) {
 	for _, p := range perm {
-		if _, ok := s.Permissions[p]; ok {
+		if _, ok := s.RolePermissions[p]; ok {
 			return true, nil
 		}
 	}
@@ -112,6 +113,23 @@ func (r RoleList) IsAnyGranted(perm ...string) (bool, error) {
 	return false, nil
 }
 
+func (r RoleList) Permissions() []string {
+	tmp := make(map[string]struct{})
+	for _, role := range r {
+		for _, p := range role.Permissions() {
+			tmp[p] = struct{}{}
+		}
+	}
+
+	res := make([]string, 0, len(tmp))
+	for p := range tmp {
+		res = append(res, p)
+	}
+	sort.Strings(res)
+
+	return res
+}
+
 type StaticRBAC struct {
 	Roles       map[string]*StaticRole
 	Permissions map[string]string
@@ -141,7 +159,7 @@ func (s *StaticRBAC) GetRolesDesc(ctx context.Context, perm ...string) ([]*RoleD
 RolesLoop:
 	for _, r := range s.Roles {
 		for _, p := range perm {
-			if _, ok := r.Permissions[p]; !ok {
+			if _, ok := r.RolePermissions[p]; !ok {
 				continue RolesLoop
 			}
 		}
@@ -149,7 +167,7 @@ RolesLoop:
 		desc := RoleDesc{
 			Name:        r.RoleName,
 			Description: r.Description,
-			Permissions: r.permissions(),
+			Permissions: r.Permissions(),
 		}
 
 		roles = append(roles, &desc)
@@ -171,7 +189,7 @@ PermissionsLoop:
 
 		// build roles list
 		for _, r := range s.Roles {
-			if _, ok := r.Permissions[p]; ok {
+			if _, ok := r.RolePermissions[p]; ok {
 				rolesList[r.RoleName] = struct{}{}
 			}
 		}
@@ -213,7 +231,7 @@ func (s *StaticRBAC) GetRoleDesc(ctx context.Context, role string) (*RoleDesc, e
 	desc := RoleDesc{
 		Name:        r.RoleName,
 		Description: r.Description,
-		Permissions: r.permissions(),
+		Permissions: r.Permissions(),
 	}
 
 	return &desc, nil
@@ -229,7 +247,7 @@ func (s *StaticRBAC) GetPermissionDesc(ctx context.Context, perm string) (*Permi
 
 	// build roles list
 	for _, r := range s.Roles {
-		if _, ok := r.Permissions[perm]; ok {
+		if _, ok := r.RolePermissions[perm]; ok {
 			rolesList[r.RoleName] = struct{}{}
 		}
 	}

@@ -181,6 +181,7 @@ func (s *Service) APIHandler() http.Handler {
 	aud := &middleware.Audience{
 		Value:           baseURLFunc,
 		TokenContextKey: handlers.TokenContextKey,
+		Namespace:       s.config.Namespace(),
 	}
 
 	m := mux.NewRouter()

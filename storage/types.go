@@ -2,6 +2,7 @@ package storage
 
 import (
 	"encoding/json"
+	"sort"
 	"time"
 
 	"github.com/ecadlabs/auth/rbac"
@@ -151,6 +152,8 @@ func (r Roles) Get() (roles []string) {
 	for key := range r {
 		roles = append(roles, key)
 	}
+
+	sort.Strings(roles)
 
 	return
 }

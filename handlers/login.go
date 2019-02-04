@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -22,12 +23,7 @@ const (
 	TokenContextKey = "token"
 )
 
-func (u *Users) writeUserToken(w http.ResponseWriter, addr string, user *storage.User, membership *storage.Membership) error {
-	roles := make([]string, 0, len(membership.Roles))
-	for r := range membership.Roles {
-		roles = append(roles, r)
-	}
-
+func (u *Users) writeUserToken(w http.ResponseWriter, addr string, user *storage.User, membership *storage.Membership, perm []string) error {
 	now := time.Now()
 
 	claims := jwt.MapClaims{
@@ -39,11 +35,15 @@ func (u *Users) writeUserToken(w http.ResponseWriter, addr string, user *storage
 		utils.NSClaim(u.Namespace, "tenant"): membership.TenantID,
 		utils.NSClaim(u.Namespace, "email"):  user.Email,
 		utils.NSClaim(u.Namespace, "name"):   user.Name,
-		utils.NSClaim(u.Namespace, "roles"):  roles,
+		utils.NSClaim(u.Namespace, "roles"):  membership.Roles.Get(),
 	}
 
 	if addr != "" {
 		claims[utils.NSClaim(u.Namespace, "address")] = addr
+	}
+
+	if perm != nil {
+		claims[utils.NSClaim(u.Namespace, "permissions")] = perm
 	}
 
 	token := jwt.NewWithClaims(u.JWTSigningMethod, claims)
@@ -112,13 +112,17 @@ func (u *Users) getMembershipLogin(ctx context.Context, tenantID, userID uuid.UU
 
 // Login is a login endpoint handler
 func (u *Users) Login(w http.ResponseWriter, r *http.Request) {
+	var writePerm bool
+	if v := r.FormValue("permissions"); v != "" {
+		writePerm, _ = strconv.ParseBool(v)
+	}
+
 	type loginRequest struct {
 		Name     string `json:"name"`
 		Password string `json:"password"`
 	}
 
 	var request *loginRequest
-
 	if name, password, ok := r.BasicAuth(); ok {
 		request = &loginRequest{
 			Name:     name,
@@ -196,13 +200,23 @@ func (u *Users) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	membership, err := u.getMembershipLogin(ctx, uid, user.ID)
-
 	if err != nil {
 		utils.JSONErrorResponse(w, err)
 		return
 	}
 
-	if err := u.writeUserToken(w, remoteAddr, user, membership); err != nil {
+	var perm []string
+	if writePerm {
+		role, err := u.Enforcer.GetRole(ctx, membership.Roles.Get()...)
+		if err != nil {
+			utils.JSONErrorResponse(w, err)
+			return
+		}
+
+		perm = role.Permissions()
+	}
+
+	if err := u.writeUserToken(w, remoteAddr, user, membership, perm); err != nil {
 		utils.JSONErrorResponse(w, err)
 		return
 	}
@@ -222,6 +236,7 @@ func (u *Users) Login(w http.ResponseWriter, r *http.Request) {
 func (u *Users) Refresh(w http.ResponseWriter, r *http.Request) {
 	self := r.Context().Value(UserContextKey{}).(*storage.User)
 	member := r.Context().Value(MembershipContextKey{}).(*storage.Membership)
+	token := r.Context().Value(TokenContextKey).(*jwt.Token)
 
 	ctx, cancel := u.context(r)
 	defer cancel()
@@ -231,7 +246,20 @@ func (u *Users) Refresh(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := u.writeUserToken(w, "", self, member); err != nil {
+	claims := token.Claims.(jwt.MapClaims)
+	var perm []string
+	if _, ok := claims[utils.NSClaim(u.Namespace, "permissions")]; ok {
+		role, err := u.Enforcer.GetRole(ctx, member.Roles.Get()...)
+		if err != nil {
+			utils.JSONErrorResponse(w, err)
+			return
+		}
+		perm = role.Permissions()
+	}
+
+	addr := claims[utils.NSClaim(u.Namespace, "address")].(string)
+
+	if err := u.writeUserToken(w, addr, self, member, perm); err != nil {
 		utils.JSONErrorResponse(w, err)
 		return
 	}
