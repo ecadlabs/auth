@@ -220,8 +220,8 @@ func (u *Users) Login(w http.ResponseWriter, r *http.Request) {
 
 //Refresh is a refresh endpoint handler
 func (u *Users) Refresh(w http.ResponseWriter, r *http.Request) {
-	self := r.Context().Value(UserContextKey).(*storage.User)
-	member := r.Context().Value(MembershipContextKey).(*storage.Membership)
+	self := r.Context().Value(UserContextKey{}).(*storage.User)
+	member := r.Context().Value(MembershipContextKey{}).(*storage.Membership)
 
 	ctx, cancel := u.context(r)
 	defer cancel()

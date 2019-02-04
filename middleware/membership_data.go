@@ -15,8 +15,8 @@ import (
 // Gets user data from DB
 type MembershipData struct {
 	Storage              *storage.MembershipStorage
-	TokenContextKey      string
-	MembershipContextKey string
+	TokenContextKey      interface{}
+	MembershipContextKey interface{}
 	Namespace            string
 }
 

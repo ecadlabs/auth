@@ -199,12 +199,12 @@ func (s *Service) APIHandler() http.Handler {
 
 	userdata := &middleware.UserData{
 		TokenContextKey: handlers.TokenContextKey,
-		UserContextKey:  handlers.UserContextKey,
+		UserContextKey:  handlers.UserContextKey{},
 		Storage:         s.storage,
 	}
 
 	membershipData := &middleware.MembershipData{
-		MembershipContextKey: handlers.MembershipContextKey,
+		MembershipContextKey: handlers.MembershipContextKey{},
 		TokenContextKey:      handlers.TokenContextKey,
 		Storage:              s.membershipStorage,
 		Namespace:            s.config.Namespace(),

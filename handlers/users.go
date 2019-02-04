@@ -23,10 +23,11 @@ import (
 )
 
 const (
-	UserContextKey       = "user"
-	MembershipContextKey = "membership"
-	DefaultLimit         = 20
+	DefaultLimit = 20
 )
+
+type UserContextKey struct{}
+type MembershipContextKey struct{}
 
 type Users struct {
 	Storage           *storage.Storage
@@ -83,8 +84,8 @@ func (u *Users) context(r *http.Request) (context.Context, context.CancelFunc) {
 }
 
 func (u *Users) GetUser(w http.ResponseWriter, r *http.Request) {
-	self := r.Context().Value(UserContextKey).(*storage.User)
-	member := r.Context().Value(MembershipContextKey).(*storage.Membership)
+	self := r.Context().Value(UserContextKey{}).(*storage.User)
+	member := r.Context().Value(MembershipContextKey{}).(*storage.Membership)
 
 	uid, err := uuid.FromString(mux.Vars(r)["id"])
 	if err != nil {
@@ -131,7 +132,7 @@ func (u *Users) GetUser(w http.ResponseWriter, r *http.Request) {
 
 func (u *Users) GetUsers(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
-	member := r.Context().Value(MembershipContextKey).(*storage.Membership)
+	member := r.Context().Value(MembershipContextKey{}).(*storage.Membership)
 
 	ctx, cancel := u.context(r)
 	defer cancel()
@@ -225,8 +226,8 @@ func (u *Users) resetToken(user *storage.User) (string, error) {
 }
 
 func (u *Users) NewUser(w http.ResponseWriter, r *http.Request) {
-	self := r.Context().Value(UserContextKey).(*storage.User)
-	member := r.Context().Value(MembershipContextKey).(*storage.Membership)
+	self := r.Context().Value(UserContextKey{}).(*storage.User)
+	member := r.Context().Value(MembershipContextKey{}).(*storage.Membership)
 
 	var user storage.CreateUser
 	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
@@ -335,8 +336,8 @@ func (u *Users) NewUser(w http.ResponseWriter, r *http.Request) {
 
 func (u *Users) PatchUser(w http.ResponseWriter, r *http.Request) {
 	// TODO Email verification
-	self := r.Context().Value(UserContextKey).(*storage.User)
-	member := r.Context().Value(MembershipContextKey).(*storage.Membership)
+	self := r.Context().Value(UserContextKey{}).(*storage.User)
+	member := r.Context().Value(MembershipContextKey{}).(*storage.Membership)
 
 	uid, err := uuid.FromString(mux.Vars(r)["id"])
 	if err != nil {
@@ -429,8 +430,8 @@ func (u *Users) PatchUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func (u *Users) DeleteUser(w http.ResponseWriter, r *http.Request) {
-	self := r.Context().Value(UserContextKey).(*storage.User)
-	member := r.Context().Value(MembershipContextKey).(*storage.Membership)
+	self := r.Context().Value(UserContextKey{}).(*storage.User)
+	member := r.Context().Value(MembershipContextKey{}).(*storage.Membership)
 
 	uid, err := uuid.FromString(mux.Vars(r)["id"])
 	if err != nil {
@@ -669,8 +670,8 @@ func (u *Users) SendResetRequest(w http.ResponseWriter, r *http.Request) {
 }
 
 func (u *Users) SendUpdateEmailRequest(w http.ResponseWriter, r *http.Request) {
-	self := r.Context().Value(UserContextKey).(*storage.User)
-	member := r.Context().Value(MembershipContextKey).(*storage.Membership)
+	self := r.Context().Value(UserContextKey{}).(*storage.User)
+	member := r.Context().Value(MembershipContextKey{}).(*storage.Membership)
 
 	var request struct {
 		Email string    `json:"email"`

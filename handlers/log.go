@@ -14,7 +14,7 @@ import (
 //GetLogs Endpoint handler to get list of logs
 func (u *Users) GetLogs(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
-	member := r.Context().Value(MembershipContextKey).(*storage.Membership)
+	member := r.Context().Value(MembershipContextKey{}).(*storage.Membership)
 
 	ctx, cancel := u.context(r)
 	defer cancel()

@@ -3,13 +3,13 @@ package middleware
 import (
 	"net/http"
 
+	"github.com/dgrijalva/jwt-go"
 	"github.com/ecadlabs/auth/errors"
 	"github.com/ecadlabs/auth/utils"
-	"github.com/dgrijalva/jwt-go"
 )
 
 type Audience struct {
-	TokenContextKey string
+	TokenContextKey interface{}
 	Value           func() string
 }
 

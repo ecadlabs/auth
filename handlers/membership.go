@@ -50,7 +50,7 @@ func (m *Memberships) context(r *http.Request) (context.Context, context.CancelF
 
 // PatchMembership is an endpoint handler to update membership item
 func (m *Memberships) PatchMembership(w http.ResponseWriter, r *http.Request) {
-	member := r.Context().Value(MembershipContextKey).(*storage.Membership)
+	member := r.Context().Value(MembershipContextKey{}).(*storage.Membership)
 
 	ctx, cancel := m.context(r)
 	defer cancel()
@@ -159,7 +159,7 @@ func (m *Memberships) PatchMembership(w http.ResponseWriter, r *http.Request) {
 
 // DeleteMembership is an endpoint handler to delete membership item
 func (m *Memberships) DeleteMembership(w http.ResponseWriter, r *http.Request) {
-	member := r.Context().Value(MembershipContextKey).(*storage.Membership)
+	member := r.Context().Value(MembershipContextKey{}).(*storage.Membership)
 
 	ctx, cancel := m.context(r)
 	defer cancel()
@@ -219,7 +219,7 @@ func (m *Memberships) DeleteMembership(w http.ResponseWriter, r *http.Request) {
 // FindTenantMemberships is an endpoint handler to get list of membership item for a particular tenant
 func (m *Memberships) FindTenantMemberships(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
-	member := r.Context().Value(MembershipContextKey).(*storage.Membership)
+	member := r.Context().Value(MembershipContextKey{}).(*storage.Membership)
 
 	ctx, cancel := m.context(r)
 	defer cancel()
@@ -305,7 +305,7 @@ func (m *Memberships) FindTenantMemberships(w http.ResponseWriter, r *http.Reque
 // FindUserMemberships is an endpoint handler to get list of membership item for a particular user
 func (m *Memberships) FindUserMemberships(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
-	member := r.Context().Value(MembershipContextKey).(*storage.Membership)
+	member := r.Context().Value(MembershipContextKey{}).(*storage.Membership)
 
 	ctx, cancel := m.context(r)
 	defer cancel()
