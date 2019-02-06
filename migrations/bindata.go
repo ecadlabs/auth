@@ -12,6 +12,8 @@
 // data/14_roles_ref.up.sql
 // data/15_role_membership_ref.down.sql
 // data/15_role_membership_ref.up.sql
+// data/16_user_id_default.down.sql
+// data/16_user_id_default.up.sql
 // data/1_add_users_table.down.sql
 // data/1_add_users_table.up.sql
 // data/2_add_roles_table.down.sql
@@ -333,6 +335,46 @@ func _15_role_membership_refUpSql() (*asset, error) {
 	}
 
 	info := bindataFileInfo{name: "15_role_membership_ref.up.sql", size: 511, mode: os.FileMode(420), modTime: time.Unix(1548718874, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
+var __16_user_id_defaultDownSql = []byte("\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\x72\xf4\x09\x71\x0d\x52\x08\x71\x74\xf2\x71\x55\x28\x2d\x4e\x2d\x2a\x56\x80\x88\x38\xfb\xfb\x84\xfa\xfa\x29\x64\xa6\x28\xb8\x04\xf9\x07\x28\xb8\xb8\xba\x39\x86\xfa\x84\x58\x73\x01\x02\x00\x00\xff\xff\xa9\xc0\x97\xbc\x30\x00\x00\x00")
+
+func _16_user_id_defaultDownSqlBytes() ([]byte, error) {
+	return bindataRead(
+		__16_user_id_defaultDownSql,
+		"16_user_id_default.down.sql",
+	)
+}
+
+func _16_user_id_defaultDownSql() (*asset, error) {
+	bytes, err := _16_user_id_defaultDownSqlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "16_user_id_default.down.sql", size: 48, mode: os.FileMode(420), modTime: time.Unix(1549487976, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
+var __16_user_id_defaultUpSql = []byte("\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\x72\xf4\x09\x71\x0d\x52\x08\x71\x74\xf2\x71\x55\x28\x2d\x4e\x2d\x2a\x56\x80\x88\x38\xfb\xfb\x84\xfa\xfa\x29\x64\xa6\x28\x04\xbb\x86\x28\xb8\xb8\xba\x39\x86\xfa\x84\x28\x94\x96\x66\xa6\xc4\xa7\xa7\xe6\xa5\x16\x25\x96\xa4\xc6\x97\x99\x68\x68\x5a\x73\x01\x02\x00\x00\xff\xff\xe5\x69\x10\x4f\x42\x00\x00\x00")
+
+func _16_user_id_defaultUpSqlBytes() ([]byte, error) {
+	return bindataRead(
+		__16_user_id_defaultUpSql,
+		"16_user_id_default.up.sql",
+	)
+}
+
+func _16_user_id_defaultUpSql() (*asset, error) {
+	bytes, err := _16_user_id_defaultUpSqlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "16_user_id_default.up.sql", size: 66, mode: os.FileMode(420), modTime: time.Unix(1549487943, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -761,6 +803,8 @@ var _bindata = map[string]func() (*asset, error){
 	"14_roles_ref.up.sql": _14_roles_refUpSql,
 	"15_role_membership_ref.down.sql": _15_role_membership_refDownSql,
 	"15_role_membership_ref.up.sql": _15_role_membership_refUpSql,
+	"16_user_id_default.down.sql": _16_user_id_defaultDownSql,
+	"16_user_id_default.up.sql": _16_user_id_defaultUpSql,
 	"1_add_users_table.down.sql": _1_add_users_tableDownSql,
 	"1_add_users_table.up.sql": _1_add_users_tableUpSql,
 	"2_add_roles_table.down.sql": _2_add_roles_tableDownSql,
@@ -833,6 +877,8 @@ var _bintree = &bintree{nil, map[string]*bintree{
 	"14_roles_ref.up.sql": &bintree{_14_roles_refUpSql, map[string]*bintree{}},
 	"15_role_membership_ref.down.sql": &bintree{_15_role_membership_refDownSql, map[string]*bintree{}},
 	"15_role_membership_ref.up.sql": &bintree{_15_role_membership_refUpSql, map[string]*bintree{}},
+	"16_user_id_default.down.sql": &bintree{_16_user_id_defaultDownSql, map[string]*bintree{}},
+	"16_user_id_default.up.sql": &bintree{_16_user_id_defaultUpSql, map[string]*bintree{}},
 	"1_add_users_table.down.sql": &bintree{_1_add_users_tableDownSql, map[string]*bintree{}},
 	"1_add_users_table.up.sql": &bintree{_1_add_users_tableUpSql, map[string]*bintree{}},
 	"2_add_roles_table.down.sql": &bintree{_2_add_roles_tableDownSql, map[string]*bintree{}},

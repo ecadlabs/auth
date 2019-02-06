@@ -146,7 +146,7 @@ func (m *Memberships) PatchMembership(w http.ResponseWriter, r *http.Request) {
 		}
 
 		for _, role := range ops.AddRoles {
-			m.AuxLogger.WithFields(logFields(EvAddRole, member.UserID, userID, r)).WithField("role", role).Printf("User %v added role `%s' to account %v in tenant %v", member.UserID, userID, tenantID)
+			m.AuxLogger.WithFields(logFields(EvAddRole, member.UserID, userID, r)).WithField("role", role).Printf("User %v added role `%s' to account %v in tenant %v", member.UserID, role, userID, tenantID)
 		}
 
 		for _, role := range ops.RemoveRoles {

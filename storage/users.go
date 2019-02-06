@@ -335,7 +335,6 @@ func isUniqueViolation(err error, constraint string) bool {
 // NewUserInt insert a new user in the database along with his initial tenant
 func NewUserInt(ctx context.Context, tx *sqlx.Tx, user *CreateUser) (res *User, err error) {
 	model := userModel{
-		ID:            uuid.NewV4(),
 		Email:         user.Email,
 		PasswordHash:  user.PasswordHash,
 		Name:          user.Name,
@@ -343,7 +342,7 @@ func NewUserInt(ctx context.Context, tx *sqlx.Tx, user *CreateUser) (res *User, 
 	}
 
 	// Create user
-	rows, err := sqlx.NamedQueryContext(ctx, tx, "INSERT INTO users (id, email, password_hash, name, email_verified) VALUES (:id, :email, :password_hash, :name, :email_verified) RETURNING added, modified, password_gen", &model)
+	rows, err := sqlx.NamedQueryContext(ctx, tx, "INSERT INTO users (email, password_hash, name, email_verified) VALUES (:email, :password_hash, :name, :email_verified) RETURNING id, added, modified, password_gen", &model)
 	if err != nil {
 		if isUniqueViolation(err, "users_email_key") {
 			err = errors.ErrEmailInUse
@@ -367,19 +366,7 @@ func NewUserInt(ctx context.Context, tx *sqlx.Tx, user *CreateUser) (res *User, 
 	tModel := TenantModel{}
 
 	// Create tenant
-	rows, err = sqlx.NamedQueryContext(ctx, tx, "INSERT INTO tenants (name, tenant_type) VALUES (:email, 'individual') RETURNING *", &model)
-	if err != nil {
-		return
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		if err = rows.StructScan(&tModel); err != nil {
-			return
-		}
-	}
-
-	if err = rows.Err(); err != nil {
+	if err = tx.GetContext(ctx, &tModel, "INSERT INTO tenants (name, tenant_type) VALUES ($1, 'individual') RETURNING *", model.Email); err != nil {
 		return
 	}
 
