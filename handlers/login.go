@@ -149,7 +149,7 @@ func (u *Users) Login(w http.ResponseWriter, r *http.Request) {
 		remoteAddr = utils.GetRemoteAddr(r)
 		log.WithField("address", remoteAddr).Println("Empty login request")
 
-		user, err = u.Storage.GetUserByIPAddress(ctx, remoteAddr)
+		user, err = u.Storage.GetServiceAccountByAddress(ctx, remoteAddr)
 		if err != nil {
 			if err != errors.ErrUserNotFound {
 				log.Error(err)

@@ -77,8 +77,7 @@ type Storage struct {
 	DB *sqlx.DB
 }
 
-func (s *Storage) getUser(ctx context.Context, col string, val interface{}) (*User, error) {
-	f := `
+const getUserQuery = `
 	SELECT
 	  users.*,
 	  m.membership,
@@ -86,48 +85,48 @@ func (s *Storage) getUser(ctx context.Context, col string, val interface{}) (*Us
 	FROM
 	  users
 	  LEFT JOIN (
-	    SELECT
-	      membership.user_id,
-	      json_agg(
-	        json_build_object(
-	          'tenant_id',
-	          membership.tenant_id,
-	          'type',
-	          membership.membership_type,
-	          'roles',
-	          r.roles
-	        )
-	      ) AS membership
-	    FROM
-	      membership
-	      LEFT JOIN (
-	        SELECT
-	          membership_id,
-	          json_agg(role) AS roles
-	        FROM
-	          roles
-	        GROUP BY
-	          membership_id
-	      ) AS r ON membership.id = r.membership_id
-	    WHERE
-	      membership.membership_status = 'active'
-	    GROUP BY
-	      membership.user_id
+		SELECT
+		  membership.user_id,
+		  json_agg(
+			json_build_object(
+			  'tenant_id',
+			  membership.tenant_id,
+			  'type',
+			  membership.membership_type,
+			  'roles',
+			  r.roles
+			)
+		  ) AS membership
+		FROM
+		  membership
+		  LEFT JOIN (
+			SELECT
+			  membership_id,
+			  json_agg(role) AS roles
+			FROM
+			  roles
+			GROUP BY
+			  membership_id
+		  ) AS r ON membership.id = r.membership_id
+		WHERE
+		  membership.membership_status = 'active'
+		GROUP BY
+		  membership.user_id
 	  ) AS m ON m.user_id = users.id
 	  LEFT JOIN (
-	    SELECT
-	      user_id,
-	      array_agg(addr) AS ip_whitelist
-	    FROM
-	      service_account_ip
-	    GROUP BY
-	      user_id
-	  ) AS ips ON ips.user_id = users.id
-	WHERE
-	  users.%s = $1`
+		SELECT
+		  user_id,
+		  array_agg(addr) AS ip_whitelist
+		FROM
+		  service_account_ip
+		GROUP BY
+		  user_id
+	  ) AS ips ON ips.user_id = users.id`
 
+// GetUserByID retrieve a user by his ID
+func (s *Storage) GetUserByID(ctx context.Context, id uuid.UUID) (*User, error) {
 	var u userModel
-	if err := s.DB.GetContext(ctx, &u, fmt.Sprintf(f, pq.QuoteIdentifier(col)), val); err != nil {
+	if err := s.DB.GetContext(ctx, &u, getUserQuery+" WHERE users.id = $1", id); err != nil {
 		if err == sql.ErrNoRows {
 			err = errors.ErrUserNotFound
 		}
@@ -138,18 +137,22 @@ func (s *Storage) getUser(ctx context.Context, col string, val interface{}) (*Us
 	return u.toUser(), nil
 }
 
-// GetUserByID retrieve a user by his ID
-func (s *Storage) GetUserByID(ctx context.Context, id uuid.UUID) (*User, error) {
-	return s.getUser(ctx, "id", id)
-}
-
 // GetUserByEmail retrieve a user by his Email
 func (s *Storage) GetUserByEmail(ctx context.Context, email string) (*User, error) {
-	return s.getUser(ctx, "email", email)
+	var u userModel
+	if err := s.DB.GetContext(ctx, &u, getUserQuery+" WHERE users.account_type = 'regular' AND users.email = $1", email); err != nil {
+		if err == sql.ErrNoRows {
+			err = errors.ErrUserNotFound
+		}
+
+		return nil, err
+	}
+
+	return u.toUser(), nil
 }
 
-// GetUserByIPAddress retrieve a user by whitelisted IP address if any
-func (s *Storage) GetUserByIPAddress(ctx context.Context, address string) (*User, error) {
+// GetServiceAccountByAddress retrieve a user by whitelisted IP address if any
+func (s *Storage) GetServiceAccountByAddress(ctx context.Context, address string) (*User, error) {
 	q := `
 	SELECT
 	  users.*,
@@ -187,6 +190,7 @@ func (s *Storage) GetUserByIPAddress(ctx context.Context, address string) (*User
 	      membership.user_id
 	  ) AS m ON m.user_id = users.id
 	WHERE
+	  users.account_type = 'service' AND
 	  service_account_ip.addr = $1`
 
 	var u userModel
