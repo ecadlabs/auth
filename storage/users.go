@@ -402,7 +402,7 @@ func (s *Storage) UpdatePasswordWithGen(ctx context.Context, id uuid.UUID, hash 
 	}()
 
 	var gen int
-	if err := tx.GetContext(ctx, &gen, "SELECT password_gen FROM users WHERE id = $1", id); err != nil {
+	if err = tx.GetContext(ctx, &gen, "SELECT password_gen FROM users WHERE id = $1", id); err != nil {
 		if err == sql.ErrNoRows {
 			err = errors.ErrUserNotFound
 		}
@@ -448,7 +448,7 @@ func (s *Storage) UpdateEmailWithGen(ctx context.Context, id uuid.UUID, email st
 	}()
 
 	var prev userModel
-	if err := tx.GetContext(ctx, &prev, "SELECT email_gen, email FROM users WHERE id = $1", id); err != nil {
+	if err = tx.GetContext(ctx, &prev, "SELECT email_gen, email FROM users WHERE id = $1", id); err != nil {
 		if err == sql.ErrNoRows {
 			err = errors.ErrUserNotFound
 		}

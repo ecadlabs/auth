@@ -474,7 +474,7 @@ func (u *Users) DeleteUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// TODO: archive user
-	if err := u.Storage.DeleteUser(ctx, uid); err != nil {
+	if err = u.Storage.DeleteUser(ctx, uid); err != nil {
 		log.Error(err)
 		utils.JSONErrorResponse(w, err)
 		return

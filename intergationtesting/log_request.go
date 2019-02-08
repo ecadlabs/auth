@@ -10,19 +10,19 @@ import (
 )
 
 func getLogsList(srv *httptest.Server, token string, query url.Values) (int, []*storage.LogEntry, error) {
-	tmpUrl, err := url.Parse(srv.URL)
+	tmpURL, err := url.Parse(srv.URL)
 	if err != nil {
 		return 0, nil, err
 	}
 
-	tmpUrl.Path = "/logs/"
-	tmpUrl.RawQuery = query.Encode()
-	reqUrl := tmpUrl.String()
+	tmpURL.Path = "/logs/"
+	tmpURL.RawQuery = query.Encode()
+	reqURL := tmpURL.String()
 
 	result := make([]*storage.LogEntry, 0)
 
 	for {
-		req, err := http.NewRequest("GET", reqUrl, nil)
+		req, err := http.NewRequest("GET", reqURL, nil)
 		if err != nil {
 			return 0, nil, err
 		}
@@ -62,7 +62,7 @@ func getLogsList(srv *httptest.Server, token string, query url.Values) (int, []*
 			break
 		}
 
-		reqUrl = res.Next
+		reqURL = res.Next
 		result = append(result, res.Value...)
 	}
 
