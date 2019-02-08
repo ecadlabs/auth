@@ -7,6 +7,8 @@ import (
 	"net/url"
 	"testing"
 
+	"github.com/dgrijalva/jwt-go"
+
 	"github.com/ecadlabs/auth/storage"
 	uuid "github.com/satori/go.uuid"
 )
@@ -17,7 +19,13 @@ func givenTenantExists(srv *httptest.Server, name string) (tenant *storage.Tenan
 		return
 	}
 
-	model := createTenantModel{Name: name}
+	jwtToken, _ := jwt.Parse(token, func(tok *jwt.Token) (interface{}, error) {
+		return []byte("secret"), nil
+	})
+
+	claims, _ := jwtToken.Claims.(jwt.MapClaims)
+
+	model := createTenantModel{Name: name, OwnerId: claims["sub"]}
 	code, tenant, err = createTenant(srv, &model, token)
 	if err != nil {
 		return
@@ -91,6 +99,28 @@ func TestInviteToTenant(t *testing.T) {
 		t.Error(err)
 		return
 	}
+}
+
+func TestCreateTenant(t *testing.T) {
+	srv, _, token, _, _ := BeforeTest(t)
+	code, token, _, err := doLogin(srv, superUserEmail, testPassword, nil)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	model := createTenantModel{Name: "test", OwnerId: ""}
+	code, _, err = createTenant(srv, &model, token)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	if code != http.StatusOK {
+		t.Error(code)
+		return
+	}
+	return
 }
 
 func TestNewUserShouldNotBeAbleToInvite(t *testing.T) {
