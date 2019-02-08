@@ -14,7 +14,8 @@ import (
 )
 
 type createTenantModel struct {
-	Name string `json:"name"`
+	Name    string      `json:"name"`
+	OwnerId interface{} `json:"ownerId"`
 }
 
 func createTenant(srv *httptest.Server, tenant *createTenantModel, token string) (int, *storage.TenantModel, error) {
