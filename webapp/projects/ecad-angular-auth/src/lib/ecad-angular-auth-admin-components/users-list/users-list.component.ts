@@ -1,4 +1,11 @@
-import { Component, OnInit, ViewChild, Inject, EventEmitter, Output } from '@angular/core';
+import {
+  Component,
+  OnInit,
+  ViewChild,
+  Inject,
+  EventEmitter,
+  Output
+} from '@angular/core';
 import { FilteredDatasource } from '../../filterable-datasource/filtered-datasource';
 import { Subject } from 'rxjs';
 import { UserEditFormComponent } from '../user-edit-form/user-edit-form.component';
@@ -17,7 +24,6 @@ import { ConfirmDialogService } from '../../confirm-dialog/confirm-dialog.servic
   styleUrls: ['./users-list.component.scss']
 })
 export class UsersListComponent implements OnInit {
-
   @Output()
   userClicked: EventEmitter<User> = new EventEmitter();
 
@@ -32,8 +38,7 @@ export class UsersListComponent implements OnInit {
     'added',
     'modified',
     'email_verified',
-    'roles',
-    'actions',
+    'actions'
   ];
 
   constructor(
@@ -43,23 +48,17 @@ export class UsersListComponent implements OnInit {
     @Inject(PASSWORD_RESET)
     private passwordReset: IPasswordReset,
     private snackBar: MatSnackBar,
-    private confirmDialog: ConfirmDialogService,
-  ) { }
-
-  getRoles(user: User) {
-    return Object.keys((user.roles || {} as Object));
-  }
+    private confirmDialog: ConfirmDialogService
+  ) {}
 
   changePage($event) {
-    this.dataSource.pageInfo$
-      .pipe(first())
-      .subscribe(({ currentPage }) => {
-        if (currentPage > $event.pageIndex) {
-          this.prevousPage$.next();
-        } else {
-          this.nextPage$.next();
-        }
-      });
+    this.dataSource.pageInfo$.pipe(first()).subscribe(({ currentPage }) => {
+      if (currentPage > $event.pageIndex) {
+        this.prevousPage$.next();
+      } else {
+        this.nextPage$.next();
+      }
+    });
   }
 
   ngOnInit() {
@@ -75,24 +74,27 @@ export class UsersListComponent implements OnInit {
     this.userClicked.next(user);
   }
 
-  getDisplayRoles(user: User) {
-    return this.userService.getRoles()
-      .filter(({ value }) => Object.keys(user.roles).includes(value))
-      .map(({ displayValue }) => displayValue);
-  }
   async resetPassword($event: Event, user: User) {
     $event.stopPropagation();
-    this.confirmDialog.confirm('You are about to reset this user password. Do you wish to continue?').subscribe(async (confirmed) => {
-      if (confirmed) {
-        await this.passwordReset.sendResetEmail(user.email).toPromise();
-        this.snackBar.open('Reset password email sent', undefined, { duration: 2000, horizontalPosition: 'end' });
-      }
-    });
+    this.confirmDialog
+      .confirm(
+        'You are about to reset this user password. Do you wish to continue?'
+      )
+      .subscribe(async confirmed => {
+        if (confirmed) {
+          await this.passwordReset.sendResetEmail(user.email).toPromise();
+          this.snackBar.open('Reset password email sent', undefined, {
+            duration: 2000,
+            horizontalPosition: 'end'
+          });
+        }
+      });
   }
 
   updateUser($event: Event, user: User) {
     $event.stopPropagation();
-    this.dialog.open(UserEditFormComponent, { data: user, width: '500px' })
+    this.dialog
+      .open(UserEditFormComponent, { data: user, width: '500px' })
       .afterClosed()
       .subscribe(() => {
         this.dataSource.refresh();
@@ -100,7 +102,8 @@ export class UsersListComponent implements OnInit {
   }
 
   addUser() {
-    this.dialog.open(UserEditFormComponent, { width: '500px' })
+    this.dialog
+      .open(UserEditFormComponent, { width: '500px' })
       .afterClosed()
       .subscribe(() => {
         this.dataSource.refresh();
@@ -109,15 +112,16 @@ export class UsersListComponent implements OnInit {
 
   delete($event: Event, user: User) {
     $event.stopPropagation();
-    this.confirmDialog.confirm(
-      'This will delete the user permanently. Do you wish to continue?'
-    ).subscribe((confirmed) => {
-      if (confirmed) {
-        this.userService.delete(user.id)
-          .subscribe(() => {
+    this.confirmDialog
+      .confirm(
+        'This will delete the user permanently. Do you wish to continue?'
+      )
+      .subscribe(confirmed => {
+        if (confirmed) {
+          this.userService.delete(user.id).subscribe(() => {
             this.dataSource.refresh();
           });
-      }
-    });
+        }
+      });
   }
 }

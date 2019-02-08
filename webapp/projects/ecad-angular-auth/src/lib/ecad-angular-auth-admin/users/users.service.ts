@@ -1,5 +1,9 @@
 import { Injectable, Inject } from '@angular/core';
-import { ResourcesService, PagedResult, FilterCondition } from '../../resource-util/resources.service';
+import {
+  ResourcesService,
+  PagedResult,
+  FilterCondition
+} from '../../resource-util/resources.service';
 import { AuthAdminConfig } from '../interfaces/auth-admin-config.i';
 import { CreateUser } from '../interfaces/create-user.i';
 import { UpdateUser } from '../interfaces/update-user.i';
@@ -13,13 +17,12 @@ import { HttpClient } from '@angular/common/http';
   providedIn: 'root'
 })
 export class UsersService implements IUsersService {
-
   constructor(
     private resourcesService: ResourcesService<User, CreateUser>,
     @Inject(AUTH_ADMIN_CONFIG)
     private authAdminConfigVal: AuthAdminConfig,
     private httpClient: HttpClient
-  ) { }
+  ) {}
 
   private get apiEndpoint() {
     return this.authAdminConfigVal.apiEndpoint;
@@ -40,30 +43,25 @@ export class UsersService implements IUsersService {
     });
   }
 
-  update(payload: UpdateUser, addedRoles: string[] = [], deletedRoles: string[] = []): Observable<User> {
+  update(payload: UpdateUser): Observable<User> {
     const allowedKeyForReplace: (keyof User)[] = ['name'];
-    let operations = (Object.keys(payload) as (keyof User)[])
+    const operations = (Object.keys(payload) as (keyof User)[])
       .filter(key => allowedKeyForReplace.includes(key))
       .reduce((prev, key) => {
-        return [...prev, {
-          op: 'replace',
-          path: `/${key}`,
-          value: payload[key] || ''
-        }];
+        return [
+          ...prev,
+          {
+            op: 'replace',
+            path: `/${key}`,
+            value: payload[key] || ''
+          }
+        ];
       }, []);
-    operations = addedRoles.reduce((prev, role) => {
-      return [...prev, {
-        op: 'add',
-        path: `/roles/${role}`,
-      }];
-    }, operations);
-    operations = deletedRoles.reduce((prev, role) => {
-      return [...prev, {
-        op: 'remove',
-        path: `/roles/${role}`,
-      }];
-    }, operations);
-    return this.resourcesService.patch(this.apiEndpoint, payload.id, operations);
+    return this.resourcesService.patch(
+      this.apiEndpoint,
+      payload.id,
+      operations
+    );
   }
 
   delete(id: string): Observable<boolean> {
@@ -75,7 +73,12 @@ export class UsersService implements IUsersService {
     sortBy: keyof User = 'added',
     orderBy: 'asc' | 'desc' = 'desc'
   ): Observable<PagedResult<User>> {
-    return this.resourcesService.fetch(this.apiEndpoint, filter, sortBy, orderBy);
+    return this.resourcesService.fetch(
+      this.apiEndpoint,
+      filter,
+      sortBy,
+      orderBy
+    );
   }
 
   find(id: string): Observable<User> {
