@@ -78,6 +78,7 @@ const (
 	CodeRoleNotFound        Code = "role_not_found"
 	CodePermissionNotFound  Code = "permission_not_found"
 	CodeMembershipNotActive Code = "membership_not_active"
+	CodeService             Code = "service_account"
 )
 
 var httpStatus = map[Code]int{
@@ -105,6 +106,7 @@ var httpStatus = map[Code]int{
 	CodeRolesEmpty:          http.StatusBadRequest,
 	CodeRoleNotFound:        http.StatusNotFound,
 	CodePermissionNotFound:  http.StatusNotFound,
+	CodeService:             http.StatusBadRequest,
 }
 
 // Some predefined errors
@@ -132,4 +134,5 @@ var (
 	ErrRolesEmpty          = &Error{errors.New("Roles value is empty"), CodeRolesEmpty}
 	ErrRoleNotFound        = &Error{errors.New("Role not found"), CodeRoleNotFound}
 	ErrPermissionNotFound  = &Error{errors.New("Permission not found"), CodePermissionNotFound}
+	ErrService             = &Error{errors.New("Service account"), CodeService}
 )

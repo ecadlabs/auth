@@ -14,6 +14,8 @@
 // data/15_role_membership_ref.up.sql
 // data/16_user_id_default.down.sql
 // data/16_user_id_default.up.sql
+// data/17_service_account_keys.down.sql
+// data/17_service_account_keys.up.sql
 // data/1_add_users_table.down.sql
 // data/1_add_users_table.up.sql
 // data/2_add_roles_table.down.sql
@@ -234,7 +236,7 @@ func _13_ip_whitelistDownSql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "13_ip_whitelist.down.sql", size: 90, mode: os.FileMode(420), modTime: time.Unix(1548437532, 0)}
+	info := bindataFileInfo{name: "13_ip_whitelist.down.sql", size: 90, mode: os.FileMode(420), modTime: time.Unix(1549642044, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -254,7 +256,7 @@ func _13_ip_whitelistUpSql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "13_ip_whitelist.up.sql", size: 406, mode: os.FileMode(420), modTime: time.Unix(1548437532, 0)}
+	info := bindataFileInfo{name: "13_ip_whitelist.up.sql", size: 406, mode: os.FileMode(420), modTime: time.Unix(1549642044, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -274,7 +276,7 @@ func _14_roles_refDownSql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "14_roles_ref.down.sql", size: 54, mode: os.FileMode(420), modTime: time.Unix(1548437971, 0)}
+	info := bindataFileInfo{name: "14_roles_ref.down.sql", size: 54, mode: os.FileMode(420), modTime: time.Unix(1549642044, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -294,7 +296,7 @@ func _14_roles_refUpSql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "14_roles_ref.up.sql", size: 136, mode: os.FileMode(420), modTime: time.Unix(1548437898, 0)}
+	info := bindataFileInfo{name: "14_roles_ref.up.sql", size: 136, mode: os.FileMode(420), modTime: time.Unix(1549642044, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -314,7 +316,7 @@ func _15_role_membership_refDownSql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "15_role_membership_ref.down.sql", size: 225, mode: os.FileMode(420), modTime: time.Unix(1548444992, 0)}
+	info := bindataFileInfo{name: "15_role_membership_ref.down.sql", size: 225, mode: os.FileMode(420), modTime: time.Unix(1549642044, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -334,7 +336,7 @@ func _15_role_membership_refUpSql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "15_role_membership_ref.up.sql", size: 511, mode: os.FileMode(420), modTime: time.Unix(1548718874, 0)}
+	info := bindataFileInfo{name: "15_role_membership_ref.up.sql", size: 511, mode: os.FileMode(420), modTime: time.Unix(1549642044, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -354,7 +356,7 @@ func _16_user_id_defaultDownSql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "16_user_id_default.down.sql", size: 48, mode: os.FileMode(420), modTime: time.Unix(1549487976, 0)}
+	info := bindataFileInfo{name: "16_user_id_default.down.sql", size: 48, mode: os.FileMode(420), modTime: time.Unix(1549642044, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -374,7 +376,47 @@ func _16_user_id_defaultUpSql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "16_user_id_default.up.sql", size: 66, mode: os.FileMode(420), modTime: time.Unix(1549487943, 0)}
+	info := bindataFileInfo{name: "16_user_id_default.up.sql", size: 66, mode: os.FileMode(420), modTime: time.Unix(1549642044, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
+var __17_service_account_keysDownSql = []byte("\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\x72\x72\x75\xf7\xf4\xb3\xe6\xe2\x72\x09\xf2\x0f\x50\x08\x71\x74\xf2\x71\x55\x28\x4e\x2d\x2a\xcb\x4c\x4e\x8d\x4f\x4c\x4e\xce\x2f\xcd\x2b\x89\xcf\x4e\xad\x2c\xb6\x86\x28\xf0\xf4\x73\x71\x8d\x50\x28\x2d\x4e\x2d\x2a\x8e\x4f\xcd\x4d\xcc\xcc\x01\x49\x5a\x73\x39\xfa\x84\xb8\x06\x41\x75\x83\x25\x15\x1c\x5d\x5c\x14\x9c\xfd\xfd\x82\x43\x82\x1c\x3d\xfd\x42\xd0\x75\x28\x84\xfa\x79\x06\x86\xba\x2a\x68\x80\x45\x34\xad\xb9\xb8\x9c\xfd\x7d\x7d\x3d\x43\xac\xb9\x00\x01\x00\x00\xff\xff\xf2\x27\xb4\x09\x8f\x00\x00\x00")
+
+func _17_service_account_keysDownSqlBytes() ([]byte, error) {
+	return bindataRead(
+		__17_service_account_keysDownSql,
+		"17_service_account_keys.down.sql",
+	)
+}
+
+func _17_service_account_keysDownSql() (*asset, error) {
+	bytes, err := _17_service_account_keysDownSqlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "17_service_account_keys.down.sql", size: 143, mode: os.FileMode(420), modTime: time.Unix(1549666056, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
+var __17_service_account_keysUpSql = []byte("\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\x94\x91\xd1\x4a\xc3\x30\x14\x86\xaf\xcd\x53\xfc\x77\x5b\x61\x6f\x50\xbc\xc8\x9a\x33\x17\x4c\x93\x9a\x9e\x30\xe7\x4d\xa9\x6b\xd0\xe2\xa6\xa3\xdd\x84\xbd\xbd\xb4\x73\x0c\x14\x04\x2f\xf3\xf3\x71\x4e\xce\xf7\xcf\xe9\x4e\xdb\x54\x88\xcc\x93\x64\x02\xcb\xb9\x21\xf4\xb1\xfb\x6c\x37\xb1\xaa\x37\x9b\x8f\xe3\xfb\xa1\x7a\x8b\xa7\x7e\x2a\x00\xa0\x6d\x10\x82\x56\xb0\x8e\x61\x83\x31\x28\xbc\xce\xa5\x5f\xe3\x9e\xd6\x33\x71\x73\xec\x63\x57\xfd\x62\x3c\x2d\xc8\x93\xcd\xa8\xc4\x00\xf4\xd3\xb6\x49\xe0\x2c\x14\x19\x62\x42\x26\xcb\x4c\x2a\x1a\x92\x50\x28\x79\x4d\x66\xe3\xca\x5d\xdc\x3d\xc7\xae\x7f\x6d\xf7\x7f\x4e\xbe\x62\xff\x1b\x5f\x37\x4d\x6c\xc0\x3a\xa7\x92\x65\x5e\x60\xa5\x79\x39\x3e\xf1\xe4\x2c\x5d\x57\x29\x5a\xc8\x60\x18\xd6\xad\xa6\x89\x48\x52\x21\xa4\x61\xf2\xdf\xc6\xc6\xbb\xa0\xbc\x2b\x90\x39\x5b\xb2\x97\xda\xf2\x39\xad\xe2\xae\x6e\xb7\x83\xc3\xf4\x62\x39\x58\xfd\x10\x08\xda\x2a\x7a\xfc\x09\x0d\xff\x3c\x5b\x1a\xa3\x04\xab\x25\x79\xc2\xa5\x8a\xc3\x69\x1f\x71\x8b\x49\x17\x5f\x8e\xdb\xba\x9b\x0c\xd5\xb9\x3c\xd7\x9c\x8a\xaf\x00\x00\x00\xff\xff\xe4\xb2\xfe\x58\xcb\x01\x00\x00")
+
+func _17_service_account_keysUpSqlBytes() ([]byte, error) {
+	return bindataRead(
+		__17_service_account_keysUpSql,
+		"17_service_account_keys.up.sql",
+	)
+}
+
+func _17_service_account_keysUpSql() (*asset, error) {
+	bytes, err := _17_service_account_keysUpSqlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "17_service_account_keys.up.sql", size: 459, mode: os.FileMode(420), modTime: time.Unix(1549666207, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -805,6 +847,8 @@ var _bindata = map[string]func() (*asset, error){
 	"15_role_membership_ref.up.sql": _15_role_membership_refUpSql,
 	"16_user_id_default.down.sql": _16_user_id_defaultDownSql,
 	"16_user_id_default.up.sql": _16_user_id_defaultUpSql,
+	"17_service_account_keys.down.sql": _17_service_account_keysDownSql,
+	"17_service_account_keys.up.sql": _17_service_account_keysUpSql,
 	"1_add_users_table.down.sql": _1_add_users_tableDownSql,
 	"1_add_users_table.up.sql": _1_add_users_tableUpSql,
 	"2_add_roles_table.down.sql": _2_add_roles_tableDownSql,
@@ -879,6 +923,8 @@ var _bintree = &bintree{nil, map[string]*bintree{
 	"15_role_membership_ref.up.sql": &bintree{_15_role_membership_refUpSql, map[string]*bintree{}},
 	"16_user_id_default.down.sql": &bintree{_16_user_id_defaultDownSql, map[string]*bintree{}},
 	"16_user_id_default.up.sql": &bintree{_16_user_id_defaultUpSql, map[string]*bintree{}},
+	"17_service_account_keys.down.sql": &bintree{_17_service_account_keysDownSql, map[string]*bintree{}},
+	"17_service_account_keys.up.sql": &bintree{_17_service_account_keysUpSql, map[string]*bintree{}},
 	"1_add_users_table.down.sql": &bintree{_1_add_users_tableDownSql, map[string]*bintree{}},
 	"1_add_users_table.up.sql": &bintree{_1_add_users_tableUpSql, map[string]*bintree{}},
 	"2_add_roles_table.down.sql": &bintree{_2_add_roles_tableDownSql, map[string]*bintree{}},

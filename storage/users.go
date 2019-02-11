@@ -216,10 +216,11 @@ var userQueryColumns = map[string]int{
 	"login_ts":       query.ColQuery | query.ColSort,
 	"refresh_addr":   query.ColQuery | query.ColSort,
 	"refresh_ts":     query.ColQuery | query.ColSort,
+	"account_type":   query.ColQuery | query.ColSort,
 }
 
 // GetUsers retrieve a users according to a query and return a paged results
-func (s *Storage) GetUsers(ctx context.Context, q *query.Query) (users []*User, count int, next *query.Query, err error) {
+func (s *Storage) GetUsers(ctx context.Context, typ string, q *query.Query) (users []*User, count int, next *query.Query, err error) {
 	if q.SortBy == "" {
 		q.SortBy = UsersDefaultSortColumn
 	}
@@ -275,7 +276,16 @@ func (s *Storage) GetUsers(ctx context.Context, q *query.Query) (users []*User, 
 		},
 	}
 
-	stmt, args, err := q.SelectStmt(&selOpt)
+	tmp := *q
+	if typ != "" {
+		tmp.Match = append(tmp.Match, query.Expr{
+			Col:   "account_type",
+			Op:    query.OpEq,
+			Value: typ,
+		})
+	}
+
+	stmt, args, err := tmp.SelectStmt(&selOpt)
 	if err != nil {
 		err = errors.Wrap(err, errors.CodeQuerySyntax)
 		return
@@ -305,8 +315,8 @@ func (s *Storage) GetUsers(ctx context.Context, q *query.Query) (users []*User, 
 	}
 
 	// Count
-	if q.TotalCount {
-		stmt, args := q.CountStmt(&selOpt)
+	if tmp.TotalCount {
+		stmt, args := tmp.CountStmt(&selOpt)
 		if err = s.DB.Get(&count, stmt, args...); err != nil {
 			return
 		}
@@ -339,10 +349,11 @@ func NewUserInt(ctx context.Context, tx *sqlx.Tx, user *CreateUser) (res *User, 
 		PasswordHash:  user.PasswordHash,
 		Name:          user.Name,
 		EmailVerified: user.EmailVerified,
+		Type:          user.Type,
 	}
 
 	// Create user
-	rows, err := sqlx.NamedQueryContext(ctx, tx, "INSERT INTO users (email, password_hash, name, email_verified) VALUES (:email, :password_hash, :name, :email_verified) RETURNING id, added, modified, password_gen", &model)
+	rows, err := sqlx.NamedQueryContext(ctx, tx, "INSERT INTO users (type, email, password_hash, name, email_verified) VALUES (:account_type, :email, :password_hash, :name, :email_verified) RETURNING id, added, modified, password_gen", &model)
 	if err != nil {
 		if isUniqueViolation(err, "users_email_key") {
 			err = errors.ErrEmailInUse

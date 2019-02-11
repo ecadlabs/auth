@@ -38,6 +38,13 @@ const (
 	ActiveState = "active"
 )
 
+const (
+	// AccountRegular represents regulat user account
+	AccountRegular = "regular"
+	// AccountService represents service account
+	AccountService = "service"
+)
+
 // Roles type for holding roles map
 type Roles map[string]interface{}
 
@@ -72,12 +79,13 @@ type CreateUser struct {
 	PasswordHash  []byte `json:"-" schema:"-"`
 	EmailVerified bool   `json:"email_verified" schema:"email_verified"`
 	Roles         Roles  `json:"roles,omitempty"`
+	Type          string `json:"account_type" schema:"account_type"`
 }
 
 // User struct representing a user
 type User struct {
 	ID               uuid.UUID         `json:"id" schema:"id"`
-	Type             string            `json:"type" schema:"type"`
+	Type             string            `json:"account_type" schema:"account_type"`
 	Email            string            `json:"email" schema:"email"`
 	EmailGen         int               `json:"-"`
 	Name             string            `json:"name,omitempty" schema:"name"`

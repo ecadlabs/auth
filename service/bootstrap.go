@@ -78,6 +78,7 @@ func (s *Service) Bootstrap() (user *storage.User, err error) {
 		PasswordHash:  hash,
 		EmailVerified: true, // Allow logging in !!!
 		Roles:         roles,
+		Type:          storage.AccountRegular,
 	}
 
 	user, err = storage.NewUserInt(context.Background(), tx, &u)
