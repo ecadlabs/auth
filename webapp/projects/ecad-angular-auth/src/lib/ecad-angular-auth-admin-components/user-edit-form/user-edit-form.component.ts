@@ -60,11 +60,9 @@ export class UserEditFormComponent implements OnInit {
     try {
       if (!this.dialogData) {
         const createUserPayload: CreateUser = this.userForm.value;
-        createUserPayload.roles = this.userForm.value.roles.reduce(
-          (prev, val) => Object.assign(prev, { [val]: true }),
-          {}
-        );
-        await this.userService.create(createUserPayload).toPromise();
+        await this.userService
+          .create({ ...createUserPayload, roles: { owner: true } })
+          .toPromise();
       } else {
         const payload = this.userForm.value;
         if (this.isEmailUpdated) {
