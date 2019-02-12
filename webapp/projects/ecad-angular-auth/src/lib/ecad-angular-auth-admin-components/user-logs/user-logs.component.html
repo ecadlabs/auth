@@ -1,51 +1,93 @@
 <table mat-table #table [dataSource]="dataSource" matSort multiTemplateDataRows>
-
   <ng-container matColumnDef="event">
-    <th mat-header-cell class="col-lg" *matHeaderCellDef mat-sort-header i18n> Event </th>
-    <td mat-cell class="col-lg" *matCellDef="let element"> {{element.event}} </td>
+    <th mat-header-cell class="col-lg" *matHeaderCellDef mat-sort-header i18n>
+      Event
+    </th>
+    <td mat-cell class="col-lg" *matCellDef="let element">
+      {{ element.event }}
+    </td>
   </ng-container>
 
   <ng-container matColumnDef="addr">
-    <th mat-header-cell class="col-lg" *matHeaderCellDef mat-sort-header i18n> Address </th>
-    <td mat-cell class="col-lg" *matCellDef="let element"> {{element.addr}} </td>
+    <th mat-header-cell class="col-lg" *matHeaderCellDef mat-sort-header i18n>
+      Address
+    </th>
+    <td mat-cell class="col-lg" *matCellDef="let element">
+      {{ element.addr }}
+    </td>
   </ng-container>
 
   <ng-container matColumnDef="user_id">
-    <th mat-header-cell class="col-lg" *matHeaderCellDef mat-sort-header i18n> Initiated by </th>
-    <td mat-cell class="col-lg" *matCellDef="let element"> {{element.user_id}} </td>
+    <th mat-header-cell class="col-lg" *matHeaderCellDef mat-sort-header i18n>
+      Initiated by
+    </th>
+    <td mat-cell class="col-lg" *matCellDef="let element">
+      {{ element.source_id }}
+    </td>
   </ng-container>
 
   <ng-container matColumnDef="target_id">
-    <th mat-header-cell class="col-lg" *matHeaderCellDef mat-sort-header i18n> Target </th>
-    <td mat-cell class="col-lg" *matCellDef="let element"> {{element.target_id}} </td>
+    <th mat-header-cell class="col-lg" *matHeaderCellDef mat-sort-header i18n>
+      Target
+    </th>
+    <td mat-cell class="col-lg" *matCellDef="let element">
+      {{ element.target_id }}
+    </td>
   </ng-container>
 
   <ng-container matColumnDef="ts">
-    <th mat-header-cell class="col-lg" *matHeaderCellDef mat-sort-header i18n> Timestamp </th>
-    <td mat-cell class="col-lg" *matCellDef="let element"> {{element.ts}} </td>
+    <th mat-header-cell class="col-lg" *matHeaderCellDef mat-sort-header i18n>
+      Timestamp
+    </th>
+    <td mat-cell class="col-lg" *matCellDef="let element">{{ element.ts }}</td>
   </ng-container>
 
   <ng-container matColumnDef="expandedDetail">
-    <td mat-cell *matCellDef="let element" [attr.colspan]="displayedColumns.length">
-      <div [@detailExpand]="element == expandedElement ? 'expanded' : 'collapsed'" class="example-element-detail">
+    <td
+      mat-cell
+      *matCellDef="let element"
+      [attr.colspan]="displayedColumns.length"
+    >
+      <div
+        [@detailExpand]="element == expandedElement ? 'expanded' : 'collapsed'"
+        class="example-element-detail"
+      >
         <span class="user-mail" *ngIf="expandedTarget">
           Target:
-          <a href="javascript:void(0)" (click)='selectUser(expandedTarget)'>{{expandedTarget.email}}</a>
+          <a href="javascript:void(0)" (click)="selectUser(expandedTarget)">{{
+            expandedTarget.email
+          }}</a>
         </span>
-        <span class="user-mail" *ngIf="expandedUser">User:
-          <a href="javascript:void(0)" (click)='selectUser(expandedUser)'>{{expandedUser.email}}</a>
+        <span class="user-mail" *ngIf="expandedUser"
+          >User:
+          <a href="javascript:void(0)" (click)="selectUser(expandedUser)">{{
+            expandedUser.email
+          }}</a>
         </span>
-        <p class='log-message'>
-          Log message: {{element.msg}}
-        </p>
+        <p class="log-message">Log message: {{ element.msg }}</p>
       </div>
     </td>
   </ng-container>
 
   <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-  <tr mat-row *matRowDef="let row; columns: displayedColumns;" [class.example-expanded-row]="expandedElement === row" (click)="expand(row)"></tr>
-  <tr mat-row *matRowDef="let row; columns: ['expandedDetail']" class="example-detail-row"></tr>
+  <tr
+    mat-row
+    *matRowDef="let row; columns: displayedColumns"
+    [class.example-expanded-row]="expandedElement === row"
+    (click)="expand(row)"
+  ></tr>
+  <tr
+    mat-row
+    *matRowDef="let row; columns: ['expandedDetail']"
+    class="example-detail-row"
+  ></tr>
 </table>
-<mat-paginator *ngIf="dataSource" (page)='changePage($event)' [length]="((dataSource.pageInfo$ | async) || {totalCount: 0}).totalCount"
-  [pageSize]="20" [pageSizeOptions]="[20]">
+
+<mat-paginator
+  *ngIf="dataSource"
+  (page)="changePage($event)"
+  [length]="((dataSource.pageInfo$ | async) || { totalCount: 0 }).totalCount"
+  [pageSize]="20"
+  [pageSizeOptions]="[20]"
+>
 </mat-paginator>

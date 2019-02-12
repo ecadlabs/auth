@@ -240,7 +240,7 @@ func (u *Users) NewUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if len(member.Roles) == 0 {
+	if len(user.Roles) == 0 {
 		utils.JSONErrorResponse(w, errors.ErrRolesEmpty)
 		return
 	}
