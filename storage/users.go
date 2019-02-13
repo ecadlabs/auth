@@ -124,9 +124,17 @@ const getUserQuery = `
 	  ) AS ips ON ips.user_id = users.id`
 
 // GetUserByID retrieve a user by his ID
-func (s *Storage) GetUserByID(ctx context.Context, id uuid.UUID) (*User, error) {
+func (s *Storage) GetUserByID(ctx context.Context, typ string, id uuid.UUID) (*User, error) {
+	q := getUserQuery + " WHERE users.id = $1"
+	args := []interface{}{id}
+
+	if typ != "" {
+		q += " AND users.account_type = $2"
+		args = append(args, typ)
+	}
+
 	var u userModel
-	if err := s.DB.GetContext(ctx, &u, getUserQuery+" WHERE users.id = $1", id); err != nil {
+	if err := s.DB.GetContext(ctx, &u, q, args...); err != nil {
 		if err == sql.ErrNoRows {
 			err = errors.ErrUserNotFound
 		}
@@ -138,9 +146,17 @@ func (s *Storage) GetUserByID(ctx context.Context, id uuid.UUID) (*User, error) 
 }
 
 // GetUserByEmail retrieve a user by his Email
-func (s *Storage) GetUserByEmail(ctx context.Context, email string) (*User, error) {
+func (s *Storage) GetUserByEmail(ctx context.Context, typ, email string) (*User, error) {
+	q := getUserQuery + " WHERE users.email = $1"
+	args := []interface{}{email}
+
+	if typ != "" {
+		q += " AND users.account_type = $2"
+		args = append(args, typ)
+	}
+
 	var u userModel
-	if err := s.DB.GetContext(ctx, &u, getUserQuery+" WHERE users.account_type = 'regular' AND users.email = $1", email); err != nil {
+	if err := s.DB.GetContext(ctx, &u, q, args...); err != nil {
 		if err == sql.ErrNoRows {
 			err = errors.ErrUserNotFound
 		}
@@ -436,7 +452,7 @@ var updatePaths = map[string]struct{}{
 }
 
 // UpdateUser update user according to patch operations
-func (s *Storage) UpdateUser(ctx context.Context, id uuid.UUID, ops *Ops) (user *User, err error) {
+func (s *Storage) UpdateUser(ctx context.Context, typ string, id uuid.UUID, ops *Ops) (user *User, err error) {
 	// Verify columns
 	for k := range ops.Update {
 		if _, ok := updatePaths[k]; !ok {
@@ -461,14 +477,14 @@ func (s *Storage) UpdateUser(ctx context.Context, id uuid.UUID, ops *Ops) (user 
 	// Update properties
 	var i int
 	expr := "UPDATE users SET "
-	args := make([]interface{}, len(ops.Update)+1)
+	args := make([]interface{}, 0, len(ops.Update)+2)
 
 	for k, v := range ops.Update {
 		if i != 0 {
 			expr += ", "
 		}
 		expr += fmt.Sprintf("%s = $%d", pq.QuoteIdentifier(k), i+1)
-		args[i] = v
+		args = append(args, v)
 		i++
 	}
 
@@ -476,8 +492,18 @@ func (s *Storage) UpdateUser(ctx context.Context, id uuid.UUID, ops *Ops) (user 
 		expr += ", "
 	}
 
-	expr += fmt.Sprintf("modified = DEFAULT WHERE id = $%d RETURNING *", len(ops.Update)+1)
-	args[len(ops.Update)] = id
+	expr += "modified = DEFAULT WHERE "
+
+	expr += fmt.Sprintf("id = $%d", i)
+	args = append(args, id)
+	i++
+
+	if typ != "" {
+		expr += fmt.Sprintf(" AND account_type = $%d", i)
+		args = append(args, typ)
+	}
+
+	expr += " RETURNING *"
 
 	var u userModel
 	if err = tx.GetContext(ctx, &u, expr, args...); err != nil {
@@ -491,7 +517,7 @@ func (s *Storage) UpdateUser(ctx context.Context, id uuid.UUID, ops *Ops) (user 
 }
 
 // DeleteUser delete user with the specified ID
-func (s *Storage) DeleteUser(ctx context.Context, id uuid.UUID) (err error) {
+func (s *Storage) DeleteUser(ctx context.Context, typ string, id uuid.UUID) (err error) {
 	tx, err := s.DB.Beginx()
 	if err != nil {
 		return
@@ -506,7 +532,15 @@ func (s *Storage) DeleteUser(ctx context.Context, id uuid.UUID) (err error) {
 		err = tx.Commit()
 	}()
 
-	res, err := tx.ExecContext(ctx, "DELETE FROM users WHERE id = $1", id)
+	q := "DELETE FROM users WHERE id = $1"
+	args := []interface{}{id}
+
+	if typ != "" {
+		q += " AND account_type = $2"
+		args = append(args, typ)
+	}
+
+	res, err := tx.ExecContext(ctx, q, args...)
 	if err != nil {
 		return err
 	}
@@ -540,7 +574,7 @@ func (s *Storage) UpdatePasswordWithGen(ctx context.Context, id uuid.UUID, hash 
 	}()
 
 	var gen int
-	if err := tx.GetContext(ctx, &gen, "SELECT password_gen FROM users WHERE id = $1", id); err != nil {
+	if err := tx.GetContext(ctx, &gen, "SELECT password_gen FROM users WHERE id = $1 AND account_type = 'regular'", id); err != nil {
 		if err == sql.ErrNoRows {
 			err = errors.ErrUserNotFound
 		}
@@ -552,7 +586,7 @@ func (s *Storage) UpdatePasswordWithGen(ctx context.Context, id uuid.UUID, hash 
 		return errors.ErrTokenExpired
 	}
 
-	res, err := tx.ExecContext(ctx, "UPDATE users SET password_hash = $1, email_verified = TRUE, modified = DEFAULT, password_gen = password_gen + 1 WHERE id = $2 AND password_gen = $3", hash, id, gen)
+	res, err := tx.ExecContext(ctx, "UPDATE users SET password_hash = $1, email_verified = TRUE, modified = DEFAULT, password_gen = password_gen + 1 WHERE account_type = 'regular' AND id = $2 AND password_gen = $3", hash, id, gen)
 	if err != nil {
 		return err
 	}
@@ -586,7 +620,7 @@ func (s *Storage) UpdateEmailWithGen(ctx context.Context, id uuid.UUID, email st
 	}()
 
 	var prev userModel
-	if err := tx.GetContext(ctx, &prev, "SELECT email_gen, email FROM users WHERE id = $1", id); err != nil {
+	if err := tx.GetContext(ctx, &prev, "SELECT email_gen, email FROM users WHERE id = $1 AND account_type = 'regular'", id); err != nil {
 		if err == sql.ErrNoRows {
 			err = errors.ErrUserNotFound
 		}
@@ -599,7 +633,7 @@ func (s *Storage) UpdateEmailWithGen(ctx context.Context, id uuid.UUID, email st
 	}
 
 	var u userModel
-	if err = tx.GetContext(ctx, &u, "UPDATE users SET email = $1, email_verified = TRUE, modified = DEFAULT, email_gen = email_gen + 1 WHERE id = $2 AND email_gen = $3 RETURNING *", email, id, prev.EmailGen); err != nil {
+	if err = tx.GetContext(ctx, &u, "UPDATE users SET email = $1, email_verified = TRUE, modified = DEFAULT, email_gen = email_gen + 1 WHERE account_type = 'regular' AND id = $2 AND email_gen = $3 RETURNING *", email, id, prev.EmailGen); err != nil {
 		if err == sql.ErrNoRows {
 			err = errors.ErrUserNotFound
 		}

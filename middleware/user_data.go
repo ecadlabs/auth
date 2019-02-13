@@ -32,7 +32,7 @@ func (u *UserData) Handler(h http.Handler) http.Handler {
 				if id, err = uuid.FromString(sub); err == nil {
 					var user *storage.User
 
-					if user, err = u.Storage.GetUserByID(r.Context(), id); err == nil {
+					if user, err = u.Storage.GetUserByID(r.Context(), "", id); err == nil {
 						if user.EmailVerified {
 							req := r.WithContext(context.WithValue(r.Context(), u.UserContextKey, user))
 							h.ServeHTTP(w, req)

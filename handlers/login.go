@@ -166,7 +166,7 @@ func (u *Users) Login(w http.ResponseWriter, r *http.Request) {
 		}
 
 		var err error
-		user, err = u.Storage.GetUserByEmail(ctx, request.Name)
+		user, err = u.Storage.GetUserByEmail(ctx, storage.AccountRegular, request.Name)
 		if err != nil {
 			log.Error(err)
 			utils.JSONError(w, "", errors.CodeUnauthorized)

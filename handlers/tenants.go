@@ -453,7 +453,7 @@ func (t *Tenants) InviteExistingUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	target, err := t.UserStorage.GetUserByEmail(ctx, user.Email)
+	target, err := t.UserStorage.GetUserByEmail(ctx, storage.AccountRegular, user.Email)
 
 	if err != nil {
 		log.Error(err)

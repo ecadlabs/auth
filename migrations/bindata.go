@@ -16,6 +16,8 @@
 // data/16_user_id_default.up.sql
 // data/17_service_account_keys.down.sql
 // data/17_service_account_keys.up.sql
+// data/18_service_constraints.down.sql
+// data/18_service_constraints.up.sql
 // data/1_add_users_table.down.sql
 // data/1_add_users_table.up.sql
 // data/2_add_roles_table.down.sql
@@ -417,6 +419,46 @@ func _17_service_account_keysUpSql() (*asset, error) {
 	}
 
 	info := bindataFileInfo{name: "17_service_account_keys.up.sql", size: 459, mode: os.FileMode(420), modTime: time.Unix(1549666207, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
+var __18_service_constraintsDownSql = []byte("\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\x72\xf4\x09\x71\x0d\x52\x08\x71\x74\xf2\x71\x55\x28\x2d\x4e\x2d\x2a\x56\x70\x09\xf2\x0f\x50\x70\xf6\xf7\x0b\x0e\x09\x72\xf4\xf4\x0b\x81\x88\xc6\x17\xa7\x16\x95\x65\x26\xa7\xc6\xe7\xe5\xc7\xa7\xe6\x26\x66\xe6\xc4\x17\x94\xa7\x58\x73\x01\x02\x00\x00\xff\xff\x51\x7e\xf4\xba\x3e\x00\x00\x00")
+
+func _18_service_constraintsDownSqlBytes() ([]byte, error) {
+	return bindataRead(
+		__18_service_constraintsDownSql,
+		"18_service_constraints.down.sql",
+	)
+}
+
+func _18_service_constraintsDownSql() (*asset, error) {
+	bytes, err := _18_service_constraintsDownSqlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "18_service_constraints.down.sql", size: 62, mode: os.FileMode(420), modTime: time.Unix(1550097214, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
+var __18_service_constraintsUpSql = []byte("\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\x24\xca\x41\xaa\x83\x30\x10\x06\xe0\xfd\x3b\xc5\xbf\x53\xcf\xf0\xe8\x22\xd5\x40\x4b\x25\x42\x9a\xfd\x10\xe2\x50\x05\x6b\x42\xc6\x54\x7a\xfb\x52\xbb\xfd\xf8\x54\xef\xb4\x85\x53\xe7\x5e\xa3\x08\x67\x81\xea\x3a\xb4\x83\xb9\x3b\xab\xae\xc6\xfd\x90\x84\xf3\x6b\x0e\x4c\x6b\x24\x7e\xfa\x79\xa1\xb4\x8f\x68\x2f\xba\xbd\xa1\xf6\x21\xc4\xb2\x6e\xb4\xbd\x13\xe3\x84\x2a\xf3\xa3\x2c\x3e\x57\x18\x2c\xea\x63\x7f\xb5\x82\x32\x1d\x92\x17\xd9\x63\x1e\x69\xf2\x32\x1d\xdc\x34\xff\x7f\x9f\x00\x00\x00\xff\xff\xc6\x38\xc2\x4a\x85\x00\x00\x00")
+
+func _18_service_constraintsUpSqlBytes() ([]byte, error) {
+	return bindataRead(
+		__18_service_constraintsUpSql,
+		"18_service_constraints.up.sql",
+	)
+}
+
+func _18_service_constraintsUpSql() (*asset, error) {
+	bytes, err := _18_service_constraintsUpSqlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "18_service_constraints.up.sql", size: 133, mode: os.FileMode(420), modTime: time.Unix(1550097203, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -849,6 +891,8 @@ var _bindata = map[string]func() (*asset, error){
 	"16_user_id_default.up.sql": _16_user_id_defaultUpSql,
 	"17_service_account_keys.down.sql": _17_service_account_keysDownSql,
 	"17_service_account_keys.up.sql": _17_service_account_keysUpSql,
+	"18_service_constraints.down.sql": _18_service_constraintsDownSql,
+	"18_service_constraints.up.sql": _18_service_constraintsUpSql,
 	"1_add_users_table.down.sql": _1_add_users_tableDownSql,
 	"1_add_users_table.up.sql": _1_add_users_tableUpSql,
 	"2_add_roles_table.down.sql": _2_add_roles_tableDownSql,
@@ -925,6 +969,8 @@ var _bintree = &bintree{nil, map[string]*bintree{
 	"16_user_id_default.up.sql": &bintree{_16_user_id_defaultUpSql, map[string]*bintree{}},
 	"17_service_account_keys.down.sql": &bintree{_17_service_account_keysDownSql, map[string]*bintree{}},
 	"17_service_account_keys.up.sql": &bintree{_17_service_account_keysUpSql, map[string]*bintree{}},
+	"18_service_constraints.down.sql": &bintree{_18_service_constraintsDownSql, map[string]*bintree{}},
+	"18_service_constraints.up.sql": &bintree{_18_service_constraintsUpSql, map[string]*bintree{}},
 	"1_add_users_table.down.sql": &bintree{_1_add_users_tableDownSql, map[string]*bintree{}},
 	"1_add_users_table.up.sql": &bintree{_1_add_users_tableUpSql, map[string]*bintree{}},
 	"2_add_roles_table.down.sql": &bintree{_2_add_roles_tableDownSql, map[string]*bintree{}},
