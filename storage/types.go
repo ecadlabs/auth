@@ -30,6 +30,11 @@ const (
 )
 
 const (
+	TenantTypeOrg        = "organization"
+	TenantTypeIndividual = "individual"
+)
+
+const (
 	// InvitedState string representing the invited membership state
 	InvitedState = "invited"
 	// ActiveState string representing the active membership state
@@ -42,6 +47,7 @@ type Roles map[string]interface{}
 type membershipItem struct {
 	MembershipType string    `json:"type"`
 	TenantID       uuid.UUID `json:"tenantID"`
+	TenantType     string    `json:"tenantType"`
 }
 
 // CreateUser struct representing data necessary to create a new user
@@ -80,12 +86,19 @@ type User struct {
 
 // GetDefaultMembership retrive the default membership of this user
 func (u *User) GetDefaultMembership() (id uuid.UUID) {
+	// Select the first organization or return individual tenant
+	for _, membership := range u.Memberships {
+		if membership.TenantType == TenantTypeOrg {
+			return membership.TenantID
+		}
+	}
 	return u.Memberships[0].TenantID
 }
 
 // Membership struct representing a user
 type Membership struct {
 	ID               uuid.UUID `json:"id"`
+	Email            string    `json:"email"`
 	MembershipType   string    `json:"type"`
 	TenantID         uuid.UUID `json:"tenant_id"`
 	MembershipStatus string    `json:"status"`

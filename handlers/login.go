@@ -36,6 +36,7 @@ func (u *Users) writeUserToken(w http.ResponseWriter, user *storage.User, member
 		"iss":    u.BaseURL(),
 		"aud":    u.BaseURL(),
 		"tenant": membership.TenantID,
+		"member": membership.ID,
 		utils.NSClaim(u.Namespace, "email"): user.Email,
 		utils.NSClaim(u.Namespace, "name"):  user.Name,
 		utils.NSClaim(u.Namespace, "roles"): roles,

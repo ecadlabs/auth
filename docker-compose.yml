@@ -1,17 +1,16 @@
 version: '3'
 services:
-
   envoy:
     image: envoyproxy/envoy-alpine:v1.6.0
     volumes:
       - ./envoy/:/etc/envoy
     command: /usr/local/bin/envoy -c /etc/envoy/envoy_dev.yaml
     ports:
-      - "8000:10000"
-      - "9901:9901"
+      - '8000:10000'
+      - '9901:9901'
 
   db:
-    image: "postgres:alpine"
+    image: 'postgres:alpine'
     environment:
       - POSTGRES_USER=auth
       - POSTGRES_PASSWORD=auth
@@ -29,10 +28,11 @@ services:
     entrypoint: /app/auth
     command:
       - -db
-      - "postgres://auth:auth@db/auth?connect_timeout=10&sslmode=disable"
+      - 'postgres://auth:auth@db/auth?connect_timeout=10&sslmode=disable'
       - -base
-      - "http://localhost:8000/api/v1"
+      - 'http://localhost:8000/api/v1'
       - -bootstrap
+      - /app/bootstrap.yaml
       - -namespace
       - com.ecadlabs.auth
       - -c
@@ -48,17 +48,6 @@ services:
     depends_on:
       - envoy
     command: /bin/bash -c "nginx -g 'daemon off;'"
-
-  webapp:
-    build:
-      dockerfile: Dockerfile.dev
-      context: webapp/
-    volumes:
-      - ./webapp/:/app
-      - node_modules_volume:/app/node_modules
-    depends_on:
-      - envoy
-      - auth
 
 volumes:
   node_modules_volume:

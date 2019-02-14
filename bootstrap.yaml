@@ -1,0 +1,12 @@
+tenants:
+  - name: 'test'
+    uuid: '583f78bd-9ca0-45fe-ab67-a37ca5ef0cbe'
+users:
+  - email: 'admin@admin'
+    uuid: '665a99c9-0fb4-48d7-840f-a7045686f6c3'
+    hash: '$2y$10$ECLXGM7mZP6xkyKvPIQO3.d.scltj9NaT4IJdKB9267YLv7M2G2Ne'
+    role: 'admin'
+memberships:
+  - tenant_id: '583f78bd-9ca0-45fe-ab67-a37ca5ef0cbe'
+    user_id: '665a99c9-0fb4-48d7-840f-a7045686f6c3'
+    role: 'admin'
