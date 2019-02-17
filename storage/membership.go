@@ -141,7 +141,7 @@ var membershipUpdatePath = map[string]struct{}{
 }
 
 // UpdateMembership update a membership
-func (s *MembershipStorage) UpdateMembership(ctx context.Context, id uuid.UUID, userID uuid.UUID, ops *RoleOps) (*Membership, error) {
+func (s *MembershipStorage) UpdateMembership(ctx context.Context, id uuid.UUID, userID uuid.UUID, ops *Ops) (*Membership, error) {
 	// Verify columns
 	for k := range ops.Update {
 		if _, ok := membershipUpdatePath[k]; !ok {
@@ -195,13 +195,13 @@ func (s *MembershipStorage) UpdateMembership(ctx context.Context, id uuid.UUID, 
 	}
 
 	// Update roles
-	if len(ops.AddRoles) != 0 {
+	if roles := ops.Add["roles"]; len(roles) != 0 {
 		expr := "INSERT INTO roles (membership_id, role) VALUES "
-		args := make([]interface{}, len(ops.AddRoles)+1)
+		args := make([]interface{}, len(roles)+1)
 
 		args[0] = u.ID
 
-		for i, r := range ops.AddRoles {
+		for i, r := range roles {
 			if i != 0 {
 				expr += ", "
 			}
@@ -217,13 +217,13 @@ func (s *MembershipStorage) UpdateMembership(ctx context.Context, id uuid.UUID, 
 		}
 	}
 
-	if len(ops.RemoveRoles) != 0 {
+	if roles := ops.Remove["roles"]; len(roles) != 0 {
 		expr := "DELETE FROM roles WHERE membership_id = $1 AND ("
-		args := make([]interface{}, len(ops.RemoveRoles)+1)
+		args := make([]interface{}, len(roles)+1)
 
 		args[0] = u.ID
 
-		for i, r := range ops.RemoveRoles {
+		for i, r := range roles {
 			if i != 0 {
 				expr += " OR "
 			}

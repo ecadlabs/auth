@@ -12,6 +12,7 @@ permissions:
   com.ecadlabs.users.delegate:admin: Assign `admin' role
   com.ecadlabs.users.delegate:owner: Assign `owner' role
   com.ecadlabs.users.delegate:ops: Assign `ops' role
+  com.ecadlabs.service_accounts.full_control: Allows user to manage service accounts
   # The org permsissions are speculative/future looking permissions included
   # here to provoke analysis/critical evaluation
   com.ecadlabs.org.read_self: Allows user to view the organizations to which they are assigned
@@ -27,6 +28,7 @@ roles:
     description: A super user that has all access
     permissions:
       - com.ecadlabs.users.full_control
+      - com.ecadlabs.service_accounts.full_control
       - com.ecadlabs.tenants.full_control
       - it.r255.cloudwatch.full_control
       - it.r255.edge.full_control

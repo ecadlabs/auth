@@ -95,7 +95,7 @@ func (m *Memberships) PatchMembership(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ops, err := storage.RoleOpsFromPatch(p)
+	ops, err := storage.OpsFromPatch(p)
 	if err != nil {
 		log.Error(err)
 		utils.JSONErrorResponse(w, err)
@@ -103,14 +103,16 @@ func (m *Memberships) PatchMembership(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check role manipulation permissions
-	if len(ops.AddRoles) != 0 || len(ops.RemoveRoles) != 0 {
-		tmp := make(map[string]struct{}, len(ops.AddRoles)+len(ops.RemoveRoles))
+	addRoles, removeRoles := ops.Add["roles"], ops.Remove["roles"]
 
-		for _, r := range ops.AddRoles {
+	if len(addRoles) != 0 || len(removeRoles) != 0 {
+		tmp := make(map[string]struct{}, len(addRoles)+len(removeRoles))
+
+		for _, r := range addRoles {
 			tmp[permissionDelegatePrefix+r] = struct{}{}
 		}
 
-		for _, r := range ops.RemoveRoles {
+		for _, r := range removeRoles {
 			tmp[permissionDelegatePrefix+r] = struct{}{}
 		}
 
@@ -145,11 +147,11 @@ func (m *Memberships) PatchMembership(w http.ResponseWriter, r *http.Request) {
 			m.AuxLogger.WithFields(logFields(EvUpdate, member.UserID, userID, r)).WithFields(log.Fields(ops.Update)).Printf("User %v updated account %v in tenant %v", member.UserID, userID, tenantID)
 		}
 
-		for _, role := range ops.AddRoles {
+		for _, role := range addRoles {
 			m.AuxLogger.WithFields(logFields(EvAddRole, member.UserID, userID, r)).WithField("role", role).Printf("User %v added role `%s' to account %v in tenant %v", member.UserID, role, userID, tenantID)
 		}
 
-		for _, role := range ops.RemoveRoles {
+		for _, role := range removeRoles {
 			m.AuxLogger.WithFields(logFields(EvRemoveRole, member.UserID, userID, r)).WithField("role", role).Printf("User %v removed role `%s' from account %v in tenant %v", member.UserID, role, userID, tenantID)
 		}
 	}

@@ -365,14 +365,16 @@ func (u *Users) NewUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err = u.Notifier.Notify(ctx, notification.NotificationInvite, &notification.NotificationData{
-		Addr:        utils.GetRemoteAddr(r),
-		CurrentUser: self,
-		TargetUser:  ret,
-		Token:       token,
-		TokenMaxAge: u.ResetTokenMaxAge,
-	}); err != nil {
-		log.Error(err)
+	if user.Type == storage.AccountRegular {
+		if err = u.Notifier.Notify(ctx, notification.NotificationInvite, &notification.NotificationData{
+			Addr:        utils.GetRemoteAddr(r),
+			CurrentUser: self,
+			TargetUser:  ret,
+			Token:       token,
+			TokenMaxAge: u.ResetTokenMaxAge,
+		}); err != nil {
+			log.Error(err)
+		}
 	}
 
 	// Log
@@ -432,6 +434,11 @@ func (u *Users) PatchUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	delete(ops.Update, "password_hash")
+
+	if typ == storage.AccountRegular && (ops.Add["address_whitelist"] != nil || ops.Remove["address_whitelist"] != nil) {
+		utils.JSONErrorResponse(w, errors.ErrForbidden)
+		return
+	}
 
 	if v, ok := ops.Update["password"]; ok {
 		delete(ops.Update, "password")

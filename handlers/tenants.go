@@ -386,7 +386,7 @@ func (t *Tenants) AcceptInvite(w http.ResponseWriter, r *http.Request) {
 	updates := make(map[string]interface{})
 	updates["membership_status"] = storage.ActiveState
 
-	_, err = t.MembershipStorage.UpdateMembership(ctx, tenantID, id, &storage.RoleOps{
+	_, err = t.MembershipStorage.UpdateMembership(ctx, tenantID, id, &storage.Ops{
 		Update: updates,
 	})
 	if err != nil {

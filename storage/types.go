@@ -2,6 +2,7 @@ package storage
 
 import (
 	"encoding/json"
+	"net"
 	"sort"
 	"time"
 
@@ -45,11 +46,8 @@ const (
 	AccountService = "service"
 )
 
-// Roles type for holding roles map
-type Roles map[string]interface{}
-
-func (r *Roles) UnmarshalJSON(data []byte) error {
-	if err := json.Unmarshal(data, (*map[string]interface{})(r)); err == nil {
+func unmarshalJSONSet(data []byte, dst *map[string]interface{}) error {
+	if err := json.Unmarshal(data, dst); err == nil {
 		return nil
 	}
 
@@ -58,12 +56,26 @@ func (r *Roles) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	*r = make(Roles, len(tmp))
+	*dst = make(map[string]interface{}, len(tmp))
 	for _, v := range tmp {
-		(*r)[v] = true
+		(*dst)[v] = true
 	}
 
 	return nil
+}
+
+// Roles type for holding roles map
+type Roles map[string]interface{}
+
+func (r *Roles) UnmarshalJSON(data []byte) error {
+	return unmarshalJSONSet(data, (*map[string]interface{})(r))
+}
+
+// StringSet type for holding list of unique strings
+type StringSet map[string]interface{}
+
+func (s *StringSet) UnmarshalJSON(data []byte) error {
+	return unmarshalJSONSet(data, (*map[string]interface{})(s))
 }
 
 type MembershipItem struct {
@@ -74,12 +86,13 @@ type MembershipItem struct {
 
 // CreateUser struct representing data necessary to create a new user
 type CreateUser struct {
-	Email         string `json:"email" schema:"email"`
-	Name          string `json:"name,omitempty" schema:"name"`
-	PasswordHash  []byte `json:"-" schema:"-"`
-	EmailVerified bool   `json:"email_verified" schema:"email_verified"`
-	Roles         Roles  `json:"roles,omitempty"`
-	Type          string `json:"account_type" schema:"account_type"`
+	Email            string   `json:"email" schema:"email"`
+	Name             string   `json:"name,omitempty" schema:"name"`
+	PasswordHash     []byte   `json:"-" schema:"-"`
+	EmailVerified    bool     `json:"email_verified" schema:"email_verified"`
+	Roles            Roles    `json:"roles,omitempty"`
+	Type             string   `json:"account_type" schema:"account_type"`
+	AddressWhiteList []net.IP `json:"address_whitelist"`
 }
 
 // User struct representing a user
@@ -99,7 +112,7 @@ type User struct {
 	LoginTimestamp   *time.Time        `json:"login_ts,omitempty"`
 	RefreshAddr      string            `json:"refresh_addr,omitempty"`
 	RefreshTimestamp *time.Time        `json:"refresh_ts,omitempty"`
-	AddressWhiteList []string          `json:"address_whitelist,omitempty"`
+	AddressWhiteList StringSet         `json:"address_whitelist,omitempty"`
 }
 
 // GetDefaultMembership retrive the default membership of this user
@@ -176,3 +189,12 @@ const (
 	// LogDefaultSortColumn default column for sorting logs
 	LogDefaultSortColumn = "ts"
 )
+
+// APIKey represents service account API key
+type APIKey struct {
+	ID           uuid.UUID `db:"id" json:"id"`
+	MembershipID uuid.UUID `db:"membership_id" json:"membership_id"`
+	UserID       uuid.UUID `db:"user_id" json:"user_id"`
+	TenantID     uuid.UUID `db:"tenant_id" json:"tenant_id"`
+	Added        time.Time `db:"added" json:"added"`
+}

@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"net"
 	"strings"
 	"time"
 
@@ -38,19 +39,18 @@ type userModel struct {
 
 func (u *userModel) toUser() *User {
 	ret := &User{
-		ID:               u.ID,
-		Type:             u.Type,
-		Email:            u.Email,
-		PasswordHash:     u.PasswordHash,
-		Name:             u.Name,
-		Added:            u.Added,
-		Modified:         u.Modified,
-		EmailVerified:    u.EmailVerified,
-		PasswordGen:      u.PasswordGen,
-		LoginAddr:        u.LoginAddr,
-		RefreshAddr:      u.RefreshAddr,
-		EmailGen:         u.EmailGen,
-		AddressWhiteList: u.AddressWhiteList,
+		ID:            u.ID,
+		Type:          u.Type,
+		Email:         u.Email,
+		PasswordHash:  u.PasswordHash,
+		Name:          u.Name,
+		Added:         u.Added,
+		Modified:      u.Modified,
+		EmailVerified: u.EmailVerified,
+		PasswordGen:   u.PasswordGen,
+		LoginAddr:     u.LoginAddr,
+		RefreshAddr:   u.RefreshAddr,
+		EmailGen:      u.EmailGen,
 	}
 
 	epoch := time.Unix(0, 0).UTC()
@@ -66,6 +66,14 @@ func (u *userModel) toUser() *User {
 	if len(u.Membership) != 0 {
 		if err := json.Unmarshal(u.Membership, &ret.Membership); err != nil {
 			log.Warn(err)
+		}
+	}
+
+	if len(u.AddressWhiteList) != 0 {
+		ret.AddressWhiteList = make(StringSet, len(u.AddressWhiteList))
+
+		for _, a := range u.AddressWhiteList {
+			ret.AddressWhiteList[a] = true
 		}
 	}
 
@@ -369,7 +377,7 @@ func NewUserInt(ctx context.Context, tx *sqlx.Tx, user *CreateUser) (res *User, 
 	}
 
 	// Create user
-	rows, err := sqlx.NamedQueryContext(ctx, tx, "INSERT INTO users (type, email, password_hash, name, email_verified) VALUES (:account_type, :email, :password_hash, :name, :email_verified) RETURNING id, added, modified, password_gen", &model)
+	rows, err := sqlx.NamedQueryContext(ctx, tx, "INSERT INTO users (account_type, email, password_hash, name, email_verified) VALUES (:account_type, :email, :password_hash, :name, :email_verified) RETURNING id, added, modified, password_gen", &model)
 	if err != nil {
 		if isUniqueViolation(err, "users_email_key") {
 			err = errors.ErrEmailInUse
@@ -387,8 +395,6 @@ func NewUserInt(ctx context.Context, tx *sqlx.Tx, user *CreateUser) (res *User, 
 	if err = rows.Err(); err != nil {
 		return
 	}
-
-	res = model.toUser()
 
 	tModel := TenantModel{}
 
@@ -417,7 +423,31 @@ func NewUserInt(ctx context.Context, tx *sqlx.Tx, user *CreateUser) (res *User, 
 		i++
 	}
 
-	_, err = tx.ExecContext(ctx, "INSERT INTO roles (membership_id, role) VALUES "+strings.Join(valuesExprs, ", "), args...)
+	if _, err = tx.ExecContext(ctx, "INSERT INTO roles (membership_id, role) VALUES "+strings.Join(valuesExprs, ", "), args...); err != nil {
+		return
+	}
+
+	if len(user.AddressWhiteList) != 0 {
+		// Create whitelist
+		valuesExprs = make([]string, len(user.AddressWhiteList))
+		args = make([]interface{}, len(user.AddressWhiteList)+1)
+
+		args[0] = model.ID
+		i = 0
+
+		for _, a := range user.AddressWhiteList {
+			valuesExprs[i] = fmt.Sprintf("($1, $%d)", i+2)
+			args[i+1] = a.String()
+			i++
+		}
+
+		if _, err = tx.ExecContext(ctx, "INSERT INTO service_account_ip (user_id, addr) VALUES "+strings.Join(valuesExprs, ", "), args...); err != nil {
+			return
+		}
+	}
+
+	res = model.toUser()
+
 	return
 }
 
@@ -494,26 +524,81 @@ func (s *Storage) UpdateUser(ctx context.Context, typ string, id uuid.UUID, ops 
 
 	expr += "modified = DEFAULT WHERE "
 
-	expr += fmt.Sprintf("id = $%d", i)
+	expr += fmt.Sprintf("id = $%d", i+1)
 	args = append(args, id)
 	i++
 
 	if typ != "" {
-		expr += fmt.Sprintf(" AND account_type = $%d", i)
+		expr += fmt.Sprintf(" AND account_type = $%d", i+1)
 		args = append(args, typ)
 	}
 
-	expr += " RETURNING *"
-
-	var u userModel
-	if err = tx.GetContext(ctx, &u, expr, args...); err != nil {
-		if err == sql.ErrNoRows {
-			err = errors.ErrUserNotFound
-		}
+	res, err := tx.ExecContext(ctx, expr, args...)
+	if err != nil {
 		return nil, err
 	}
 
-	return u.toUser(), nil
+	v, err := res.RowsAffected()
+	if err != nil {
+		return nil, err
+	}
+
+	if v == 0 {
+		return nil, errors.ErrUserNotFound
+	}
+
+	// Update white list
+	addAddr := ops.Add["address_whitelist"]
+	removeAddr := ops.Remove["address_whitelist"]
+
+	if len(addAddr) != 0 {
+		expr := "INSERT INTO service_account_ip (user_id, addr) VALUES "
+		args := make([]interface{}, len(addAddr)+1)
+
+		args[0] = id
+
+		for i, r := range addAddr {
+			if net.ParseIP(r) == nil {
+				return nil, errors.ErrAddrSyntax
+			}
+
+			if i != 0 {
+				expr += ", "
+			}
+			expr += fmt.Sprintf("($1, $%d)", i+2)
+			args[i+1] = r
+		}
+
+		if _, err = tx.ExecContext(ctx, expr, args...); err != nil {
+			if isUniqueViolation(err, "service_account_ip_addr_key") {
+				err = errors.ErrAddrExists
+			}
+			return nil, err
+		}
+	}
+
+	if len(removeAddr) != 0 {
+		expr := "DELETE FROM service_account_ip WHERE user_id = $1 AND ("
+		args := make([]interface{}, len(removeAddr)+1)
+
+		args[0] = id
+
+		for i, r := range removeAddr {
+			if i != 0 {
+				expr += " OR "
+			}
+			expr += fmt.Sprintf("addr = $%d", i+2)
+			args[i+1] = r
+		}
+
+		expr += ")"
+
+		if _, err = tx.ExecContext(ctx, expr, args...); err != nil {
+			return nil, err
+		}
+	}
+
+	return s.GetUserByID(ctx, typ, id)
 }
 
 // DeleteUser delete user with the specified ID
