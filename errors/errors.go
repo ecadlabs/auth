@@ -111,6 +111,7 @@ var httpStatus = map[Code]int{
 	CodeService:             http.StatusBadRequest,
 	CodeKeyNotFound:         http.StatusNotFound,
 	CodeAddrExists:          http.StatusConflict,
+	CodeMembershipNotFound:  http.StatusNotFound,
 }
 
 // Some predefined errors

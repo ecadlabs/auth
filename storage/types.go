@@ -1,11 +1,13 @@
 package storage
 
 import (
+	"context"
 	"encoding/json"
 	"net"
 	"sort"
 	"time"
 
+	"github.com/ecadlabs/auth/query"
 	"github.com/ecadlabs/auth/rbac"
 	"github.com/satori/go.uuid"
 )
@@ -86,7 +88,7 @@ type MembershipItem struct {
 
 // CreateUser struct representing data necessary to create a new user
 type CreateUser struct {
-	Email            string   `json:"email" schema:"email"`
+	Email            string   `json:"email,omitempty" schema:"email"`
 	Name             string   `json:"name,omitempty" schema:"name"`
 	PasswordHash     []byte   `json:"-" schema:"-"`
 	EmailVerified    bool     `json:"email_verified" schema:"email_verified"`
@@ -99,7 +101,7 @@ type CreateUser struct {
 type User struct {
 	ID               uuid.UUID         `json:"id" schema:"id"`
 	Type             string            `json:"account_type" schema:"account_type"`
-	Email            string            `json:"email" schema:"email"`
+	Email            string            `json:"email,omitempty" schema:"email"`
 	EmailGen         int               `json:"-"`
 	Name             string            `json:"name,omitempty" schema:"name"`
 	PasswordHash     []byte            `json:"-" schema:"-"`
@@ -197,4 +199,46 @@ type APIKey struct {
 	UserID       uuid.UUID `db:"user_id" json:"user_id"`
 	TenantID     uuid.UUID `db:"tenant_id" json:"tenant_id"`
 	Added        time.Time `db:"added" json:"added"`
+}
+
+type TenantStorage interface {
+	CreateTenant(ctx context.Context, name string, ownerID uuid.UUID) (*TenantModel, error)
+	GetTenant(ctx context.Context, tenantID, userID uuid.UUID, onlySelf bool) (*TenantModel, error)
+	GetTenantsSoleMember(ctx context.Context, userID uuid.UUID) (tenants []*TenantModel, err error)
+	GetTenants(ctx context.Context, userID uuid.UUID, onlySelf bool, q *query.Query) (tenants []*TenantModel, count int, next *query.Query, err error)
+	PatchTenant(ctx context.Context, id uuid.UUID, ops *Ops) (*TenantModel, error)
+	DeleteTenant(ctx context.Context, id uuid.UUID) error
+}
+
+type MembershipStorage interface {
+	AddMembership(ctx context.Context, id uuid.UUID, user *User, status string, membershipType string, role Roles) error
+	GetMembership(ctx context.Context, id uuid.UUID, userID uuid.UUID) (*Membership, error)
+	UpdateMembership(ctx context.Context, id uuid.UUID, userID uuid.UUID, ops *Ops) (*Membership, error)
+	GetMemberships(ctx context.Context, q *query.Query) (memberships []*Membership, count int, next *query.Query, err error)
+	DeleteMembership(ctx context.Context, id uuid.UUID, userID uuid.UUID) error
+}
+
+type APIKeyStorage interface {
+	GetKey(ctx context.Context, keyID, userID uuid.UUID) (*APIKey, error)
+	GetKeys(ctx context.Context, uid uuid.UUID) ([]*APIKey, error)
+	NewKey(ctx context.Context, userID, tenantID uuid.UUID) (*APIKey, error)
+	DeleteKey(ctx context.Context, keyID, userID uuid.UUID) error
+}
+
+type UserStorage interface {
+	GetUserByID(ctx context.Context, typ string, id uuid.UUID) (*User, error)
+	GetUserByEmail(ctx context.Context, typ, email string) (*User, error)
+	GetServiceAccountByAddress(ctx context.Context, address string) (*User, error)
+	GetUsers(ctx context.Context, typ string, q *query.Query) (users []*User, count int, next *query.Query, err error)
+	NewUser(ctx context.Context, user *CreateUser) (res *User, err error)
+	UpdateUser(ctx context.Context, typ string, id uuid.UUID, ops *Ops) (user *User, err error)
+	DeleteUser(ctx context.Context, typ string, id uuid.UUID) (err error)
+	UpdatePasswordWithGen(ctx context.Context, id uuid.UUID, hash []byte, expectedGen int) (err error)
+	UpdateEmailWithGen(ctx context.Context, id uuid.UUID, email string, expectedGen int) (user *User, oldEmail string, err error)
+	UpdateLoginInfo(ctx context.Context, id uuid.UUID, addr string) error
+	UpdateRefreshInfo(ctx context.Context, id uuid.UUID, addr string) error
+}
+
+type LogStorage interface {
+	GetLogs(ctx context.Context, q *query.Query) (entries []*LogEntry, count int, next *query.Query, err error)
 }

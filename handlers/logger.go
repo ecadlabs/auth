@@ -37,7 +37,9 @@ const (
 	//EvEmailUpdateRequest constant for request email update event
 	EvEmailUpdateRequest = "email_update_request"
 	//EvEmailUpdate constant for email update event
-	EvEmailUpdate = "email_update"
+	EvEmailUpdate  = "email_update"
+	EvNewAPIKey    = "create_api_key"
+	EvDeleteAPIKey = "delete_api_key"
 )
 
 func logFields(ev string, self, id uuid.UUID, r *http.Request) logrus.Fields {

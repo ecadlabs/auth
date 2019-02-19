@@ -38,13 +38,8 @@ func (t *TenantModel) Clone() *TenantModel {
 	}
 }
 
-// TenantStorage storage service for tenant resource
-type TenantStorage struct {
-	DB *sqlx.DB
-}
-
 // CreateTenant insert a tenant in the database and return it
-func (s *TenantStorage) CreateTenant(ctx context.Context, name string, ownerID uuid.UUID) (*TenantModel, error) {
+func (s *Storage) CreateTenant(ctx context.Context, name string, ownerID uuid.UUID) (*TenantModel, error) {
 	tx, err := s.DB.Beginx()
 	if err != nil {
 		return nil, err
@@ -92,7 +87,7 @@ func (s *TenantStorage) CreateTenant(ctx context.Context, name string, ownerID u
 }
 
 // GetTenant fetch a tenant from the database and return it
-func (s *TenantStorage) GetTenant(ctx context.Context, tenantID, userID uuid.UUID, onlySelf bool) (*TenantModel, error) {
+func (s *Storage) GetTenant(ctx context.Context, tenantID, userID uuid.UUID, onlySelf bool) (*TenantModel, error) {
 	var queryExtension = ""
 	if onlySelf {
 		queryExtension += "AND id IN (SELECT tenant_id FROM membership WHERE user_id = '" + userID.String() + "')"
@@ -119,10 +114,10 @@ var tenantsQueryColumns = map[string]int{
 }
 
 // GetTenantsSoleMember get a list of tenant where the user is the only member
-func (s *TenantStorage) GetTenantsSoleMember(ctx context.Context, userID uuid.UUID) (tenants []*TenantModel, err error) {
+func (s *Storage) GetTenantsSoleMember(ctx context.Context, userID uuid.UUID) (tenants []*TenantModel, err error) {
 	rows, err := s.DB.QueryContext(ctx, `
 	SELECT * FROM tenants WHERE id IN (
-		SELECT membership.tenant_id FROM membership 
+		SELECT membership.tenant_id FROM membership
 		WHERE membership.tenant_id IN (
 			SELECT tenant_id FROM membership WHERE user_id = $1
 		)
@@ -163,7 +158,7 @@ func (s *TenantStorage) GetTenantsSoleMember(ctx context.Context, userID uuid.UU
 }
 
 // GetTenants get a list of tenant which are paged
-func (s *TenantStorage) GetTenants(ctx context.Context, userID uuid.UUID, onlySelf bool, q *query.Query) (tenants []*TenantModel, count int, next *query.Query, err error) {
+func (s *Storage) GetTenants(ctx context.Context, userID uuid.UUID, onlySelf bool, q *query.Query) (tenants []*TenantModel, count int, next *query.Query, err error) {
 	var queryExtension = "tenants as scoped_tenants"
 	if onlySelf {
 		queryExtension = "(SELECT * FROM tenants WHERE id IN (SELECT tenant_id FROM membership WHERE user_id = '" + userID.String() + "')) as scoped_tenants"
@@ -242,7 +237,7 @@ var tenantUpdatePaths = map[string]struct{}{
 }
 
 // PatchTenant update a tenant
-func (s *TenantStorage) PatchTenant(ctx context.Context, id uuid.UUID, ops *Ops) (*TenantModel, error) {
+func (s *Storage) PatchTenant(ctx context.Context, id uuid.UUID, ops *Ops) (*TenantModel, error) {
 	// Verify columns
 	for k := range ops.Update {
 		if _, ok := tenantUpdatePaths[k]; !ok {
@@ -297,7 +292,7 @@ func (s *TenantStorage) PatchTenant(ctx context.Context, id uuid.UUID, ops *Ops)
 }
 
 // DeleteTenant delete a tenant from the database
-func (s *TenantStorage) DeleteTenant(ctx context.Context, id uuid.UUID) error {
+func (s *Storage) DeleteTenant(ctx context.Context, id uuid.UUID) error {
 	tx, err := s.DB.Beginx()
 	if err != nil {
 		return err

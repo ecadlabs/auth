@@ -32,11 +32,10 @@ type CreateTenantModel struct {
 
 // Tenants handler for crud operation on tenant resources
 type Tenants struct {
-	UserStorage       *storage.Storage
-	Storage           *storage.TenantStorage
-	MembershipStorage *storage.MembershipStorage
-	Timeout           time.Duration
-	Enforcer          rbac.Enforcer
+	Storage Storage
+
+	Timeout  time.Duration
+	Enforcer rbac.Enforcer
 
 	BaseURL            func() string
 	TokenFactory       *TokenFactory
@@ -386,7 +385,7 @@ func (t *Tenants) AcceptInvite(w http.ResponseWriter, r *http.Request) {
 	updates := make(map[string]interface{})
 	updates["membership_status"] = storage.ActiveState
 
-	_, err = t.MembershipStorage.UpdateMembership(ctx, tenantID, id, &storage.Ops{
+	_, err = t.Storage.UpdateMembership(ctx, tenantID, id, &storage.Ops{
 		Update: updates,
 	})
 	if err != nil {
@@ -453,7 +452,7 @@ func (t *Tenants) InviteExistingUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	target, err := t.UserStorage.GetUserByEmail(ctx, storage.AccountRegular, user.Email)
+	target, err := t.Storage.GetUserByEmail(ctx, storage.AccountRegular, user.Email)
 
 	if err != nil {
 		log.Error(err)
@@ -499,7 +498,7 @@ func (t *Tenants) InviteExistingUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	membership, _ := t.MembershipStorage.GetMembership(ctx, uid, target.ID)
+	membership, _ := t.Storage.GetMembership(ctx, uid, target.ID)
 
 	if membership != nil && membership.MembershipStatus != storage.InvitedState {
 		utils.JSONErrorResponse(w, errors.ErrMembershipExisits)
@@ -508,7 +507,7 @@ func (t *Tenants) InviteExistingUser(w http.ResponseWriter, r *http.Request) {
 
 	// Only create membership if it does not exists
 	if membership == nil {
-		err = t.MembershipStorage.AddMembership(ctx, uid, target, storage.InvitedState, user.MembershipType, user.Roles)
+		err = t.Storage.AddMembership(ctx, uid, target, storage.InvitedState, user.MembershipType, user.Roles)
 		if err != nil {
 			log.Error(err)
 			utils.JSONErrorResponse(w, err)

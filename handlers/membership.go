@@ -21,11 +21,9 @@ import (
 
 //Memberships is a handler for memberships
 type Memberships struct {
-	UserStorage       *storage.Storage
-	Storage           *storage.TenantStorage
-	MembershipStorage *storage.MembershipStorage
-	Timeout           time.Duration
-	Enforcer          rbac.Enforcer
+	Storage  storage.MembershipStorage
+	Timeout  time.Duration
+	Enforcer rbac.Enforcer
 
 	BaseURL     func() string
 	TenantsPath string
@@ -134,7 +132,7 @@ func (m *Memberships) PatchMembership(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	updatedMember, err := m.MembershipStorage.UpdateMembership(ctx, tenantID, userID, ops)
+	updatedMember, err := m.Storage.UpdateMembership(ctx, tenantID, userID, ops)
 	if err != nil {
 		log.Error(err)
 		utils.JSONErrorResponse(w, err)
@@ -204,7 +202,7 @@ func (m *Memberships) DeleteMembership(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = m.MembershipStorage.DeleteMembership(ctx, tenantID, userID)
+	err = m.Storage.DeleteMembership(ctx, tenantID, userID)
 
 	if err != nil {
 		utils.JSONErrorResponse(w, err)
@@ -267,7 +265,7 @@ func (m *Memberships) FindTenantMemberships(w http.ResponseWriter, r *http.Reque
 		q.Limit = DefaultLimit
 	}
 
-	memberships, count, nextQuery, err := m.MembershipStorage.GetMemberships(ctx, q)
+	memberships, count, nextQuery, err := m.Storage.GetMemberships(ctx, q)
 
 	if err != nil {
 		log.Error(err)
@@ -353,7 +351,7 @@ func (m *Memberships) FindUserMemberships(w http.ResponseWriter, r *http.Request
 		q.Limit = DefaultLimit
 	}
 
-	memberships, count, nextQuery, err := m.MembershipStorage.GetMemberships(ctx, q)
+	memberships, count, nextQuery, err := m.Storage.GetMemberships(ctx, q)
 
 	if err != nil {
 		log.Error(err)

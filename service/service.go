@@ -33,14 +33,12 @@ const (
 var JWTSigningMethod = jwt.SigningMethodHS256
 
 type Service struct {
-	config            Config
-	storage           *storage.Storage
-	tenantStorage     *storage.TenantStorage
-	membershipStorage *storage.MembershipStorage
-	notifier          notification.Notifier
-	DB                *sql.DB
-	ac                rbac.RBAC
-	enableLog         bool
+	config    Config
+	storage   *storage.Storage
+	notifier  notification.Notifier
+	DB        *sql.DB
+	ac        rbac.RBAC
+	enableLog bool
 }
 
 func New(c *Config, ac rbac.RBAC, enableLog bool) (*Service, error) {
@@ -77,14 +75,12 @@ func New(c *Config, ac rbac.RBAC, enableLog bool) (*Service, error) {
 	var dbCon = sqlx.NewDb(db, "postgres")
 
 	return &Service{
-		config:            *c,
-		storage:           &storage.Storage{DB: dbCon},
-		tenantStorage:     &storage.TenantStorage{DB: dbCon},
-		membershipStorage: &storage.MembershipStorage{DB: dbCon},
-		DB:                db,
-		notifier:          notifier,
-		ac:                ac,
-		enableLog:         enableLog,
+		config:    *c,
+		storage:   &storage.Storage{DB: dbCon},
+		DB:        db,
+		notifier:  notifier,
+		ac:        ac,
+		enableLog: enableLog,
 	}, nil
 }
 
@@ -111,10 +107,8 @@ func (s *Service) APIHandler() http.Handler {
 	}
 
 	usersHandler := &handlers.Users{
-		Storage:           s.storage,
-		TenantStorage:     s.tenantStorage,
-		MembershipStorage: s.membershipStorage,
-		Timeout:           time.Duration(s.config.DBTimeout) * time.Second,
+		Storage: s.storage,
+		Timeout: time.Duration(s.config.DBTimeout) * time.Second,
 
 		JWTSecretGetter: func() ([]byte, error) {
 			return []byte(s.config.JWTSecret), nil
@@ -140,11 +134,9 @@ func (s *Service) APIHandler() http.Handler {
 	}
 
 	tenantsHandler := &handlers.Tenants{
-		UserStorage:       s.storage,
-		Storage:           s.tenantStorage,
-		MembershipStorage: s.membershipStorage,
-		Timeout:           time.Duration(s.config.DBTimeout) * time.Second,
-		Enforcer:          s.ac,
+		Storage:  s.storage,
+		Timeout:  time.Duration(s.config.DBTimeout) * time.Second,
+		Enforcer: s.ac,
 
 		BaseURL:            baseURLFunc,
 		TenantsPath:        "/tenants/",
@@ -156,15 +148,20 @@ func (s *Service) APIHandler() http.Handler {
 	}
 
 	membershipsHandler := &handlers.Memberships{
-		UserStorage:       s.storage,
-		Storage:           s.tenantStorage,
-		MembershipStorage: s.membershipStorage,
-		Timeout:           time.Duration(s.config.DBTimeout) * time.Second,
-		Enforcer:          s.ac,
-		BaseURL:           baseURLFunc,
-		TenantsPath:       "/tenants/",
-		UsersPath:         "/users/",
-		AuxLogger:         dbLogger,
+		Storage:     s.storage,
+		Timeout:     time.Duration(s.config.DBTimeout) * time.Second,
+		Enforcer:    s.ac,
+		BaseURL:     baseURLFunc,
+		TenantsPath: "/tenants/",
+		UsersPath:   "/users/",
+		AuxLogger:   dbLogger,
+	}
+
+	apiKeysHandler := &handlers.APIKeys{
+		Storage:   s.storage,
+		Timeout:   time.Duration(s.config.DBTimeout) * time.Second,
+		Enforcer:  s.ac,
+		AuxLogger: dbLogger,
 	}
 
 	jwtOptions := jwtmiddleware.Options{
@@ -207,7 +204,7 @@ func (s *Service) APIHandler() http.Handler {
 	membershipData := &middleware.MembershipData{
 		MembershipContextKey: handlers.MembershipContextKey{},
 		TokenContextKey:      handlers.TokenContextKey,
-		Storage:              s.membershipStorage,
+		Storage:              s.storage,
 		Namespace:            s.config.Namespace(),
 	}
 
@@ -230,6 +227,11 @@ func (s *Service) APIHandler() http.Handler {
 	umux.Methods("DELETE").Path("/{id}").HandlerFunc(usersHandler.DeleteUser)
 	umux.Methods("GET").Path("/{userId}/memberships").HandlerFunc(membershipsHandler.FindUserMemberships)
 
+	umux.Methods("POST").Path("/{userId}/api_keys/").HandlerFunc(apiKeysHandler.NewAPIKey)
+	umux.Methods("GET").Path("/{userId}/api_keys/{keyId}").HandlerFunc(apiKeysHandler.GetAPIKey)
+	umux.Methods("GET").Path("/{userId}/api_keys/").HandlerFunc(apiKeysHandler.GetAPIKeys)
+	umux.Methods("DELETE").Path("/{userId}/api_keys/{keyId}").HandlerFunc(apiKeysHandler.DeleteAPIKey)
+
 	// Tenants API
 	tmux := m.PathPrefix("/tenants").Subrouter()
 	tmux.Use(jwtMiddleware.Handler)
@@ -242,8 +244,8 @@ func (s *Service) APIHandler() http.Handler {
 	tmux.Methods("DELETE").Path("/{id}").HandlerFunc(tenantsHandler.DeleteTenant)
 	tmux.Methods("PATCH").Path("/{id}").HandlerFunc(tenantsHandler.UpdateTenant)
 
-	tmux.Methods("POST").Path("/{id}/members").Handler(userdata.Handler(http.HandlerFunc(tenantsHandler.InviteExistingUser)))
-	tmux.Methods("GET").Path("/{tenantId}/members").HandlerFunc(membershipsHandler.FindTenantMemberships)
+	tmux.Methods("POST").Path("/{id}/members/").Handler(userdata.Handler(http.HandlerFunc(tenantsHandler.InviteExistingUser)))
+	tmux.Methods("GET").Path("/{tenantId}/members/").HandlerFunc(membershipsHandler.FindTenantMemberships)
 	tmux.Methods("PATCH").Path("/{tenantId}/members/{userId}").HandlerFunc(membershipsHandler.PatchMembership)
 	tmux.Methods("DELETE").Path("/{tenantId}/members/{userId}").HandlerFunc(membershipsHandler.DeleteMembership)
 

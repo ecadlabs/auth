@@ -45,13 +45,8 @@ func (m *membershipModel) toMembership() *Membership {
 	return ret
 }
 
-// MembershipStorage is a storage service for memberships
-type MembershipStorage struct {
-	DB *sqlx.DB
-}
-
 // AddMembership insert a new membership in the database
-func (s *MembershipStorage) AddMembership(ctx context.Context, id uuid.UUID, user *User, status string, membershipType string, role Roles) error {
+func (s *Storage) AddMembership(ctx context.Context, id uuid.UUID, user *User, status string, membershipType string, role Roles) error {
 	// TODO: Refactor this to use the membership struct as a parameter
 	tx, err := s.DB.Beginx()
 	if err != nil {
@@ -102,7 +97,7 @@ func (s *MembershipStorage) AddMembership(ctx context.Context, id uuid.UUID, use
 }
 
 // GetMembership retrive a membership from the database
-func (s *MembershipStorage) GetMembership(ctx context.Context, id uuid.UUID, userID uuid.UUID) (*Membership, error) {
+func (s *Storage) GetMembership(ctx context.Context, id uuid.UUID, userID uuid.UUID) (*Membership, error) {
 	q := `
 	SELECT
 	  membership.*,
@@ -141,7 +136,7 @@ var membershipUpdatePath = map[string]struct{}{
 }
 
 // UpdateMembership update a membership
-func (s *MembershipStorage) UpdateMembership(ctx context.Context, id uuid.UUID, userID uuid.UUID, ops *Ops) (*Membership, error) {
+func (s *Storage) UpdateMembership(ctx context.Context, id uuid.UUID, userID uuid.UUID, ops *Ops) (*Membership, error) {
 	// Verify columns
 	for k := range ops.Update {
 		if _, ok := membershipUpdatePath[k]; !ok {
@@ -266,7 +261,7 @@ var membershipsQueryColumns = map[string]int{
 }
 
 // GetMemberships get memberships from the database as a paged result
-func (s *MembershipStorage) GetMemberships(ctx context.Context, q *query.Query) (memberships []*Membership, count int, next *query.Query, err error) {
+func (s *Storage) GetMemberships(ctx context.Context, q *query.Query) (memberships []*Membership, count int, next *query.Query, err error) {
 	if q.SortBy == "" {
 		q.SortBy = MembershipsDefaultSortColumn
 	}
@@ -348,7 +343,7 @@ func (s *MembershipStorage) GetMemberships(ctx context.Context, q *query.Query) 
 }
 
 // DeleteMembership deletes a membership from the database
-func (s *MembershipStorage) DeleteMembership(ctx context.Context, id uuid.UUID, userID uuid.UUID) error {
+func (s *Storage) DeleteMembership(ctx context.Context, id uuid.UUID, userID uuid.UUID) error {
 	tx, err := s.DB.Beginx()
 	if err != nil {
 		return err
@@ -386,7 +381,7 @@ func (s *MembershipStorage) DeleteMembership(ctx context.Context, id uuid.UUID, 
 	return nil
 }
 
-func (s *MembershipStorage) hasAMinimumOfOneOwner(ctx context.Context, tx *sqlx.Tx, id uuid.UUID) error {
+func (s *Storage) hasAMinimumOfOneOwner(ctx context.Context, tx *sqlx.Tx, id uuid.UUID) error {
 	q := `
 		SELECT
 		  EXISTS(

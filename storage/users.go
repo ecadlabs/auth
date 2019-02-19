@@ -464,12 +464,18 @@ func (s *Storage) NewUser(ctx context.Context, user *CreateUser) (res *User, err
 			tx.Rollback()
 			return
 		}
-
-		err = tx.Commit()
 	}()
 
-	res, err = NewUserInt(ctx, tx, user)
-	return
+	tmp, err := NewUserInt(ctx, tx, user)
+	if err != nil {
+		return nil, err
+	}
+
+	if err = tx.Commit(); err != nil {
+		return nil, err
+	}
+
+	return s.GetUserByID(ctx, "", tmp.ID)
 }
 
 func errPatchPath(p string) error {
@@ -500,8 +506,6 @@ func (s *Storage) UpdateUser(ctx context.Context, typ string, id uuid.UUID, ops 
 			tx.Rollback()
 			return
 		}
-
-		err = tx.Commit()
 	}()
 
 	// Update properties
@@ -596,6 +600,10 @@ func (s *Storage) UpdateUser(ctx context.Context, typ string, id uuid.UUID, ops 
 		if _, err = tx.ExecContext(ctx, expr, args...); err != nil {
 			return nil, err
 		}
+	}
+
+	if err = tx.Commit(); err != nil {
+		return nil, err
 	}
 
 	return s.GetUserByID(ctx, typ, id)

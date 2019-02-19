@@ -36,16 +36,44 @@ func (s *Storage) GetKey(ctx context.Context, keyID, userID uuid.UUID) (*APIKey,
 
 func (s *Storage) GetKeys(ctx context.Context, uid uuid.UUID) ([]*APIKey, error) {
 	var keys []*APIKey
-	if err := s.DB.SelectContext(ctx, &keys, apiKeyQuery+" WHERE users.id = $1", uid); err != nil {
+	if err := s.DB.SelectContext(ctx, &keys, apiKeyQuery+" WHERE users.id = $1 ORDER BY service_account_keys.added", uid); err != nil {
 		return nil, err
 	}
 
 	return keys, nil
 }
 
-func (s *Storage) NewKey(ctx context.Context, membershipID uuid.UUID) (*APIKey, error) {
+func (s *Storage) NewKey(ctx context.Context, userID, tenantID uuid.UUID) (*APIKey, error) {
+	q := `
+		WITH k AS (
+		  INSERT INTO
+		    service_account_keys (membership_id)
+		  SELECT
+		    membership.id
+		  FROM
+		    membership
+		    INNER JOIN users ON membership.user_id = users.id
+		    AND users.account_type = 'service'
+		  WHERE
+		    users.id = $1
+		    AND tenant_id = $2 RETURNING *
+		)
+		SELECT
+		  k.id,
+		  k.membership_id,
+		  membership.user_id,
+		  membership.tenant_id,
+		  k.added
+		FROM
+		  k
+		  INNER JOIN membership ON k.membership_id = membership.id`
+
 	var key APIKey
-	if err := s.DB.GetContext(ctx, &key, "INSERT INTO service_account_keys (membership_id) VALUES ($1) RETURNING *", membershipID); err != nil {
+	if err := s.DB.GetContext(ctx, &key, q, userID, tenantID); err != nil {
+		if err == sql.ErrNoRows {
+			err = errors.ErrMembershipNotFound
+		}
+
 		return nil, err
 	}
 

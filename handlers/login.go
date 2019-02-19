@@ -92,7 +92,7 @@ func (u *Users) getTenantFromRequest(r *http.Request, user *storage.User) (uuid.
 }
 
 func (u *Users) getMembershipLogin(ctx context.Context, tenantID, userID uuid.UUID) (*storage.Membership, error) {
-	membership, err := u.MembershipStorage.GetMembership(ctx, tenantID, userID)
+	membership, err := u.Storage.GetMembership(ctx, tenantID, userID)
 
 	if membership == nil {
 		return nil, errors.ErrMembershipNotFound

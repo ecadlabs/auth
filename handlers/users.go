@@ -30,10 +30,8 @@ type UserContextKey struct{}
 type MembershipContextKey struct{}
 
 type Users struct {
-	Storage           *storage.Storage
-	TenantStorage     *storage.TenantStorage
-	MembershipStorage *storage.MembershipStorage
-	Timeout           time.Duration
+	Storage Storage
+	Timeout time.Duration
 
 	SessionMaxAge    time.Duration
 	JWTSecretGetter  func() ([]byte, error)
@@ -83,7 +81,7 @@ func (u *Users) context(r *http.Request) (context.Context, context.CancelFunc) {
 	return r.Context(), func() {}
 }
 
-func (u *Users) checkWritePermissions(role rbac.Role, self bool) (typ string, err error) {
+func (u *Users) checkWritePermissions(role rbac.Role, typ string, self bool) (resTyp string, err error) {
 	perm := []string{permissionFull, permissionWrite}
 	if self {
 		perm = append(perm, permissionWriteSelf)
@@ -94,24 +92,34 @@ func (u *Users) checkWritePermissions(role rbac.Role, self bool) (typ string, er
 		return
 	}
 
-	serviceGranted, err := role.IsAnyGranted(permissionServiceFull, permissionServiceWrite)
+	perm = []string{permissionServiceFull, permissionServiceWrite}
+	if self {
+		perm = append(perm, permissionWriteSelf)
+	}
+
+	serviceGranted, err := role.IsAnyGranted(perm...)
 	if err != nil {
 		return
 	}
 
 	switch {
 	case regularGranted && !serviceGranted:
-		typ = storage.AccountRegular
+		resTyp = storage.AccountRegular
 	case !regularGranted && serviceGranted:
-		typ = storage.AccountService
+		resTyp = storage.AccountService
 	case !regularGranted && !serviceGranted:
+		err = errors.ErrForbidden
+		return
+	}
+
+	if typ != "" && resTyp != "" && typ != resTyp {
 		err = errors.ErrForbidden
 	}
 
 	return
 }
 
-func (u *Users) checkReadPermissions(role rbac.Role, self bool) (typ string, err error) {
+func (u *Users) checkReadPermissions(role rbac.Role, typ string, self bool) (resTyp string, err error) {
 	perm := []string{permissionFull, permissionRead}
 	if self {
 		perm = append(perm, permissionReadSelf)
@@ -122,17 +130,27 @@ func (u *Users) checkReadPermissions(role rbac.Role, self bool) (typ string, err
 		return
 	}
 
-	serviceGranted, err := role.IsAnyGranted(permissionServiceFull, permissionServiceRead)
+	perm = []string{permissionServiceFull, permissionServiceRead}
+	if self {
+		perm = append(perm, permissionReadSelf)
+	}
+
+	serviceGranted, err := role.IsAnyGranted(perm...)
 	if err != nil {
 		return
 	}
 
 	switch {
 	case regularGranted && !serviceGranted:
-		typ = storage.AccountRegular
+		resTyp = storage.AccountRegular
 	case !regularGranted && serviceGranted:
-		typ = storage.AccountService
+		resTyp = storage.AccountService
 	case !regularGranted && !serviceGranted:
+		err = errors.ErrForbidden
+		return
+	}
+
+	if typ != "" && resTyp != "" && typ != resTyp {
 		err = errors.ErrForbidden
 	}
 
@@ -159,15 +177,15 @@ func (u *Users) GetUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	typ, err := u.checkReadPermissions(role, self.ID == uid)
+	user, err := u.Storage.GetUserByID(ctx, "", uid)
 	if err != nil {
+		log.Error(err)
 		utils.JSONErrorResponse(w, err)
 		return
 	}
 
-	user, err := u.Storage.GetUserByID(ctx, typ, uid)
+	_, err = u.checkReadPermissions(role, user.Type, self.ID == uid)
 	if err != nil {
-		log.Error(err)
 		utils.JSONErrorResponse(w, err)
 		return
 	}
@@ -200,7 +218,7 @@ func (u *Users) GetUsers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	typ, err := u.checkReadPermissions(role, false)
+	typ, err := u.checkReadPermissions(role, "", false)
 	if err != nil {
 		utils.JSONErrorResponse(w, err)
 		return
@@ -427,7 +445,13 @@ func (u *Users) PatchUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	typ, err := u.checkWritePermissions(role, self.ID == uid)
+	user, err := u.Storage.GetUserByID(ctx, "", uid)
+	if err != nil {
+		utils.JSONErrorResponse(w, err)
+		return
+	}
+
+	typ, err := u.checkWritePermissions(role, user.Type, self.ID == uid)
 	if err != nil {
 		utils.JSONErrorResponse(w, err)
 		return
@@ -460,7 +484,7 @@ func (u *Users) PatchUser(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	user, err := u.Storage.UpdateUser(ctx, typ, uid, ops)
+	user, err = u.Storage.UpdateUser(ctx, typ, uid, ops)
 	if err != nil {
 		log.Error(err)
 		utils.JSONErrorResponse(w, err)
@@ -497,13 +521,19 @@ func (u *Users) DeleteUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	typ, err := u.checkWritePermissions(role, self.ID == uid)
+	user, err := u.Storage.GetUserByID(ctx, "", uid)
 	if err != nil {
 		utils.JSONErrorResponse(w, err)
 		return
 	}
 
-	tenants, err := u.TenantStorage.GetTenantsSoleMember(ctx, uid)
+	typ, err := u.checkWritePermissions(role, user.Type, self.ID == uid)
+	if err != nil {
+		utils.JSONErrorResponse(w, err)
+		return
+	}
+
+	tenants, err := u.Storage.GetTenantsSoleMember(ctx, uid)
 	if err != nil {
 		log.Error(err)
 		utils.JSONErrorResponse(w, err)
@@ -525,7 +555,7 @@ func (u *Users) DeleteUser(w http.ResponseWriter, r *http.Request) {
 	// Archive any tenant made orphan by this deletion
 	if len(tenants) > 0 {
 		for _, tenant := range tenants {
-			deleteErr := u.TenantStorage.DeleteTenant(ctx, tenant.ID)
+			deleteErr := u.Storage.DeleteTenant(ctx, tenant.ID)
 			// Log
 			if deleteErr == nil && u.AuxLogger != nil {
 				u.AuxLogger.WithFields(logFields(EvArchiveTenant, self.ID, tenant.ID, r)).Printf("User %v archived tenant %v", self.ID, tenant.ID)
