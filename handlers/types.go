@@ -5,6 +5,7 @@ import (
 )
 
 type Storage interface {
+	storage.APIKeyStorage
 	storage.UserStorage
 	storage.MembershipStorage
 	storage.TenantStorage

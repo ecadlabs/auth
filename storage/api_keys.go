@@ -21,7 +21,7 @@ const apiKeyQuery = `
       INNER JOIN users ON membership.user_id = users.id
       AND users.account_type = 'service'`
 
-func (s *Storage) GetKey(ctx context.Context, keyID, userID uuid.UUID) (*APIKey, error) {
+func (s *Storage) GetKey(ctx context.Context, userID, keyID uuid.UUID) (*APIKey, error) {
 	var key APIKey
 	if err := s.DB.GetContext(ctx, &key, apiKeyQuery+" WHERE service_account_keys.id = $1 AND users.id = $2", keyID, userID); err != nil {
 		if err == sql.ErrNoRows {
@@ -80,7 +80,7 @@ func (s *Storage) NewKey(ctx context.Context, userID, tenantID uuid.UUID) (*APIK
 	return &key, nil
 }
 
-func (s *Storage) DeleteKey(ctx context.Context, keyID, userID uuid.UUID) error {
+func (s *Storage) DeleteKey(ctx context.Context, userID, keyID uuid.UUID) error {
 	q := `
         DELETE FROM
           service_account_keys USING membership

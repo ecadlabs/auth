@@ -157,13 +157,6 @@ func (s *Service) APIHandler() http.Handler {
 		AuxLogger:   dbLogger,
 	}
 
-	apiKeysHandler := &handlers.APIKeys{
-		Storage:   s.storage,
-		Timeout:   time.Duration(s.config.DBTimeout) * time.Second,
-		Enforcer:  s.ac,
-		AuxLogger: dbLogger,
-	}
-
 	jwtOptions := jwtmiddleware.Options{
 		ValidationKeyGetter: func(token *jwt.Token) (interface{}, error) { return []byte(s.config.JWTSecret), nil },
 		SigningMethod:       JWTSigningMethod,
@@ -208,6 +201,13 @@ func (s *Service) APIHandler() http.Handler {
 		Namespace:            s.config.Namespace(),
 	}
 
+	serviceAPI := &middleware.ServiceAPI{
+		MembershipContextKey: handlers.MembershipContextKey{},
+		TokenContextKey:      handlers.TokenContextKey,
+		Storage:              s.storage,
+		Namespace:            s.config.Namespace(),
+	}
+
 	m.Methods("GET").Path("/refresh").Handler(jwtMiddleware.Handler(aud.Handler(userdata.Handler(membershipData.Handler(http.HandlerFunc(usersHandler.Refresh))))))
 
 	// Users API
@@ -216,6 +216,7 @@ func (s *Service) APIHandler() http.Handler {
 
 	umux := m.PathPrefix("/users").Subrouter()
 	umux.Use(jwtMiddleware.Handler)
+	umux.Use(serviceAPI.Handler)
 	umux.Use(aud.Handler)
 	umux.Use(userdata.Handler)
 	umux.Use(membershipData.Handler)
@@ -227,14 +228,16 @@ func (s *Service) APIHandler() http.Handler {
 	umux.Methods("DELETE").Path("/{id}").HandlerFunc(usersHandler.DeleteUser)
 	umux.Methods("GET").Path("/{userId}/memberships").HandlerFunc(membershipsHandler.FindUserMemberships)
 
-	umux.Methods("POST").Path("/{userId}/api_keys/").HandlerFunc(apiKeysHandler.NewAPIKey)
-	umux.Methods("GET").Path("/{userId}/api_keys/{keyId}").HandlerFunc(apiKeysHandler.GetAPIKey)
-	umux.Methods("GET").Path("/{userId}/api_keys/").HandlerFunc(apiKeysHandler.GetAPIKeys)
-	umux.Methods("DELETE").Path("/{userId}/api_keys/{keyId}").HandlerFunc(apiKeysHandler.DeleteAPIKey)
+	umux.Methods("POST").Path("/{userId}/api_keys/").HandlerFunc(usersHandler.NewAPIKey)
+	umux.Methods("GET").Path("/{userId}/api_keys/{keyId}").HandlerFunc(usersHandler.GetAPIKey)
+	umux.Methods("GET").Path("/{userId}/api_keys/").HandlerFunc(usersHandler.GetAPIKeys)
+	umux.Methods("DELETE").Path("/{userId}/api_keys/{keyId}").HandlerFunc(usersHandler.DeleteAPIKey)
+	umux.Methods("GET").Path("/{userId}/api_keys/{keyId}/token").HandlerFunc(usersHandler.GetAPIToken)
 
 	// Tenants API
 	tmux := m.PathPrefix("/tenants").Subrouter()
 	tmux.Use(jwtMiddleware.Handler)
+	tmux.Use(serviceAPI.Handler)
 	tmux.Use(aud.Handler)
 	tmux.Use(membershipData.Handler)
 
@@ -256,6 +259,7 @@ func (s *Service) APIHandler() http.Handler {
 	// Log API
 	lmux := m.PathPrefix("/logs").Subrouter()
 	lmux.Use(jwtMiddleware.Handler)
+	lmux.Use(serviceAPI.Handler)
 	lmux.Use(aud.Handler)
 	lmux.Use(userdata.Handler)
 
@@ -269,6 +273,7 @@ func (s *Service) APIHandler() http.Handler {
 
 	rmux := m.PathPrefix("/rbac").Subrouter()
 	rmux.Use(jwtMiddleware.Handler)
+	rmux.Use(serviceAPI.Handler)
 
 	rmux.Methods("GET").Path("/roles/").HandlerFunc(rbacHandler.GetRoles)
 	rmux.Methods("GET").Path("/roles/{id}").HandlerFunc(rbacHandler.GetRole)

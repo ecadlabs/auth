@@ -10,6 +10,7 @@ import (
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/ecadlabs/auth/errors"
+	"github.com/ecadlabs/auth/rbac"
 	"github.com/ecadlabs/auth/storage"
 	"github.com/ecadlabs/auth/utils"
 	"github.com/gorilla/mux"
@@ -23,27 +24,53 @@ const (
 	TokenContextKey = "token"
 )
 
-func (u *Users) writeUserToken(w http.ResponseWriter, addr string, user *storage.User, membership *storage.Membership, perm []string) error {
+type userTokenOptions struct {
+	addr          string
+	user          *storage.User
+	membership    *storage.Membership
+	key           *storage.APIKey
+	role          rbac.Role
+	sessionMaxAge time.Duration
+	refresh       string
+}
+
+func (u *Users) writeUserToken(w http.ResponseWriter, opt *userTokenOptions) error {
 	now := time.Now()
 
 	claims := jwt.MapClaims{
-		"sub":                                user.ID,
-		"exp":                                now.Add(u.SessionMaxAge).Unix(),
-		"iat":                                now.Unix(),
-		"iss":                                u.BaseURL(),
-		"aud":                                u.BaseURL(),
-		utils.NSClaim(u.Namespace, "tenant"): membership.TenantID,
-		utils.NSClaim(u.Namespace, "email"):  user.Email,
-		utils.NSClaim(u.Namespace, "name"):   user.Name,
-		utils.NSClaim(u.Namespace, "roles"):  membership.Roles.Get(),
+		"sub": opt.user.ID,
+		"iat": now.Unix(),
+		"iss": u.BaseURL(),
+		"aud": u.BaseURL(),
 	}
 
-	if addr != "" {
-		claims[utils.NSClaim(u.Namespace, "address")] = addr
+	if opt.sessionMaxAge != 0 {
+		claims["exp"] = now.Add(opt.sessionMaxAge).Unix()
 	}
 
-	if perm != nil {
-		claims[utils.NSClaim(u.Namespace, "permissions")] = perm
+	if opt.key != nil {
+		claims[utils.NSClaim(u.Namespace, "api_key")] = opt.key.ID
+	}
+
+	if opt.addr != "" {
+		claims[utils.NSClaim(u.Namespace, "address")] = opt.addr
+	}
+
+	if opt.user.Email != "" {
+		claims[utils.NSClaim(u.Namespace, "email")] = opt.user.Email
+	}
+
+	if opt.user.Name != "" {
+		claims[utils.NSClaim(u.Namespace, "name")] = opt.user.Name
+	}
+
+	if opt.membership != nil {
+		claims[utils.NSClaim(u.Namespace, "tenant")] = opt.membership.TenantID
+		claims[utils.NSClaim(u.Namespace, "roles")] = opt.membership.Roles.Get()
+	}
+
+	if opt.role != nil {
+		claims[utils.NSClaim(u.Namespace, "permissions")] = opt.role.Permissions()
 	}
 
 	token := jwt.NewWithClaims(u.JWTSigningMethod, claims)
@@ -63,8 +90,8 @@ func (u *Users) writeUserToken(w http.ResponseWriter, addr string, user *storage
 		RefreshURL string    `json:"refresh,omitempty"`
 	}{
 		Token:      tokenString,
-		ID:         user.ID,
-		RefreshURL: u.RefreshURL(),
+		ID:         opt.user.ID,
+		RefreshURL: opt.refresh,
 	}
 
 	w.Header().Set("Access-Control-Allow-Origin", "*")
@@ -191,7 +218,7 @@ func (u *Users) Login(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	uid, err := u.getTenantFromRequest(r, user)
+	tid, err := u.getTenantFromRequest(r, user)
 
 	if err != nil {
 		log.Error(err)
@@ -199,24 +226,31 @@ func (u *Users) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	membership, err := u.getMembershipLogin(ctx, uid, user.ID)
+	membership, err := u.getMembershipLogin(ctx, tid, user.ID)
 	if err != nil {
 		utils.JSONErrorResponse(w, err)
 		return
 	}
 
-	var perm []string
+	var role rbac.Role
 	if writePerm {
-		role, err := u.Enforcer.GetRole(ctx, membership.Roles.Get()...)
+		role, err = u.Enforcer.GetRole(ctx, membership.Roles.Get()...)
 		if err != nil {
 			utils.JSONErrorResponse(w, err)
 			return
 		}
-
-		perm = role.Permissions()
 	}
 
-	if err := u.writeUserToken(w, remoteAddr, user, membership, perm); err != nil {
+	opt := userTokenOptions{
+		addr:          remoteAddr,
+		user:          user,
+		membership:    membership,
+		role:          role,
+		sessionMaxAge: u.SessionMaxAge,
+		refresh:       u.RefreshURL(),
+	}
+
+	if err := u.writeUserToken(w, &opt); err != nil {
 		utils.JSONErrorResponse(w, err)
 		return
 	}
@@ -232,7 +266,7 @@ func (u *Users) Login(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-//Refresh is a refresh endpoint handler
+// Refresh is a refresh endpoint handler
 func (u *Users) Refresh(w http.ResponseWriter, r *http.Request) {
 	self := r.Context().Value(UserContextKey{}).(*storage.User)
 	member := r.Context().Value(MembershipContextKey{}).(*storage.Membership)
@@ -247,19 +281,30 @@ func (u *Users) Refresh(w http.ResponseWriter, r *http.Request) {
 	}
 
 	claims := token.Claims.(jwt.MapClaims)
-	var perm []string
+
+	var (
+		role rbac.Role
+		err  error
+	)
 	if _, ok := claims[utils.NSClaim(u.Namespace, "permissions")]; ok {
-		role, err := u.Enforcer.GetRole(ctx, member.Roles.Get()...)
+		role, err = u.Enforcer.GetRole(ctx, member.Roles.Get()...)
 		if err != nil {
 			utils.JSONErrorResponse(w, err)
 			return
 		}
-		perm = role.Permissions()
 	}
 
-	addr := claims[utils.NSClaim(u.Namespace, "address")].(string)
+	opt := userTokenOptions{
+		user:          self,
+		membership:    member,
+		role:          role,
+		sessionMaxAge: u.SessionMaxAge,
+		refresh:       u.RefreshURL(),
+	}
 
-	if err := u.writeUserToken(w, addr, self, member, perm); err != nil {
+	opt.addr, _ = claims[utils.NSClaim(u.Namespace, "address")].(string)
+
+	if err := u.writeUserToken(w, &opt); err != nil {
 		utils.JSONErrorResponse(w, err)
 		return
 	}

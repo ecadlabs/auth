@@ -219,10 +219,10 @@ type MembershipStorage interface {
 }
 
 type APIKeyStorage interface {
-	GetKey(ctx context.Context, keyID, userID uuid.UUID) (*APIKey, error)
+	GetKey(ctx context.Context, userID, keyID uuid.UUID) (*APIKey, error)
 	GetKeys(ctx context.Context, uid uuid.UUID) ([]*APIKey, error)
 	NewKey(ctx context.Context, userID, tenantID uuid.UUID) (*APIKey, error)
-	DeleteKey(ctx context.Context, keyID, userID uuid.UUID) error
+	DeleteKey(ctx context.Context, userID, keyID uuid.UUID) error
 }
 
 type UserStorage interface {

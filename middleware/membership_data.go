@@ -22,8 +22,13 @@ type MembershipData struct {
 
 func (m *MembershipData) Handler(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		var err error
+		if _, ok := r.Context().Value(m.MembershipContextKey).(*storage.Membership); ok {
+			// Already got from the service account key
+			h.ServeHTTP(w, r)
+			return
+		}
 
+		var err error
 		if token, ok := r.Context().Value(m.TokenContextKey).(*jwt.Token); ok {
 			claims := token.Claims.(jwt.MapClaims)
 
