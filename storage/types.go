@@ -35,6 +35,13 @@ const (
 )
 
 const (
+	// TenantTypeOrg string representing the organization tenant type
+	TenantTypeOrg = "organization"
+	// TenantTypeOrg string representing the individual tenant type
+	TenantTypeIndividual = "individual"
+)
+
+const (
 	// InvitedState string representing the invited membership state
 	InvitedState = "invited"
 	// ActiveState string representing the active membership state
@@ -81,20 +88,22 @@ func (s *StringSet) UnmarshalJSON(data []byte) error {
 }
 
 type MembershipItem struct {
-	Type     string    `json:"type"`
-	TenantID uuid.UUID `json:"tenant_id"`
-	Roles    Roles     `json:"roles,omitempty"`
+	Type       string    `json:"type"`
+	TenantID   uuid.UUID `json:"tenant_id"`
+	Roles      Roles     `json:"roles,omitempty"`
+	TenantType string    `json:"tenant_type"`
 }
 
 // CreateUser struct representing data necessary to create a new user
 type CreateUser struct {
-	Email            string   `json:"email,omitempty" schema:"email"`
-	Name             string   `json:"name,omitempty" schema:"name"`
-	PasswordHash     []byte   `json:"-" schema:"-"`
-	EmailVerified    bool     `json:"email_verified" schema:"email_verified"`
-	Roles            Roles    `json:"roles,omitempty"`
-	Type             string   `json:"account_type" schema:"account_type"`
-	AddressWhiteList []net.IP `json:"address_whitelist"`
+	ID               uuid.UUID `json:"-" schema:"id"`
+	Email            string    `json:"email,omitempty" schema:"email"`
+	Name             string    `json:"name,omitempty" schema:"name"`
+	PasswordHash     []byte    `json:"-" schema:"-"`
+	EmailVerified    bool      `json:"email_verified" schema:"email_verified"`
+	Roles            Roles     `json:"roles,omitempty"`
+	Type             string    `json:"account_type" schema:"account_type"`
+	AddressWhiteList []net.IP  `json:"address_whitelist"`
 }
 
 // User struct representing a user
@@ -119,12 +128,19 @@ type User struct {
 
 // GetDefaultMembership retrive the default membership of this user
 func (u *User) GetDefaultMembership() (id uuid.UUID) {
+	// Select the first organization or return individual tenant
+	for _, membership := range u.Membership {
+		if membership.TenantType == TenantTypeOrg {
+			return membership.TenantID
+		}
+	}
 	return u.Membership[0].TenantID
 }
 
 // Membership struct representing a user
 type Membership struct {
 	ID               uuid.UUID `json:"id"`
+	Email            string    `json:"email"`
 	MembershipType   string    `json:"type"`
 	TenantID         uuid.UUID `json:"tenant_id"`
 	MembershipStatus string    `json:"status"`
@@ -158,14 +174,16 @@ type Member struct {
 
 // LogEntry struct representing a log entry
 type LogEntry struct {
-	ID        uuid.UUID              `json:"id"`
-	Timestamp time.Time              `json:"ts"`
-	Event     string                 `json:"event"`
-	UserID    uuid.UUID              `json:"user_id,omitempty"`
-	TargerID  uuid.UUID              `json:"target_id,omitempty"`
-	Address   string                 `json:"addr,omitempty"`
-	Message   string                 `json:"msg,omitempty"`
-	Data      map[string]interface{} `json:"data,omitempty"`
+	ID         uuid.UUID              `json:"id"`
+	Timestamp  time.Time              `json:"ts"`
+	Event      string                 `json:"event"`
+	SourceID   uuid.UUID              `json:"source_id,omitempty"`
+	TargerID   uuid.UUID              `json:"target_id,omitempty"`
+	SourceType string                 `json:"source_type,omitempty"`
+	TargetType string                 `json:"target_type,omitempty"`
+	Address    string                 `json:"addr,omitempty"`
+	Message    string                 `json:"msg,omitempty"`
+	Data       map[string]interface{} `json:"data,omitempty"`
 }
 
 // Get retrieve a list of roles

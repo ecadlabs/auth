@@ -58,14 +58,14 @@ func main() {
 		config      service.Config
 		configFile  string
 		migrateOnly bool
-		bootstrap   bool
+		bootstrap   string
 		rbacFile    string
 	)
 
 	flag.StringVar(&configFile, "c", "", "Config file.")
 	flag.StringVar(&rbacFile, "r", "", "RBAC file.")
 	flag.BoolVar(&migrateOnly, "migrate", false, "Migrate and exit immediately.")
-	flag.BoolVar(&bootstrap, "bootstrap", false, "Bootstrap DB.")
+	flag.StringVar(&bootstrap, "bootstrap", "", "Bootstrap DB.")
 
 	flag.StringVar(&config.BaseURL, "base", "http://localhost:8000", "Base URL.")
 	flag.StringVar(&config.Address, "http", ":8000", "HTTP service address.")
@@ -182,8 +182,10 @@ func main() {
 		log.Fatal(err)
 	}
 
-	if bootstrap {
-		if _, err := svc.Bootstrap(); err != nil {
+	if bootstrap != "" {
+		bootstrapConfig := service.BootstrapConfig{}
+		bootstrapConfig.Load(bootstrap)
+		if _, err := svc.Bootstrap(&bootstrapConfig); err != nil {
 			if err != service.ErrNoBootstrap {
 				log.Fatal(err)
 			}

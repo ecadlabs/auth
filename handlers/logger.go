@@ -42,6 +42,46 @@ const (
 	EvDeleteAPIKey = "delete_api_key"
 )
 
+const (
+	MembeshipIdType = "membership"
+	TenantIdType    = "tenant"
+	UserIdType      = "user"
+)
+
+var evSourceTypeMap = map[string]string{
+	EvCreate:             MembeshipIdType,
+	EvCreateTenant:       MembeshipIdType,
+	EvUpdate:             MembeshipIdType,
+	EvUpdateTenant:       MembeshipIdType,
+	EvAddRole:            MembeshipIdType,
+	EvRemoveRole:         MembeshipIdType,
+	EvDelete:             MembeshipIdType,
+	EvArchiveTenant:      MembeshipIdType,
+	EvMembershipDelete:   MembeshipIdType,
+	EvReset:              MembeshipIdType,
+	EvResetRequest:       UserIdType,
+	EvLogin:              MembeshipIdType,
+	EvEmailUpdateRequest: UserIdType,
+	EvEmailUpdate:        UserIdType,
+}
+
+var evTargetTypeMap = map[string]string{
+	EvCreate:             UserIdType,
+	EvCreateTenant:       TenantIdType,
+	EvUpdate:             UserIdType,
+	EvUpdateTenant:       TenantIdType,
+	EvAddRole:            MembeshipIdType,
+	EvRemoveRole:         MembeshipIdType,
+	EvDelete:             UserIdType,
+	EvArchiveTenant:      TenantIdType,
+	EvMembershipDelete:   TenantIdType,
+	EvReset:              UserIdType,
+	EvResetRequest:       UserIdType,
+	EvLogin:              MembeshipIdType,
+	EvEmailUpdateRequest: UserIdType,
+	EvEmailUpdate:        UserIdType,
+}
+
 func logFields(ev string, self, id uuid.UUID, r *http.Request) logrus.Fields {
 	d := make(logrus.Fields, 4)
 
@@ -50,8 +90,11 @@ func logFields(ev string, self, id uuid.UUID, r *http.Request) logrus.Fields {
 	}
 
 	if self != uuid.Nil {
-		d[logger.DefaultUserIDKey] = self
+		d[logger.DefaultSourceIDKey] = self
 	}
+
+	d[logger.TargetIDType] = evTargetTypeMap[ev]
+	d[logger.SourceIDType] = evSourceTypeMap[ev]
 
 	d[logger.DefaultEventKey] = ev
 	d[logger.DefaultAddrKey] = utils.GetRemoteAddr(r)

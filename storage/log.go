@@ -14,26 +14,30 @@ import (
 )
 
 type logEntryModel struct {
-	ID        uuid.UUID      `db:"id"`
-	Timestamp time.Time      `db:"ts"`
-	Event     string         `db:"event"`
-	UserID    uuid.UUID      `db:"user_id"`
-	TargerID  uuid.UUID      `db:"target_id"`
-	Data      []byte         `db:"data"`
-	Address   string         `db:"addr"`
-	Message   sql.NullString `db:"msg"`
-	SortedBy  string         `db:"sorted_by"` // Output only
+	ID         uuid.UUID      `db:"id"`
+	Timestamp  time.Time      `db:"ts"`
+	Event      string         `db:"event"`
+	SourceID   uuid.UUID      `db:"source_id"`
+	TargerID   uuid.UUID      `db:"target_id"`
+	SourceType string         `db:"source_type"`
+	TargetType string         `db:"target_type"`
+	Data       []byte         `db:"data"`
+	Address    string         `db:"addr"`
+	Message    sql.NullString `db:"msg"`
+	SortedBy   string         `db:"sorted_by"` // Output only
 }
 
 func (l *logEntryModel) toLogEntry() *LogEntry {
 	ret := &LogEntry{
-		ID:        l.ID,
-		Timestamp: l.Timestamp,
-		Event:     l.Event,
-		UserID:    l.UserID,
-		TargerID:  l.TargerID,
-		Address:   l.Address,
-		Message:   l.Message.String,
+		ID:         l.ID,
+		Timestamp:  l.Timestamp,
+		Event:      l.Event,
+		SourceID:   l.SourceID,
+		TargerID:   l.TargerID,
+		SourceType: l.SourceType,
+		TargetType: l.TargetType,
+		Address:    l.Address,
+		Message:    l.Message.String,
 	}
 
 	if len(l.Data) != 0 {
@@ -48,7 +52,7 @@ func (l *logEntryModel) toLogEntry() *LogEntry {
 var logQueryColumns = map[string]int{
 	"ts":        query.ColQuery | query.ColSort,
 	"event":     query.ColQuery | query.ColSort,
-	"user_id":   query.ColQuery | query.ColSort,
+	"source_id": query.ColQuery | query.ColSort,
 	"target_id": query.ColQuery | query.ColSort,
 	"addr":      query.ColQuery | query.ColSort,
 }

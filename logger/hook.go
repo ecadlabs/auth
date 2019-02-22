@@ -11,7 +11,9 @@ import (
 
 const (
 	DefaultTable       = "log"
-	DefaultUserIDKey   = "user_id"
+	DefaultSourceIDKey = "source_id"
+	TargetIDType       = "target_id_type"
+	SourceIDType       = "source_id_type"
 	DefaultTargetIDKey = "id"
 	DefaultEventKey    = "event"
 	DefaultAddrKey     = "addr"
@@ -20,12 +22,14 @@ const (
 var hookLevels = []logrus.Level{logrus.InfoLevel}
 
 type Hook struct {
-	DB          *sql.DB
-	Table       string
-	UserIDKey   string
+	DB        *sql.DB
+	Table     string
+	UserIDKey string
+	// TenantIDKey       string
 	TargetIDKey string
-	EventKey    string
-	AddrKey     string
+	// TargetTenantIDKey string
+	EventKey string
+	AddrKey  string
 }
 
 func (h *Hook) table() string {
@@ -36,12 +40,12 @@ func (h *Hook) table() string {
 	return DefaultTable
 }
 
-func (h *Hook) userIDKey() string {
+func (h *Hook) sourceIDKey() string {
 	if h.UserIDKey != "" {
 		return h.UserIDKey
 	}
 
-	return DefaultUserIDKey
+	return DefaultSourceIDKey
 }
 
 func (h *Hook) targetIDKey() string {
@@ -74,7 +78,6 @@ func (h *Hook) Levels() []logrus.Level {
 
 func (h *Hook) Fire(entry *logrus.Entry) error {
 	data := make(logrus.Fields, len(entry.Data))
-
 	for k, v := range entry.Data {
 		switch v := v.(type) {
 		case error:
@@ -89,12 +92,14 @@ func (h *Hook) Fire(entry *logrus.Entry) error {
 		return err
 	}
 
-	uid := entry.Data[h.userIDKey()]
+	uid := entry.Data[h.sourceIDKey()]
+	sourceIdType := entry.Data[SourceIDType]
+	targetIdType := entry.Data[TargetIDType]
 	tid := entry.Data[h.targetIDKey()]
 	ev := entry.Data[h.eventKey()]
 	addr := entry.Data[h.addrKey()]
 
-	_, err = h.DB.Exec("INSERT INTO "+pq.QuoteIdentifier(h.table())+" (id, ts, event, user_id, target_id, addr, msg, data) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)", uuid.NewV4(), entry.Time, ev, uid, tid, addr, entry.Message, buf)
+	_, err = h.DB.Exec("INSERT INTO "+pq.QuoteIdentifier(h.table())+" (id, ts, event, source_id, target_id, source_type, target_type, addr, msg, data) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)", uuid.NewV4(), entry.Time, ev, uid, tid, sourceIdType, targetIdType, addr, entry.Message, buf)
 	if err != nil {
 		return err
 	}

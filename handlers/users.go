@@ -263,11 +263,11 @@ func (u *Users) GetUsers(w http.ResponseWriter, r *http.Request) {
 func (u *Users) resetToken(user *storage.User) (string, error) {
 	now := time.Now()
 	claims := jwt.MapClaims{
-		"sub":                             user.ID,
-		"exp":                             now.Add(u.ResetTokenMaxAge).Unix(),
-		"iat":                             now.Unix(),
-		"iss":                             u.BaseURL(),
-		"aud":                             u.ResetURL(),
+		"sub": user.ID,
+		"exp": now.Add(u.ResetTokenMaxAge).Unix(),
+		"iat": now.Unix(),
+		"iss": u.BaseURL(),
+		"aud": u.ResetURL(),
 		utils.NSClaim(u.Namespace, "gen"): user.PasswordGen,
 	}
 
@@ -305,7 +305,7 @@ func (u *Users) NewUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if len(member.Roles) == 0 {
+	if len(user.Roles) == 0 {
 		utils.JSONErrorResponse(w, errors.ErrRolesEmpty)
 		return
 	}
@@ -397,12 +397,12 @@ func (u *Users) NewUser(w http.ResponseWriter, r *http.Request) {
 
 	// Log
 	if u.AuxLogger != nil {
-		u.AuxLogger.WithFields(logFields(EvCreate, self.ID, ret.ID, r)).WithFields(log.Fields{
+		u.AuxLogger.WithFields(logFields(EvCreate, member.ID, ret.ID, r)).WithFields(log.Fields{
 			"email":          ret.Email,
 			"name":           ret.Name,
 			"added":          ret.Added,
 			"email_verified": ret.EmailVerified,
-		}).Printf("User %v created account %v", self.ID, ret.ID)
+		}).Printf("User %v created account %v from tenant %v", self.ID, ret.ID, member.TenantID)
 	}
 
 	w.Header().Set("Location", u.UsersURL()+ret.ID.String())
@@ -494,7 +494,8 @@ func (u *Users) PatchUser(w http.ResponseWriter, r *http.Request) {
 	// Log
 	if u.AuxLogger != nil {
 		if len(ops.Update) != 0 {
-			u.AuxLogger.WithFields(logFields(EvUpdate, self.ID, uid, r)).WithFields(log.Fields(ops.Update)).Printf("User %v updated account %v", self.ID, uid)
+			u.AuxLogger.WithFields(logFields(EvUpdate, member.ID, uid, r)).WithFields(log.Fields(ops.Update)).Printf("User %v updated account %v from tenant %v", self.ID, uid, member.TenantID)
+
 		}
 	}
 
@@ -549,7 +550,36 @@ func (u *Users) DeleteUser(w http.ResponseWriter, r *http.Request) {
 
 	// Log
 	if u.AuxLogger != nil {
-		u.AuxLogger.WithFields(logFields(EvDelete, self.ID, uid, r)).Printf("User %v deleted account %v", self.ID, uid)
+		u.AuxLogger.WithFields(logFields(EvDelete, member.ID, uid, r)).Printf("User %v deleted account %v from tenant %v", self.ID, uid, member.TenantID)
+	}
+
+	individualTenants := []*storage.TenantModel{}
+
+	for _, tenant := range tenants {
+		if tenant.TenantType == storage.TenantTypeIndividual {
+			individualTenants = append(individualTenants, tenant)
+		}
+	}
+
+	// Archive any individual tenant made orphan by this deletion
+	if len(individualTenants) > 0 {
+		for _, tenant := range individualTenants {
+			deleteErr := u.TenantStorage.DeleteTenant(ctx, tenant.ID)
+			// Log
+			if deleteErr == nil && u.AuxLogger != nil {
+				u.AuxLogger.WithFields(logFields(EvArchiveTenant, member.ID, tenant.ID, r)).Printf("User %v from tenant %v archived tenant %v", self.ID, member.TenantID, tenant.ID)
+			}
+
+			if deleteErr != nil {
+				err = deleteErr
+			}
+		}
+
+		if err != nil {
+			log.Error(err)
+			utils.JSONErrorResponse(w, err)
+			return
+		}
 	}
 
 	// Archive any tenant made orphan by this deletion
@@ -803,11 +833,11 @@ func (u *Users) SendUpdateEmailRequest(w http.ResponseWriter, r *http.Request) {
 	now := time.Now()
 
 	claims := jwt.MapClaims{
-		"sub":                               user.ID,
-		"exp":                               now.Add(u.EmailUpdateTokenMaxAge).Unix(),
-		"iat":                               now.Unix(),
-		"iss":                               u.BaseURL(),
-		"aud":                               u.EmailUpdateURL(),
+		"sub": user.ID,
+		"exp": now.Add(u.EmailUpdateTokenMaxAge).Unix(),
+		"iat": now.Unix(),
+		"iss": u.BaseURL(),
+		"aud": u.EmailUpdateURL(),
 		utils.NSClaim(u.Namespace, "email"): request.Email,
 		utils.NSClaim(u.Namespace, "gen"):   user.EmailGen,
 	}
@@ -941,7 +971,6 @@ func (u *Users) UpdateEmail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	//utils.JSONResponse(w, http.StatusOK, user)
 	w.WriteHeader(http.StatusNoContent)
 
 	// Log

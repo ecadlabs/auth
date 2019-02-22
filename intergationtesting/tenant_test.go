@@ -7,6 +7,8 @@ import (
 	"net/url"
 	"testing"
 
+	"github.com/dgrijalva/jwt-go"
+
 	"github.com/ecadlabs/auth/storage"
 	uuid "github.com/satori/go.uuid"
 )
@@ -17,7 +19,13 @@ func givenTenantExists(srv *httptest.Server, name string) (tenant *storage.Tenan
 		return
 	}
 
-	model := createTenantModel{Name: name}
+	jwtToken, _ := jwt.Parse(token, func(tok *jwt.Token) (interface{}, error) {
+		return []byte("secret"), nil
+	})
+
+	claims, _ := jwtToken.Claims.(jwt.MapClaims)
+
+	model := createTenantModel{Name: name, OwnerId: claims["sub"]}
 	code, tenant, err = createTenant(srv, &model, token)
 	if err != nil {
 		return
@@ -29,7 +37,7 @@ func givenTenantExists(srv *httptest.Server, name string) (tenant *storage.Tenan
 	return
 }
 
-func givenUserInviteToTenant(srv *httptest.Server, email string, tenantId uuid.UUID, tokenCh chan string) (err error) {
+func givenUserInviteToTenant(srv *httptest.Server, email string, tenantID uuid.UUID, tokenCh chan string) (err error) {
 	code, token, _, err := doLogin(srv, superUserEmail, testPassword, nil)
 	if err != nil {
 		return
@@ -39,7 +47,7 @@ func givenUserInviteToTenant(srv *httptest.Server, email string, tenantId uuid.U
 		return
 	}
 
-	code, err = inviteTenant(srv, token, fmt.Sprintf("%s", tenantId), email)
+	code, err = inviteTenant(srv, token, tenantID.String(), email)
 
 	if code != http.StatusNoContent {
 		return
@@ -67,7 +75,7 @@ func TestInviteToTenant(t *testing.T) {
 	srv, _, token, tokenCh, results := BeforeTest(t)
 	firstTenant := results.GetTenantbyName(genTestEmail(3))
 
-	code, err := inviteTenant(srv, token, fmt.Sprintf("%s", firstTenant.ID), genTestEmail(0))
+	code, err := inviteTenant(srv, token, firstTenant.ID.String(), genTestEmail(0))
 
 	if code != http.StatusNoContent {
 		t.Error(code)
@@ -93,6 +101,28 @@ func TestInviteToTenant(t *testing.T) {
 	}
 }
 
+func TestCreateTenant(t *testing.T) {
+	srv, _, token, _, _ := BeforeTest(t)
+	code, token, _, err := doLogin(srv, superUserEmail, testPassword, nil)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	model := createTenantModel{Name: "test", OwnerId: ""}
+	code, _, err = createTenant(srv, &model, token)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	if code != http.StatusOK {
+		t.Error(code)
+		return
+	}
+	return
+}
+
 func TestNewUserShouldNotBeAbleToInvite(t *testing.T) {
 	srv, _, token, tokenCh, _ := BeforeTest(t)
 	firstTenant, err := givenTenantExists(srv, "test")
@@ -115,7 +145,7 @@ func TestNewUserShouldNotBeAbleToInvite(t *testing.T) {
 		return
 	}
 
-	code, err = inviteTenant(srv, token, fmt.Sprintf("%s", firstTenant.ID), genTestEmail(1))
+	code, err = inviteTenant(srv, token, firstTenant.ID.String(), genTestEmail(1))
 
 	if code != http.StatusForbidden {
 		t.Error(code)
@@ -273,7 +303,7 @@ func TestOwnerCantDelegateRoleInOtherTenant(t *testing.T) {
 	}
 }
 
-func TestRegularUserCantDeleteMembership(t *testing.T) {
+func TestRegularUserCantdeleteMembership(t *testing.T) {
 	srv, _, _, tokenCh, results := BeforeTest(t)
 	tenantWithOwner := results.GetTenantbyName(genTestEmail(0))
 	if tenantWithOwner == nil {
@@ -295,7 +325,7 @@ func TestRegularUserCantDeleteMembership(t *testing.T) {
 	}
 
 	user := results.GetUser(genTestEmail(0))
-	code, err = DeleteMembership(srv, token, tenantWithOwner.ID, user.ID)
+	code, err = deleteMembership(srv, token, tenantWithOwner.ID, user.ID)
 
 	if code != http.StatusForbidden {
 		t.Error(code)
@@ -308,7 +338,7 @@ func TestRegularUserCantDeleteMembership(t *testing.T) {
 	}
 }
 
-func TestOwnerCanDeleteMembership(t *testing.T) {
+func TestOwnerCandeleteMembership(t *testing.T) {
 	srv, _, _, tokenCh, results := BeforeTest(t)
 	tenantWithOwner := results.GetTenantbyName(genTestEmail(0))
 	if tenantWithOwner == nil {
@@ -331,7 +361,7 @@ func TestOwnerCanDeleteMembership(t *testing.T) {
 	}
 
 	user := results.GetUser(genTestEmail(1))
-	code, err = DeleteMembership(srv, token, tenantWithOwner.ID, user.ID)
+	code, err = deleteMembership(srv, token, tenantWithOwner.ID, user.ID)
 
 	if code != http.StatusNoContent {
 		t.Error(code)

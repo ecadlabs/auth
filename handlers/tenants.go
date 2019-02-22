@@ -116,7 +116,8 @@ func (t *Tenants) DeleteTenant(w http.ResponseWriter, r *http.Request) {
 
 	// Log
 	if t.AuxLogger != nil {
-		t.AuxLogger.WithFields(logFields(EvArchiveTenant, member.UserID, uid, r)).Printf("User %v archived tenant %v", member.UserID, uid)
+		t.AuxLogger.WithFields(logFields(EvArchiveTenant, member.ID, uid, r)).Printf("User %v archived tenant %v", member.UserID, uid)
+
 	}
 
 	w.WriteHeader(http.StatusNoContent)
@@ -215,27 +216,21 @@ func (t *Tenants) CreateTenant(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Only super users can add a tenant with an other owner
+	// Only super users can add a tenant with an other owner or none
 	granted, err = role.IsAnyGranted(permissionTenantsFull, permissionTenantsWrite)
 
-	if (!granted || err != nil) && createTenant.Owner != "" {
+	if (!granted || err != nil) && createTenant.Owner != member.UserID.String() {
 		utils.JSONError(w, "", errors.CodeForbidden)
 		return
 	}
 
-	if createTenant.Owner == "" {
-		createTenant.Owner = member.UserID.String()
-	}
-
-	ownerID, err := uuid.FromString(createTenant.Owner)
+	newTenant, err := t.createTenant(ctx, &createTenant)
 
 	if err != nil {
 		log.Error(err)
 		utils.JSONError(w, err.Error(), errors.CodeBadRequest)
 		return
 	}
-
-	newTenants, err := t.Storage.CreateTenant(ctx, createTenant.Name, ownerID)
 
 	if err != nil {
 		utils.JSONErrorResponse(w, err)
@@ -244,10 +239,27 @@ func (t *Tenants) CreateTenant(w http.ResponseWriter, r *http.Request) {
 
 	// Log
 	if t.AuxLogger != nil {
-		t.AuxLogger.WithFields(logFields(EvCreateTenant, member.UserID, newTenants.ID, r)).Printf("User %v create tenant %v", member.UserID, newTenants.ID)
+		t.AuxLogger.WithFields(logFields(EvCreateTenant, member.ID, newTenant.ID, r)).Printf("User %v create tenant %v", member.UserID, newTenant.ID)
 	}
 
-	utils.JSONResponse(w, 200, newTenants)
+	utils.JSONResponse(w, 200, newTenant)
+}
+
+func (t *Tenants) createTenant(ctx context.Context, createTenant *CreateTenantModel) (*storage.TenantModel, error) {
+	if createTenant.Owner != "" {
+		ownerID, err := uuid.FromString(createTenant.Owner)
+
+		if err != nil {
+			return nil, err
+		}
+
+		tenant, err := t.Storage.CreateTenantWithOwner(ctx, createTenant.Name, ownerID)
+		return tenant, err
+	} else {
+		// Create an orphan tenant
+		tenant, err := t.Storage.CreateTenant(ctx, createTenant.Name)
+		return tenant, err
+	}
 }
 
 func (t *Tenants) canUpdateTenant(role rbac.Role, member *storage.Membership, uid uuid.UUID) bool {
@@ -262,6 +274,7 @@ func (t *Tenants) canUpdateTenant(role rbac.Role, member *storage.Membership, ui
 	if !onlyOwn {
 		return false
 	}
+
 	return member.TenantID == uid && member.MembershipType == storage.OwnerMembership && member.MembershipStatus == storage.ActiveState
 }
 
@@ -307,7 +320,7 @@ func (t *Tenants) UpdateTenant(w http.ResponseWriter, r *http.Request) {
 
 	if t.AuxLogger != nil {
 		if len(ops.Update) != 0 {
-			t.AuxLogger.WithFields(logFields(EvUpdateTenant, member.UserID, uid, r)).WithFields(log.Fields(ops.Update)).Printf("User %v updated tenant %v", member.UserID, uid)
+			t.AuxLogger.WithFields(logFields(EvUpdateTenant, member.ID, uid, r)).WithFields(log.Fields(ops.Update)).Printf("User %v updated tenant %v", member.UserID, uid)
 		}
 	}
 

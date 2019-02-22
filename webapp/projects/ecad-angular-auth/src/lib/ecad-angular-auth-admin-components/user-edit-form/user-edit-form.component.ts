@@ -1,11 +1,10 @@
-import { Component, OnInit, Inject } from '@angular/core';
+import { Component, Inject, OnInit } from '@angular/core';
+import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MatDialogRef, MAT_DIALOG_DATA } from '@angular/material';
-import { FormBuilder, Form, FormGroup, Validators } from '@angular/forms';
-import { MinSelection } from './user-edit-form.validators';
 import { CreateUser } from '../../ecad-angular-auth-admin/interfaces/create-user.i';
+import { IUsersService } from '../../ecad-angular-auth-admin/interfaces/user-service.i';
 import { User } from '../../ecad-angular-auth-admin/interfaces/user.i';
 import { USERS_SERVICE } from '../../ecad-angular-auth-admin/tokens';
-import { IUsersService } from '../../ecad-angular-auth-admin/interfaces/user-service.i';
 import { AuthConfig } from '../../ecad-angular-auth/interfaces/auth-config.i';
 import { AUTH_CONFIG } from '../../ecad-angular-auth/tokens';
 
@@ -15,7 +14,6 @@ import { AUTH_CONFIG } from '../../ecad-angular-auth/tokens';
   styleUrls: ['./user-edit-form.component.scss']
 })
 export class UserEditFormComponent implements OnInit {
-
   public userForm: FormGroup;
   public error: any = {};
 
@@ -27,32 +25,30 @@ export class UserEditFormComponent implements OnInit {
     public dialogData: User | null,
     @Inject(USERS_SERVICE)
     private userService: IUsersService,
-    private _fb: FormBuilder,
-  ) { }
-
-  public get roles() {
-    return this.userService.getRoles();
-  }
+    private _fb: FormBuilder
+  ) {}
 
   public get value() {
     return JSON.stringify(this.userForm.value);
   }
 
   ngOnInit() {
-    this.userForm = this._fb.group(
-      {
-        'email': ['', [Validators.required, Validators.pattern(
-          this.authConfig.emailValidationRegex || /^.+@.+\..{2,3}$/
-        )]],
-        'name': [''],
-        'roles': [[this.userService.getRoles()[0].value], MinSelection(1)]
-      }
-    );
+    this.userForm = this._fb.group({
+      email: [
+        '',
+        [
+          Validators.required,
+          Validators.pattern(
+            this.authConfig.emailValidationRegex || /^.+@.+\..{2,3}$/
+          )
+        ]
+      ],
+      name: ['']
+    });
 
     if (this.dialogData) {
       this.userForm.get('email').setValue(this.dialogData.email);
       this.userForm.get('name').setValue(this.dialogData.name);
-      this.userForm.get('roles').setValue(Object.keys(this.dialogData.roles));
     }
   }
 
@@ -64,16 +60,20 @@ export class UserEditFormComponent implements OnInit {
     try {
       if (!this.dialogData) {
         const createUserPayload: CreateUser = this.userForm.value;
-        createUserPayload.roles = this.userForm.value.roles.reduce((prev, val) => Object.assign(prev, { [val]: true }), {});
-        await this.userService.create(createUserPayload).toPromise();
+        await this.userService
+          .create({ ...createUserPayload, roles: { owner: true } })
+          .toPromise();
       } else {
         const payload = this.userForm.value;
         if (this.isEmailUpdated) {
-          await this.userService.updateEmail(this.dialogData.id, this.userForm.value.email).toPromise();
+          await this.userService
+            .updateEmail(this.dialogData.id, this.userForm.value.email)
+            .toPromise();
         }
-        const remove = this.getDeletedRole(Object.keys(this.dialogData.roles), this.userForm.value.roles);
-        const added = this.getAddedRole(Object.keys(this.dialogData.roles), this.userForm.value.roles);
-        await this.userService.update(Object.assign(payload, { id: this.dialogData.id }), added, remove).toPromise();
+
+        await this.userService
+          .update(Object.assign(payload, { id: this.dialogData.id }))
+          .toPromise();
       }
       this.error = {};
       this.dialogRef.close();
@@ -86,13 +86,5 @@ export class UserEditFormComponent implements OnInit {
         this.error.serverError = true;
       }
     }
-  }
-
-  private getDeletedRole(initialRoles: string[], current: string[]) {
-    return initialRoles.filter((role) => !current.includes(role));
-  }
-
-  private getAddedRole(initialRoles: string[], current: string[]) {
-    return current.filter((role) => !initialRoles.includes(role));
   }
 }

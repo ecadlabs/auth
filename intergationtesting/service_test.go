@@ -131,7 +131,7 @@ type tokenResponse struct {
 	RefreshURL string `json:"refresh"`
 }
 
-func doLogin(srv *httptest.Server, email, password string, tenantId *uuid.UUID) (code int, token string, refresh string, err error) {
+func doLogin(srv *httptest.Server, email, password string, tenantID *uuid.UUID) (code int, token string, refresh string, err error) {
 	req := struct {
 		Name     string `json:"name"`
 		Password string `json:"password"`
@@ -146,10 +146,10 @@ func doLogin(srv *httptest.Server, email, password string, tenantId *uuid.UUID) 
 	}
 
 	var url = ""
-	if tenantId == nil {
+	if tenantID == nil {
 		url = srv.URL + "/login"
 	} else {
-		url = fmt.Sprintf(srv.URL+"/login/%s", *tenantId)
+		url = fmt.Sprintf(srv.URL+"/login/%s", *tenantID)
 	}
 	resp, err := srv.Client().Post(url, "application/json", bytes.NewReader(buf))
 	if err != nil {
@@ -221,19 +221,19 @@ func getUser(srv *httptest.Server, token string, uid uuid.UUID) (int, *storage.U
 }
 
 func getList(srv *httptest.Server, token string, query url.Values) (int, []*storage.User, error) {
-	tmpUrl, err := url.Parse(srv.URL)
+	tmpURL, err := url.Parse(srv.URL)
 	if err != nil {
 		return 0, nil, err
 	}
 
-	tmpUrl.Path = "/users/"
-	tmpUrl.RawQuery = query.Encode()
-	reqUrl := tmpUrl.String()
+	tmpURL.Path = "/users/"
+	tmpURL.RawQuery = query.Encode()
+	reqURL := tmpURL.String()
 
 	result := make([]*storage.User, 0)
 
 	for {
-		req, err := http.NewRequest("GET", reqUrl, nil)
+		req, err := http.NewRequest("GET", reqURL, nil)
 		if err != nil {
 			return 0, nil, err
 		}
@@ -273,19 +273,19 @@ func getList(srv *httptest.Server, token string, query url.Values) (int, []*stor
 			break
 		}
 
-		reqUrl = res.Next
+		reqURL = res.Next
 		result = append(result, res.Value...)
 	}
 
 	return http.StatusOK, result, nil
 }
 
-type tenantsAndUsers struct {
+type TenantsAndUsers struct {
 	Tenants []*storage.TenantModel
 	Users   []*storage.User
 }
 
-func (t *tenantsAndUsers) GetUser(email string) *storage.User {
+func (t *TenantsAndUsers) GetUser(email string) *storage.User {
 	for _, val := range t.Users {
 		if val.Email == email {
 			return val
@@ -294,7 +294,7 @@ func (t *tenantsAndUsers) GetUser(email string) *storage.User {
 	return nil
 }
 
-func (t *tenantsAndUsers) GetTenantbyName(email string) *storage.TenantModel {
+func (t *TenantsAndUsers) GetTenantbyName(email string) *storage.TenantModel {
 	for _, val := range t.Tenants {
 		if val.Name == email {
 			return val
@@ -303,9 +303,9 @@ func (t *tenantsAndUsers) GetTenantbyName(email string) *storage.TenantModel {
 	return nil
 }
 
-var res *tenantsAndUsers
+var res *TenantsAndUsers
 
-func fetchTenantAndUsers(srv *httptest.Server, refresh bool) (*tenantsAndUsers, error) {
+func fetchTenantAndUsers(srv *httptest.Server, refresh bool) (*TenantsAndUsers, error) {
 	code, token, _, err := doLogin(srv, superUserEmail, testPassword, nil)
 	if err != nil {
 		return nil, err
@@ -325,7 +325,7 @@ func fetchTenantAndUsers(srv *httptest.Server, refresh bool) (*tenantsAndUsers, 
 		return nil, err
 	}
 
-	return &tenantsAndUsers{
+	return &TenantsAndUsers{
 		Users:   userList,
 		Tenants: list,
 	}, nil
@@ -383,7 +383,7 @@ var testRBAC = rbac.StaticRBAC{
 	},
 }
 
-func BeforeTest(t *testing.T) (srv *httptest.Server, userList []*storage.User, token string, tokenCh chan string, results *tenantsAndUsers) {
+func BeforeTest(t *testing.T) (srv *httptest.Server, userList []*storage.User, token string, tokenCh chan string, results *TenantsAndUsers) {
 	// Clear everything
 	db, err := sqlx.Open("postgres", *dbURL)
 	if err != nil {
@@ -393,7 +393,7 @@ func BeforeTest(t *testing.T) (srv *httptest.Server, userList []*storage.User, t
 	defer db.Close()
 
 	_, err = db.Exec(`DROP TABLE IF EXISTS schema_migrations, users, membership, tenants, roles, log, bootstrap`)
-	_, err = db.Exec(`DROP TYPE IF EXISTS membership_type, membership_status, tenant_type`)
+	_, err = db.Exec(`DROP TYPE IF EXISTS membership_type, membership_status, tenant_type, log_id_type`)
 	if err != nil {
 		t.Error(err)
 		return
@@ -432,8 +432,19 @@ func BeforeTest(t *testing.T) (srv *httptest.Server, userList []*storage.User, t
 		return
 	}
 
+	bootstrapConf := service.BootstrapConfig{
+		Users: []service.BootstrapUser{
+			service.BootstrapUser{
+				Email: "admin@admin",
+				Hash:  "$2y$10$FnvgJTFgKxLVbJ/Xo0dCb.10N3Rbdr5Z49a0G4MiM8XAC4Wz2DkSe",
+				Role:  "admin",
+				ID:    "a6573daa-4d0a-49a4-a281-93d0d3dafb06",
+			},
+		},
+	}
+
 	// Bootstrap
-	superuser, err := svc.Bootstrap()
+	_, err = svc.Bootstrap(&bootstrapConf)
 	if err != nil {
 		t.Error(err)
 		return
@@ -453,13 +464,11 @@ func BeforeTest(t *testing.T) (srv *httptest.Server, userList []*storage.User, t
 		return
 	}
 
-	usersList := []*storage.User{superuser}
-
 	// Create other users
 	for i := 0; i < usersNum; i++ {
 		u := genTestUser(i)
 
-		code, res, err := createUser(srv, u, token, tokenCh)
+		code, _, err := createUser(srv, u, token, tokenCh)
 		if err != nil {
 			t.Error(err)
 			return
@@ -469,8 +478,6 @@ func BeforeTest(t *testing.T) (srv *httptest.Server, userList []*storage.User, t
 			t.Error(code)
 			return
 		}
-
-		usersList = append(usersList, res)
 	}
 
 	results, err = fetchTenantAndUsers(srv, false)
@@ -729,6 +736,23 @@ func TestService(t *testing.T) {
 
 			if len(list) != 12 {
 				t.Error("Len is not 12", len(list))
+			}
+
+			if code != http.StatusOK {
+				t.Error(code)
+				return
+			}
+		})
+
+		t.Run("TestLogList", func(t *testing.T) {
+			code, list, err := getLogsList(srv, token, url.Values{})
+			if err != nil {
+				t.Error(err)
+				return
+			}
+
+			if len(list) != 25 {
+				t.Error("Len is not 25", len(list))
 			}
 
 			if code != http.StatusOK {

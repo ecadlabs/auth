@@ -262,6 +262,7 @@ func (s *Service) APIHandler() http.Handler {
 	lmux.Use(serviceAPI.Handler)
 	lmux.Use(aud.Handler)
 	lmux.Use(userdata.Handler)
+	lmux.Use(membershipData.Handler)
 
 	lmux.Methods("GET").Path("/").HandlerFunc(usersHandler.GetLogs)
 

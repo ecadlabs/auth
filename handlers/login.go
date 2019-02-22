@@ -66,6 +66,7 @@ func (u *Users) writeUserToken(w http.ResponseWriter, opt *userTokenOptions) err
 
 	if opt.membership != nil {
 		claims[utils.NSClaim(u.Namespace, "tenant")] = opt.membership.TenantID
+		claims[utils.NSClaim(u.Namespace, "member")] = opt.membership.ID
 		claims[utils.NSClaim(u.Namespace, "roles")] = opt.membership.Roles.Get()
 	}
 
@@ -262,7 +263,7 @@ func (u *Users) Login(w http.ResponseWriter, r *http.Request) {
 
 	// Log
 	if u.AuxLogger != nil {
-		u.AuxLogger.WithFields(logFields(EvLogin, user.ID, user.ID, r)).WithField("email", user.Email).Printf("User %v logged in", user.ID)
+		u.AuxLogger.WithFields(logFields(EvLogin, membership.ID, membership.ID, r)).WithField("email", user.Email).Printf("User %v logged into tenant %v", user.ID, membership.TenantID)
 	}
 }
 

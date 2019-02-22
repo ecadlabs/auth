@@ -4,12 +4,11 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"os"
-	"strings"
+
+	"github.com/satori/go.uuid"
 
 	"github.com/ecadlabs/auth/storage"
 	"github.com/jmoiron/sqlx"
-	"golang.org/x/crypto/bcrypt"
 )
 
 const (
@@ -26,7 +25,7 @@ const (
 
 var ErrNoBootstrap = errors.New("No bootstrapping")
 
-func (s *Service) Bootstrap() (user *storage.User, err error) {
+func (s *Service) Bootstrap(c *BootstrapConfig) (user *storage.User, err error) {
 	db := sqlx.NewDb(s.DB, "postgres")
 
 	tx, err := db.Beginx()
@@ -51,39 +50,53 @@ func (s *Service) Bootstrap() (user *storage.User, err error) {
 		return
 	}
 
-	email := os.Getenv(envAdminEmail)
-	if email == "" {
-		email = defaultAdminEmail
+	for _, cUser := range c.Users {
+		roles := make(storage.Roles)
+		roles[cUser.Role] = true
+		u := storage.CreateUser{
+			ID:            uuid.FromStringOrNil(cUser.ID),
+			Email:         cUser.Email,
+			PasswordHash:  ([]byte)(cUser.Hash),
+			EmailVerified: true, // Allow logging in !!!
+			Roles:         roles,
+			Type:          storage.AccountRegular,
+		}
+
+		_, err = storage.NewUserInt(context.Background(), tx, &u)
+		if err != nil {
+			return
+		}
 	}
 
-	password := os.Getenv(envAdminPassword)
-	if password == "" {
-		password = defaultAdminPassword
+	for _, tenant := range c.Tenants {
+		u := storage.TenantModel{
+			ID:   uuid.FromStringOrNil(tenant.ID),
+			Name: tenant.Name,
+		}
+
+		_, err := s.tenantStorage.CreateTenantInt(context.Background(), tx, &u)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	rolesList := os.Getenv(envAdminRoles)
-	if rolesList == "" {
-		rolesList = defaultAdminRoles
-	}
+	for _, member := range c.Membership {
+		roles := make(storage.Roles)
+		roles[member.Role] = true
 
-	roles := make(storage.Roles)
-	for _, r := range strings.Split(rolesList, ":") {
-		roles[r] = struct{}{}
-	}
+		err := s.membershipStorage.AddMembershipInt(
+			context.Background(),
+			tx,
+			uuid.FromStringOrNil(member.TenantID),
+			uuid.FromStringOrNil(member.UserID),
+			storage.ActiveState,
+			storage.MemberMembership,
+			roles,
+		)
 
-	hash, _ := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-
-	u := storage.CreateUser{
-		Email:         email,
-		PasswordHash:  hash,
-		EmailVerified: true, // Allow logging in !!!
-		Roles:         roles,
-		Type:          storage.AccountRegular,
-	}
-
-	user, err = storage.NewUserInt(context.Background(), tx, &u)
-	if err != nil {
-		return
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	_, err = tx.Exec("UPDATE bootstrap SET val = TRUE WHERE NOT val")

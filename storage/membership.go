@@ -23,7 +23,8 @@ type membershipModel struct {
 	Added            time.Time      `db:"added"`
 	Modified         time.Time      `db:"modified"`
 	Roles            pq.StringArray `db:"roles"`
-	SortedBy         string         `json:"-" db:"sorted_by"`
+	SortedBy         string         `db:"sorted_by"`
+	Email            string         `db:"email"`
 }
 
 func (m *membershipModel) toMembership() *Membership {
@@ -35,6 +36,7 @@ func (m *membershipModel) toMembership() *Membership {
 		TenantID:         m.TenantID,
 		Added:            m.Added,
 		Modified:         m.Modified,
+		Email:            m.Email,
 		Roles:            make(Roles, len(m.Roles)),
 	}
 
@@ -62,8 +64,19 @@ func (s *Storage) AddMembership(ctx context.Context, id uuid.UUID, user *User, s
 		err = tx.Commit()
 	}()
 
+	err = s.AddMembershipInt(ctx, tx, id, user.ID, status, membershipType, role)
+	if err != nil {
+		return err
+	} else {
+		return nil
+	}
+}
+
+// AddMembershipInt insert a new membership in the database
+func (s *Storage) AddMembershipInt(ctx context.Context, tx *sqlx.Tx, tenantID uuid.UUID, userID uuid.UUID, status string, membershipType string, role Roles) error {
 	var mid uuid.UUID
-	err = tx.GetContext(ctx, &mid, "INSERT INTO membership (tenant_id, user_id, membership_status, membership_type) VALUES ($1, $2, $3, $4) RETURNING id", id, user.ID, status, membershipType)
+	err := tx.GetContext(ctx, &mid, "INSERT INTO membership (tenant_id, user_id, membership_status, membership_type) VALUES ($1, $2, $3, $4) RETURNING id", tenantID, userID, status, membershipType)
+
 	if err != nil {
 		if isUniqueViolation(err, "membership_pkey") {
 			err = errors.ErrMembershipExisits
@@ -101,9 +114,11 @@ func (s *Storage) GetMembership(ctx context.Context, id uuid.UUID, userID uuid.U
 	q := `
 	SELECT
 	  membership.*,
-	  r.roles
+		r.roles,
+		users.email
 	FROM
-	  membership
+		membership
+		LEFT JOIN users ON membership.user_id = users.id
 	  LEFT JOIN (
 	    SELECT
 	      membership_id,
@@ -178,6 +193,7 @@ func (s *Storage) UpdateMembership(ctx context.Context, id uuid.UUID, userID uui
 
 	updateCount := len(ops.Update)
 	expr += fmt.Sprintf("modified = DEFAULT WHERE user_id = $%d AND tenant_id = $%d RETURNING *", updateCount+1, updateCount+2)
+
 	args[updateCount] = userID
 	args[updateCount+1] = id
 
@@ -241,12 +257,6 @@ func (s *Storage) UpdateMembership(ctx context.Context, id uuid.UUID, userID uui
 		return nil, errors.ErrRolesEmpty
 	}
 
-	// Safe guard to always have one owner
-	err = s.hasAMinimumOfOneOwner(ctx, tx, id)
-	if err != nil {
-		return nil, err
-	}
-
 	return u.toMembership(), nil
 }
 
@@ -267,11 +277,12 @@ func (s *Storage) GetMemberships(ctx context.Context, q *query.Query) (membershi
 	}
 
 	selOpt := query.SelectOptions{
-		SelectExpr: "membership.*, r.roles, membership." + pq.QuoteIdentifier(q.SortBy) + " AS sorted_by",
+		SelectExpr: "membership.*, r.roles, users.email, membership." + pq.QuoteIdentifier(q.SortBy) + " AS sorted_by",
 		FromExpr: `
 			membership
 			INNER JOIN tenants ON tenants.id = membership.tenant_id
 			AND tenants.archived = FALSE
+			INNER JOIN users ON users.id = membership.user_id
 			LEFT JOIN (
 		  	SELECT
 		    	membership_id,
@@ -372,39 +383,9 @@ func (s *Storage) DeleteMembership(ctx context.Context, id uuid.UUID, userID uui
 		return errors.ErrMembershipNotFound
 	}
 
-	// Safe guard to always have one owner
-	err = s.hasAMinimumOfOneOwner(ctx, tx, id)
+	_, err = tx.ExecContext(ctx, "DELETE FROM roles WHERE user_id = $1 AND tenant_id = $2", userID, id)
 	if err != nil {
 		return err
-	}
-
-	return nil
-}
-
-func (s *Storage) hasAMinimumOfOneOwner(ctx context.Context, tx *sqlx.Tx, id uuid.UUID) error {
-	q := `
-		SELECT
-		  EXISTS(
-		    SELECT
-		      TRUE
-		    FROM
-		      membership
-		      INNER JOIN tenants ON tenants.id = membership.tenant_id
-		      INNER JOIN roles ON roles.membership_id = membership.id
-		    WHERE
-		      membership.tenant_id = $1
-		      AND membership.membership_status = $2
-		      AND membership_type = $3
-		      AND roles.role = $4
-		  )`
-
-	var exists bool
-	if err := tx.GetContext(ctx, &exists, q, id, ActiveState, OwnerMembership, OwnerMembership); err != nil {
-		return err
-	}
-
-	if !exists {
-		return errors.ErrMembershipNotFound
 	}
 
 	return nil

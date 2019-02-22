@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"time"
 
+	errs "errors"
+
 	"github.com/ecadlabs/auth/errors"
 	"github.com/ecadlabs/auth/query"
 	"github.com/jmoiron/sqlx"
@@ -38,8 +40,34 @@ func (t *TenantModel) Clone() *TenantModel {
 	}
 }
 
-// CreateTenant insert a tenant in the database and return it
-func (s *Storage) CreateTenant(ctx context.Context, name string, ownerID uuid.UUID) (*TenantModel, error) {
+func (s *Storage) CreateTenantInt(ctx context.Context, tx *sqlx.Tx, tenant *TenantModel) (*TenantModel, error) {
+	if tenant.ID == uuid.Nil {
+		return nil, errs.New("Tenant must have a uuid defined")
+	}
+
+	newTenant := TenantModel{}
+	rows, err := sqlx.NamedQueryContext(ctx, tx, "INSERT INTO tenants (id, name) VALUES (:id, :name) RETURNING id, added, modified, protected, tenant_type", &tenant)
+
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		if err = rows.StructScan(&newTenant); err != nil {
+			return nil, err
+		}
+	}
+
+	return &newTenant, nil
+}
+
+func (s *Storage) CreateTenant(ctx context.Context, name string) (*TenantModel, error) {
+	tenant := TenantModel{
+		ID:   uuid.NewV4(),
+		Name: name,
+	}
+
 	tx, err := s.DB.Beginx()
 	if err != nil {
 		return nil, err
@@ -54,22 +82,32 @@ func (s *Storage) CreateTenant(ctx context.Context, name string, ownerID uuid.UU
 		err = tx.Commit()
 	}()
 
-	newTenant := TenantModel{
-		Name: name,
-	}
+	newTenant, err := s.CreateTenantInt(ctx, tx, &tenant)
+	return newTenant, err
+}
 
-	rows, err := sqlx.NamedQueryContext(ctx, tx, "INSERT INTO tenants (name) VALUES (:name) RETURNING id, added, modified, protected, tenant_type", &newTenant)
-
+// CreateTenant insert a tenant in the database and return it
+func (s *Storage) CreateTenantWithOwner(ctx context.Context, name string, ownerID uuid.UUID) (*TenantModel, error) {
+	tx, err := s.DB.Beginx()
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
 
-	for rows.Next() {
-		if err = rows.StructScan(&newTenant); err != nil {
-			return nil, err
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+			return
 		}
+
+		err = tx.Commit()
+	}()
+
+	tenant := &TenantModel{
+		ID:   uuid.NewV4(),
+		Name: name,
 	}
+
+	newTenant, err := s.CreateTenantInt(ctx, tx, tenant)
 
 	_, err = tx.ExecContext(ctx, "INSERT INTO membership (tenant_id, user_id, membership_status, membership_type) VALUES ($1, $2, $3, $4)", newTenant.ID, ownerID, ActiveState, OwnerMembership)
 
@@ -83,7 +121,7 @@ func (s *Storage) CreateTenant(ctx context.Context, name string, ownerID uuid.UU
 		return nil, err
 	}
 
-	return &newTenant, nil
+	return newTenant, nil
 }
 
 // GetTenant fetch a tenant from the database and return it

@@ -19,11 +19,11 @@ type Message struct {
 }
 
 type EmailTemplateData struct {
-	TenantInvitePrefix   string `json:"tenant_invite_prefix`
-	ResetURLPrefix       string `json:"reset_url_prefix"`
-	UpdateEmailURLPrefix string `json:"update_email_prefix"`
-	AppName              string `json:"app_name"`
-	SupportEmail         string `json:"support_email"`
+	TenantInvitePrefix   string `yaml:"tenant_invite_prefix"`
+	ResetURLPrefix       string `yaml:"reset_url_prefix"`
+	UpdateEmailURLPrefix string `yaml:"update_email_prefix"`
+	AppName              string `yaml:"app_name"`
+	SupportEmail         string `yaml:"support_email"`
 }
 
 type MailDriver interface {

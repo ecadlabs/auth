@@ -99,7 +99,9 @@ const getUserQuery = `
 			json_build_object(
 			  'tenant_id',
 			  membership.tenant_id,
-			  'type',
+				'type',
+				membership.tenant_type,
+			  'tenant_type',
 			  membership.membership_type,
 			  'roles',
 			  r.roles
@@ -261,6 +263,8 @@ func (s *Storage) GetUsers(ctx context.Context, typ string, q *query.Query) (use
 					'tenant_id',
 					membership.tenant_id,
 					'type',
+					membership.tenant_type,
+					'tenant_type',
 					membership.membership_type,
 					'roles',
 					r.roles
@@ -369,6 +373,7 @@ func isUniqueViolation(err error, constraint string) bool {
 // NewUserInt insert a new user in the database along with his initial tenant
 func NewUserInt(ctx context.Context, tx *sqlx.Tx, user *CreateUser) (res *User, err error) {
 	model := userModel{
+		ID:            user.ID,
 		Email:         user.Email,
 		PasswordHash:  user.PasswordHash,
 		Name:          user.Name,
@@ -377,7 +382,7 @@ func NewUserInt(ctx context.Context, tx *sqlx.Tx, user *CreateUser) (res *User, 
 	}
 
 	// Create user
-	rows, err := sqlx.NamedQueryContext(ctx, tx, "INSERT INTO users (account_type, email, password_hash, name, email_verified) VALUES (:account_type, :email, :password_hash, :name, :email_verified) RETURNING id, added, modified, password_gen", &model)
+	rows, err := sqlx.NamedQueryContext(ctx, tx, "INSERT INTO users (id, account_type, email, password_hash, name, email_verified) VALUES (:id, :account_type, :email, :password_hash, :name, :email_verified) RETURNING id, added, modified, password_gen", &model)
 	if err != nil {
 		if isUniqueViolation(err, "users_email_key") {
 			err = errors.ErrEmailInUse
@@ -465,6 +470,8 @@ func (s *Storage) NewUser(ctx context.Context, user *CreateUser) (res *User, err
 			return
 		}
 	}()
+
+	user.ID = uuid.NewV4()
 
 	tmp, err := NewUserInt(ctx, tx, user)
 	if err != nil {
@@ -714,6 +721,7 @@ func (s *Storage) UpdateEmailWithGen(ctx context.Context, id uuid.UUID, email st
 
 	var prev userModel
 	if err := tx.GetContext(ctx, &prev, "SELECT email_gen, email FROM users WHERE id = $1 AND account_type = 'regular'", id); err != nil {
+
 		if err == sql.ErrNoRows {
 			err = errors.ErrUserNotFound
 		}
