@@ -99,8 +99,8 @@ const getUserQuery = `
 			json_build_object(
 			  'tenant_id',
 			  membership.tenant_id,
-				'type',
-				membership.tenant_type,
+			  'type',
+			  membership.tenant_type,
 			  'tenant_type',
 			  membership.membership_type,
 			  'roles',
@@ -195,6 +195,8 @@ func (s *Storage) GetServiceAccountByAddress(ctx context.Context, address string
 	          membership.tenant_id,
 	          'type',
 	          membership.membership_type,
+			  'tenant_type',
+			  membership.membership_type,
 	          'roles',
 	          r.roles
 	        )
@@ -260,14 +262,14 @@ func (s *Storage) GetUsers(ctx context.Context, typ string, q *query.Query) (use
 				membership.user_id,
 				json_agg(
 				  json_build_object(
-					'tenant_id',
-					membership.tenant_id,
-					'type',
-					membership.tenant_type,
-					'tenant_type',
-					membership.membership_type,
-					'roles',
-					r.roles
+				    'tenant_id',
+				    membership.tenant_id,
+				    'type',
+				    membership.tenant_type,
+				    'tenant_type',
+				    membership.membership_type,
+				    'roles',
+				    r.roles
 				  )
 				) AS membership
 			  FROM
@@ -382,7 +384,16 @@ func NewUserInt(ctx context.Context, tx *sqlx.Tx, user *CreateUser) (res *User, 
 	}
 
 	// Create user
-	rows, err := sqlx.NamedQueryContext(ctx, tx, "INSERT INTO users (id, account_type, email, password_hash, name, email_verified) VALUES (:id, :account_type, :email, :password_hash, :name, :email_verified) RETURNING id, added, modified, password_gen", &model)
+
+	var idVal string
+	if model.ID != uuid.Nil {
+		idVal = ":id"
+	} else {
+		idVal = "DEFAULT"
+	}
+
+	q := "INSERT INTO users (id, account_type, email, password_hash, name, email_verified) VALUES (" + idVal + ", :account_type, :email, :password_hash, :name, :email_verified) RETURNING id, added, modified, password_gen"
+	rows, err := sqlx.NamedQueryContext(ctx, tx, q, &model)
 	if err != nil {
 		if isUniqueViolation(err, "users_email_key") {
 			err = errors.ErrEmailInUse

@@ -37,7 +37,7 @@ const (
 const (
 	// TenantTypeOrg string representing the organization tenant type
 	TenantTypeOrg = "organization"
-	// TenantTypeOrg string representing the individual tenant type
+	// TenantTypeIndividual string representing the individual tenant type
 	TenantTypeIndividual = "individual"
 )
 
@@ -220,7 +220,8 @@ type APIKey struct {
 }
 
 type TenantStorage interface {
-	CreateTenant(ctx context.Context, name string, ownerID uuid.UUID) (*TenantModel, error)
+	CreateTenant(ctx context.Context, name string) (*TenantModel, error)
+	CreateTenantWithOwner(ctx context.Context, name string, ownerID uuid.UUID) (*TenantModel, error)
 	GetTenant(ctx context.Context, tenantID, userID uuid.UUID, onlySelf bool) (*TenantModel, error)
 	GetTenantsSoleMember(ctx context.Context, userID uuid.UUID) (tenants []*TenantModel, err error)
 	GetTenants(ctx context.Context, userID uuid.UUID, onlySelf bool, q *query.Query) (tenants []*TenantModel, count int, next *query.Query, err error)

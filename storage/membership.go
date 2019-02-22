@@ -114,11 +114,11 @@ func (s *Storage) GetMembership(ctx context.Context, id uuid.UUID, userID uuid.U
 	q := `
 	SELECT
 	  membership.*,
-		r.roles,
-		users.email
+	  r.roles,
+	  users.email
 	FROM
-		membership
-		LEFT JOIN users ON membership.user_id = users.id
+	  membership
+	  INNER JOIN users ON membership.user_id = users.id
 	  LEFT JOIN (
 	    SELECT
 	      membership_id,
@@ -381,11 +381,6 @@ func (s *Storage) DeleteMembership(ctx context.Context, id uuid.UUID, userID uui
 
 	if rows == 0 {
 		return errors.ErrMembershipNotFound
-	}
-
-	_, err = tx.ExecContext(ctx, "DELETE FROM roles WHERE user_id = $1 AND tenant_id = $2", userID, id)
-	if err != nil {
-		return err
 	}
 
 	return nil

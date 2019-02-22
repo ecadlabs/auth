@@ -263,11 +263,11 @@ func (u *Users) GetUsers(w http.ResponseWriter, r *http.Request) {
 func (u *Users) resetToken(user *storage.User) (string, error) {
 	now := time.Now()
 	claims := jwt.MapClaims{
-		"sub": user.ID,
-		"exp": now.Add(u.ResetTokenMaxAge).Unix(),
-		"iat": now.Unix(),
-		"iss": u.BaseURL(),
-		"aud": u.ResetURL(),
+		"sub":                             user.ID,
+		"exp":                             now.Add(u.ResetTokenMaxAge).Unix(),
+		"iat":                             now.Unix(),
+		"iss":                             u.BaseURL(),
+		"aud":                             u.ResetURL(),
 		utils.NSClaim(u.Namespace, "gen"): user.PasswordGen,
 	}
 
@@ -564,7 +564,7 @@ func (u *Users) DeleteUser(w http.ResponseWriter, r *http.Request) {
 	// Archive any individual tenant made orphan by this deletion
 	if len(individualTenants) > 0 {
 		for _, tenant := range individualTenants {
-			deleteErr := u.TenantStorage.DeleteTenant(ctx, tenant.ID)
+			deleteErr := u.Storage.DeleteTenant(ctx, tenant.ID)
 			// Log
 			if deleteErr == nil && u.AuxLogger != nil {
 				u.AuxLogger.WithFields(logFields(EvArchiveTenant, member.ID, tenant.ID, r)).Printf("User %v from tenant %v archived tenant %v", self.ID, member.TenantID, tenant.ID)
@@ -833,11 +833,11 @@ func (u *Users) SendUpdateEmailRequest(w http.ResponseWriter, r *http.Request) {
 	now := time.Now()
 
 	claims := jwt.MapClaims{
-		"sub": user.ID,
-		"exp": now.Add(u.EmailUpdateTokenMaxAge).Unix(),
-		"iat": now.Unix(),
-		"iss": u.BaseURL(),
-		"aud": u.EmailUpdateURL(),
+		"sub":                               user.ID,
+		"exp":                               now.Add(u.EmailUpdateTokenMaxAge).Unix(),
+		"iat":                               now.Unix(),
+		"iss":                               u.BaseURL(),
+		"aud":                               u.EmailUpdateURL(),
 		utils.NSClaim(u.Namespace, "email"): request.Email,
 		utils.NSClaim(u.Namespace, "gen"):   user.EmailGen,
 	}
