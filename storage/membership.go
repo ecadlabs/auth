@@ -23,7 +23,8 @@ type membershipModel struct {
 	Added            time.Time      `db:"added"`
 	Modified         time.Time      `db:"modified"`
 	Roles            pq.StringArray `db:"roles"`
-	SortedBy         string         `json:"-" db:"sorted_by"`
+	SortedBy         string         `db:"sorted_by"`
+	Email            string         `db:"email"`
 }
 
 func (m *membershipModel) toMembership() *Membership {
@@ -35,6 +36,7 @@ func (m *membershipModel) toMembership() *Membership {
 		TenantID:         m.TenantID,
 		Added:            m.Added,
 		Modified:         m.Modified,
+		Email:            m.Email,
 		Roles:            make(Roles, len(m.Roles)),
 	}
 
@@ -52,7 +54,6 @@ type MembershipStorage struct {
 
 // AddMembership insert a new membership in the database
 func (s *MembershipStorage) AddMembership(ctx context.Context, id uuid.UUID, user *User, status string, membershipType string, role Roles) error {
-	// TODO: Refactor this to use the membership struct as a parameter
 	tx, err := s.DB.Beginx()
 	if err != nil {
 		return err
@@ -67,7 +68,17 @@ func (s *MembershipStorage) AddMembership(ctx context.Context, id uuid.UUID, use
 		err = tx.Commit()
 	}()
 
-	_, err = tx.ExecContext(ctx, "INSERT INTO membership (tenant_id, user_id, membership_status, membership_type) VALUES ($1, $2, $3, $4)", id, user.ID, status, membershipType)
+	err = s.AddMembershipInt(ctx, tx, id, user.ID, status, membershipType, role)
+	if err != nil {
+		return err
+	} else {
+		return nil
+	}
+}
+
+// AddMembership insert a new membership in the database
+func (s *MembershipStorage) AddMembershipInt(ctx context.Context, tx *sqlx.Tx, tenant_id uuid.UUID, user_id uuid.UUID, status string, membershipType string, role Roles) error {
+	_, err := tx.ExecContext(ctx, "INSERT INTO membership (tenant_id, user_id, membership_status, membership_type) VALUES ($1, $2, $3, $4)", tenant_id, user_id, status, membershipType)
 
 	if err != nil {
 		if isUniqueViolation(err, "membership_pkey") {
@@ -80,8 +91,8 @@ func (s *MembershipStorage) AddMembership(ctx context.Context, id uuid.UUID, use
 	valuesExprs := make([]string, len(role))
 	args := make([]interface{}, len(role)+2)
 
-	args[0] = user.ID
-	args[1] = id
+	args[0] = user_id
+	args[1] = tenant_id
 	var i int
 
 	for r := range role {
@@ -105,7 +116,7 @@ func (s *MembershipStorage) AddMembership(ctx context.Context, id uuid.UUID, use
 // GetMembership retrive a membership from the database
 func (s *MembershipStorage) GetMembership(ctx context.Context, id uuid.UUID, userID uuid.UUID) (*Membership, error) {
 	model := membershipModel{}
-	err := s.DB.GetContext(ctx, &model, "SELECT membership.*, ra.roles FROM membership LEFT JOIN (SELECT user_id, tenant_id, array_agg(role) AS roles FROM roles GROUP BY user_id, tenant_id) AS ra ON ra.user_id = membership.user_id AND ra.tenant_id = membership.tenant_id WHERE membership.tenant_id = $1 AND membership.user_id = $2", id, userID)
+	err := s.DB.GetContext(ctx, &model, "SELECT membership.*, ra.roles, users.email FROM membership LEFT JOIN users ON membership.user_id = users.id LEFT JOIN (SELECT user_id, tenant_id, array_agg(role) AS roles FROM roles GROUP BY user_id, tenant_id) AS ra ON ra.user_id = membership.user_id AND ra.tenant_id = membership.tenant_id WHERE membership.tenant_id = $1 AND membership.user_id = $2", id, userID)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -231,12 +242,6 @@ func (s *MembershipStorage) UpdateMembership(ctx context.Context, id uuid.UUID, 
 		return nil, errors.ErrRolesEmpty
 	}
 
-	// Safe guard to always have one owner
-	err = s.hasAMinimumOfOneOwner(ctx, tx, id)
-	if err != nil {
-		return nil, err
-	}
-
 	return u.toMembership(), nil
 }
 
@@ -257,7 +262,7 @@ func (s *MembershipStorage) GetMemberships(ctx context.Context, q *query.Query) 
 
 	selOpt := query.SelectOptions{
 		SelectExpr: "mem_role.*, " + pq.QuoteIdentifier(q.SortBy) + " AS sorted_by",
-		FromExpr:   "(SELECT mem.*, ra.roles FROM (SELECT membership.* FROM membership LEFT JOIN tenants ON membership.tenant_id = tenants.id WHERE tenants.archived = FALSE) AS mem LEFT JOIN (SELECT user_id, tenant_id, array_agg(role) AS roles FROM roles GROUP BY user_id, tenant_id) AS ra ON ra.user_id = mem.user_id AND ra.tenant_id = mem.tenant_id) AS mem_role",
+		FromExpr:   "(SELECT mem.*, ra.roles FROM (SELECT membership.*, users.email FROM membership LEFT JOIN users ON users.id = membership.user_id LEFT JOIN tenants ON membership.tenant_id = tenants.id WHERE tenants.archived = FALSE) AS mem LEFT JOIN (SELECT user_id, tenant_id, array_agg(role) AS roles FROM roles GROUP BY user_id, tenant_id) AS ra ON ra.user_id = mem.user_id AND ra.tenant_id = mem.tenant_id) AS mem_role",
 		IDColumn:   "id",
 		ColumnFlagsFunc: func(col string) int {
 			if flags, ok := membershipsQueryColumns[col]; ok {
@@ -352,26 +357,6 @@ func (s *MembershipStorage) DeleteMembership(ctx context.Context, id uuid.UUID, 
 	_, err = tx.ExecContext(ctx, "DELETE FROM roles WHERE user_id = $1 AND tenant_id = $2", userID, id)
 	if err != nil {
 		return err
-	}
-
-	// Safe guard to always have one owner
-	err = s.hasAMinimumOfOneOwner(ctx, tx, id)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (s *MembershipStorage) hasAMinimumOfOneOwner(ctx context.Context, tx *sqlx.Tx, id uuid.UUID) error {
-	rows, err := tx.QueryContext(ctx, "SELECT * FROM roles LEFT JOIN membership ON membership.tenant_id = roles.tenant_id AND membership.user_id = roles.user_id WHERE roles.tenant_id = $1 AND membership_status = $2 AND membership_type = $3 AND roles.role = $4", id, ActiveState, OwnerMembership, OwnerMembership)
-	if err != nil {
-		return err
-	}
-
-	defer rows.Close()
-	if !rows.Next() {
-		return errors.ErrMembershipNotFound
 	}
 
 	return nil

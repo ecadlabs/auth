@@ -64,6 +64,7 @@ func (u *userModel) toUser() *User {
 		ret.Memberships = append(ret.Memberships, &membershipItem{
 			MembershipType: result[1],
 			TenantID:       uuid.FromStringOrNil(result[0]),
+			TenantType:     result[2],
 		})
 	}
 
@@ -78,7 +79,7 @@ type Storage struct {
 func (s *Storage) getUser(ctx context.Context, col string, val interface{}) (*User, error) {
 	var u userModel
 
-	q := "SELECT users.*, ra.roles, mem.memberships FROM users LEFT JOIN (SELECT user_id, array_agg(tenant_id || ',' || membership_type) AS memberships FROM membership LEFT JOIN tenants on tenants.id = tenant_id WHERE tenants.archived = FALSE AND membership.membership_status = 'active' GROUP BY user_id) AS mem ON mem.user_id = users.id LEFT JOIN (SELECT user_id, array_agg(role) AS roles FROM roles GROUP BY user_id) AS ra ON ra.user_id = users.id WHERE users." + pq.QuoteIdentifier(col) + " = $1"
+	q := "SELECT users.*, ra.roles, mem.memberships FROM users LEFT JOIN (SELECT user_id, array_agg(tenant_id || ',' || membership_type || ',' || tenants.tenant_type) AS memberships FROM membership LEFT JOIN tenants on tenants.id = tenant_id WHERE tenants.archived = FALSE AND membership.membership_status = 'active' GROUP BY user_id) AS mem ON mem.user_id = users.id LEFT JOIN (SELECT user_id, array_agg(role) AS roles FROM roles GROUP BY user_id) AS ra ON ra.user_id = users.id WHERE users." + pq.QuoteIdentifier(col) + " = $1"
 	if err := s.DB.GetContext(ctx, &u, q, val); err != nil {
 		if err == sql.ErrNoRows {
 			err = errors.ErrUserNotFound
@@ -122,7 +123,7 @@ func (s *Storage) GetUsers(ctx context.Context, q *query.Query) (users []*User, 
 
 	selOpt := query.SelectOptions{
 		SelectExpr: "users.*, ra.roles, mem.memberships, users." + pq.QuoteIdentifier(q.SortBy) + " AS sorted_by",
-		FromExpr:   "users LEFT JOIN (SELECT user_id, array_agg(tenant_id || ',' || membership_type) AS memberships FROM membership LEFT JOIN tenants on tenants.id = tenant_id WHERE tenants.archived = FALSE AND membership.membership_status = 'active' GROUP BY user_id) AS mem ON mem.user_id = users.id LEFT JOIN (SELECT user_id, array_agg(role) AS roles FROM roles GROUP BY user_id) AS ra ON ra.user_id = users.id",
+		FromExpr:   "users LEFT JOIN (SELECT user_id, array_agg(tenant_id || ',' || membership_type || ',' || tenants.tenant_type) AS memberships FROM membership LEFT JOIN tenants on tenants.id = tenant_id WHERE tenants.archived = FALSE AND membership.membership_status = 'active' GROUP BY user_id) AS mem ON mem.user_id = users.id LEFT JOIN (SELECT user_id, array_agg(role) AS roles FROM roles GROUP BY user_id) AS ra ON ra.user_id = users.id",
 		IDColumn:   "id",
 		ColumnFlagsFunc: func(col string) int {
 			if flags, ok := userQueryColumns[col]; ok {
@@ -192,7 +193,7 @@ func isUniqueViolation(err error, constraint string) bool {
 // NewUserInt insert a new user in the database along with his initial tenant
 func NewUserInt(ctx context.Context, tx *sqlx.Tx, user *CreateUser) (res *User, err error) {
 	model := userModel{
-		ID:            uuid.NewV4(),
+		ID:            user.ID,
 		Email:         user.Email,
 		PasswordHash:  user.PasswordHash,
 		Name:          user.Name,
@@ -279,6 +280,7 @@ func (s *Storage) NewUser(ctx context.Context, user *CreateUser) (res *User, err
 		err = tx.Commit()
 	}()
 
+	user.ID = uuid.NewV4()
 	res, err = NewUserInt(ctx, tx, user)
 	return
 }

@@ -41,12 +41,49 @@ type Config struct {
 	Notifier               notification.Notifier `yaml:"-"` // Testing only
 }
 
+type BootstrapTenant struct {
+	Name string `yaml:"name"`
+	ID   string `yaml:"uuid"`
+}
+
+type BootstrapUser struct {
+	Email string `yaml:"email"`
+	Hash  string `yaml:"hash"`
+	ID    string `yaml:"uuid"`
+	Role  string `yaml:"role"`
+}
+
+type BootstrapMember struct {
+	TenantID string `yaml:"tenant_id"`
+	UserID   string `yaml:"user_id"`
+	Role     string `yaml:"role"`
+}
+
+type BootstrapConfig struct {
+	Tenants    []BootstrapTenant `yaml:"tenants"`
+	Users      []BootstrapUser   `yaml:"users"`
+	Membership []BootstrapMember `yaml:"memberships"`
+}
+
 func (c *Config) GetBaseURLFunc() func() string {
 	if c.BaseURLFunc != nil {
 		return c.BaseURLFunc
 	}
 
 	return func() string { return c.BaseURL }
+}
+
+func (c *BootstrapConfig) Load(name string) error {
+	buf, err := ioutil.ReadFile(name)
+	if err != nil {
+		return err
+	}
+
+	if err := yaml.Unmarshal(buf, c); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (c *Config) Load(name string) error {

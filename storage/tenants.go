@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"time"
 
+	errs "errors"
+
 	"github.com/ecadlabs/auth/errors"
 	"github.com/ecadlabs/auth/query"
 	"github.com/jmoiron/sqlx"
@@ -43,13 +45,13 @@ type TenantStorage struct {
 	DB *sqlx.DB
 }
 
-func (s *TenantStorage) CreateTenantInt(ctx context.Context, tx *sqlx.Tx, name string) (*TenantModel, error) {
-
-	newTenant := TenantModel{
-		Name: name,
+func (s *TenantStorage) CreateTenantInt(ctx context.Context, tx *sqlx.Tx, tenant *TenantModel) (*TenantModel, error) {
+	if tenant.ID == uuid.Nil {
+		return nil, errs.New("Tenant must have a uuid defined")
 	}
 
-	rows, err := sqlx.NamedQueryContext(ctx, tx, "INSERT INTO tenants (name) VALUES (:name) RETURNING id, added, modified, protected, tenant_type", &newTenant)
+	newTenant := TenantModel{}
+	rows, err := sqlx.NamedQueryContext(ctx, tx, "INSERT INTO tenants (id, name) VALUES (:id, :name) RETURNING id, added, modified, protected, tenant_type", &tenant)
 
 	if err != nil {
 		return nil, err
@@ -66,6 +68,11 @@ func (s *TenantStorage) CreateTenantInt(ctx context.Context, tx *sqlx.Tx, name s
 }
 
 func (s *TenantStorage) CreateTenant(ctx context.Context, name string) (*TenantModel, error) {
+	tenant := TenantModel{
+		ID:   uuid.NewV4(),
+		Name: name,
+	}
+
 	tx, err := s.DB.Beginx()
 	if err != nil {
 		return nil, err
@@ -80,7 +87,7 @@ func (s *TenantStorage) CreateTenant(ctx context.Context, name string) (*TenantM
 		err = tx.Commit()
 	}()
 
-	newTenant, err := s.CreateTenantInt(ctx, tx, name)
+	newTenant, err := s.CreateTenantInt(ctx, tx, &tenant)
 	return newTenant, err
 }
 
@@ -100,7 +107,12 @@ func (s *TenantStorage) CreateTenantWithOwner(ctx context.Context, name string, 
 		err = tx.Commit()
 	}()
 
-	newTenant, err := s.CreateTenantInt(ctx, tx, name)
+	tenant := &TenantModel{
+		ID:   uuid.NewV4(),
+		Name: name,
+	}
+
+	newTenant, err := s.CreateTenantInt(ctx, tx, tenant)
 
 	_, err = tx.ExecContext(ctx, "INSERT INTO membership (tenant_id, user_id, membership_status, membership_type) VALUES ($1, $2, $3, $4)", newTenant.ID, ownerID, ActiveState, OwnerMembership)
 

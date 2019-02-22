@@ -485,9 +485,17 @@ func (u *Users) DeleteUser(w http.ResponseWriter, r *http.Request) {
 		u.AuxLogger.WithFields(logFields(EvDelete, member.ID, uid, r)).Printf("User %v deleted account %v from tenant %v", self.ID, uid, member.TenantID)
 	}
 
-	// Archive any tenant made orphan by this deletion
-	if len(tenants) > 0 {
-		for _, tenant := range tenants {
+	individualTenants := []*storage.TenantModel{}
+
+	for _, tenant := range tenants {
+		if tenant.TenantType == storage.TenantTypeIndividual {
+			individualTenants = append(individualTenants, tenant)
+		}
+	}
+
+	// Archive any individual tenant made orphan by this deletion
+	if len(individualTenants) > 0 {
+		for _, tenant := range individualTenants {
 			deleteErr := u.TenantStorage.DeleteTenant(ctx, tenant.ID)
 			// Log
 			if deleteErr == nil && u.AuxLogger != nil {

@@ -432,8 +432,19 @@ func BeforeTest(t *testing.T) (srv *httptest.Server, userList []*storage.User, t
 		return
 	}
 
+	bootstrapConf := service.BootstrapConfig{
+		Users: []service.BootstrapUser{
+			service.BootstrapUser{
+				Email: "admin@admin",
+				Hash:  "$2y$10$FnvgJTFgKxLVbJ/Xo0dCb.10N3Rbdr5Z49a0G4MiM8XAC4Wz2DkSe",
+				Role:  "admin",
+				ID:    "a6573daa-4d0a-49a4-a281-93d0d3dafb06",
+			},
+		},
+	}
+
 	// Bootstrap
-	_, err = svc.Bootstrap()
+	_, err = svc.Bootstrap(&bootstrapConf)
 	if err != nil {
 		t.Error(err)
 		return
