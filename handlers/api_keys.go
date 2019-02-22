@@ -209,7 +209,7 @@ func (u *Users) GetAPIToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var writePerm bool
+	writePerm := true
 	if v := r.FormValue("permissions"); v != "" {
 		writePerm, _ = strconv.ParseBool(v)
 	}

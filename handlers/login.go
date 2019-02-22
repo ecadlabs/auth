@@ -140,7 +140,7 @@ func (u *Users) getMembershipLogin(ctx context.Context, tenantID, userID uuid.UU
 
 // Login is a login endpoint handler
 func (u *Users) Login(w http.ResponseWriter, r *http.Request) {
-	var writePerm bool
+	writePerm := true
 	if v := r.FormValue("permissions"); v != "" {
 		writePerm, _ = strconv.ParseBool(v)
 	}
