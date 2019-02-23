@@ -288,7 +288,7 @@ func (u *Users) NewUser(w http.ResponseWriter, r *http.Request) {
 	var user storage.CreateUser
 	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
 		log.Error(err)
-		utils.JSONError(w, err.Error(), errors.CodeBadRequest)
+		utils.JSONError(w, "Invalid user data", errors.CodeBadRequest)
 		return
 	}
 
