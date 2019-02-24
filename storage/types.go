@@ -96,27 +96,27 @@ type MembershipItem struct {
 
 // CreateUser struct representing data necessary to create a new user
 type CreateUser struct {
-	ID               uuid.UUID `json:"-" schema:"id"`
-	Email            string    `json:"email,omitempty" schema:"email"`
-	Name             string    `json:"name,omitempty" schema:"name"`
+	ID               uuid.UUID `json:"-"`
+	Email            string    `json:"email,omitempty"`
+	Name             string    `json:"name,omitempty"`
 	PasswordHash     []byte    `json:"-" schema:"-"`
-	EmailVerified    bool      `json:"email_verified" schema:"email_verified"`
+	EmailVerified    bool      `json:"email_verified"`
 	Roles            Roles     `json:"roles,omitempty"`
-	Type             string    `json:"account_type" schema:"account_type"`
+	Type             string    `json:"account_type"`
 	AddressWhiteList []net.IP  `json:"address_whitelist"`
 }
 
 // User struct representing a user
 type User struct {
-	ID               uuid.UUID         `json:"id" schema:"id"`
-	Type             string            `json:"account_type" schema:"account_type"`
-	Email            string            `json:"email,omitempty" schema:"email"`
+	ID               uuid.UUID         `json:"id"`
+	Type             string            `json:"account_type"`
+	Email            string            `json:"email,omitempty"`
 	EmailGen         int               `json:"-"`
-	Name             string            `json:"name,omitempty" schema:"name"`
+	Name             string            `json:"name,omitempty"`
 	PasswordHash     []byte            `json:"-" schema:"-"`
-	Added            time.Time         `json:"added" schema:"added"`
-	Modified         time.Time         `json:"modified" schema:"modified"`
-	EmailVerified    bool              `json:"email_verified" schema:"email_verified"`
+	Added            time.Time         `json:"added"`
+	Modified         time.Time         `json:"modified"`
+	EmailVerified    bool              `json:"email_verified"`
 	Membership       []*MembershipItem `json:"membership,omitempty"`
 	PasswordGen      int               `json:"-"`
 	LoginAddr        string            `json:"login_addr,omitempty"`
