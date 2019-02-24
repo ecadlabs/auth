@@ -90,8 +90,8 @@ func (s *StringSet) UnmarshalJSON(data []byte) error {
 type MembershipItem struct {
 	Type       string    `json:"type"`
 	TenantID   uuid.UUID `json:"tenant_id"`
-	Roles      Roles     `json:"roles,omitempty"`
 	TenantType string    `json:"tenant_type"`
+	Roles      Roles     `json:"roles,omitempty"`
 }
 
 // CreateUser struct representing data necessary to create a new user

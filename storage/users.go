@@ -100,15 +100,16 @@ const getUserQuery = `
 			  'tenant_id',
 			  membership.tenant_id,
 			  'type',
-			  membership.tenant_type,
-			  'tenant_type',
 			  membership.membership_type,
+			  'tenant_type',
+			  tenants.tenant_type,
 			  'roles',
 			  r.roles
 			)
 		  ) AS membership
 		FROM
 		  membership
+		  INNER JOIN tenants ON tenants.id = membership.tenant_id
 		  LEFT JOIN (
 			SELECT
 			  membership_id,
@@ -191,18 +192,19 @@ func (s *Storage) GetServiceAccountByAddress(ctx context.Context, address string
 	      membership.user_id,
 	      json_agg(
 	        json_build_object(
-	          'tenant_id',
-	          membership.tenant_id,
-	          'type',
-	          membership.membership_type,
-			  'tenant_type',
+			  'tenant_id',
+			  membership.tenant_id,
+			  'type',
 			  membership.membership_type,
-	          'roles',
-	          r.roles
+			  'tenant_type',
+			  tenants.tenant_type,
+			  'roles',
+			  r.roles
 	        )
 	      ) AS membership
 	    FROM
 	      membership
+		  INNER JOIN tenants ON tenants.id = membership.tenant_id
 	      LEFT JOIN (
 	        SELECT
 	          membership_id,
@@ -265,15 +267,16 @@ func (s *Storage) GetUsers(ctx context.Context, typ string, q *query.Query) (use
 				    'tenant_id',
 				    membership.tenant_id,
 				    'type',
-				    membership.tenant_type,
+					membership.membership_type,
 				    'tenant_type',
-				    membership.membership_type,
+					tenants.tenant_type,
 				    'roles',
 				    r.roles
 				  )
 				) AS membership
 			  FROM
 				membership
+				INNER JOIN tenants ON tenants.id = membership.tenant_id
 				LEFT JOIN (
 				  SELECT
 					membership_id,
