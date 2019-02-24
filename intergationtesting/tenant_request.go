@@ -100,14 +100,12 @@ func deleteMembership(srv *httptest.Server, token string, uid, userID uuid.UUID)
 }
 
 func inviteTenant(srv *httptest.Server, token, tenantID string, email string) (int, error) {
-	roles := make(storage.Roles, 1)
-	roles["regular"] = "true"
 	data := struct {
 		Email string        `json:"email"`
 		Roles storage.Roles `json:"roles"`
 	}{
 		Email: email,
-		Roles: roles,
+		Roles: storage.Roles{"regular": "true"},
 	}
 
 	buf, err := json.Marshal(data)

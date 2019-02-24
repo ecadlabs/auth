@@ -336,7 +336,7 @@ var testRBAC = rbac.StaticRBAC{
 		"admin": &rbac.StaticRole{
 			RoleName:    "admin",
 			Description: "A super user that has all access",
-			Permissions: map[string]struct{}{
+			RolePermissions: map[string]struct{}{
 				"com.ecadlabs.users.delegate:admin":   struct{}{},
 				"com.ecadlabs.users.delegate:noc":     struct{}{},
 				"com.ecadlabs.users.delegate:owner":   struct{}{},
@@ -348,7 +348,7 @@ var testRBAC = rbac.StaticRBAC{
 		"owner": &rbac.StaticRole{
 			RoleName:    "owner",
 			Description: "Tenant owner",
-			Permissions: map[string]struct{}{
+			RolePermissions: map[string]struct{}{
 				"com.ecadlabs.users.delegate:owner":   struct{}{},
 				"com.ecadlabs.users.delegate:regular": struct{}{},
 				"com.ecadlabs.tenants.read_owned":     struct{}{},
@@ -360,7 +360,7 @@ var testRBAC = rbac.StaticRBAC{
 		"regular": &rbac.StaticRole{
 			RoleName:    "regular",
 			Description: "Regular member",
-			Permissions: map[string]struct{}{
+			RolePermissions: map[string]struct{}{
 				"com.ecadlabs.users.read_self":  struct{}{},
 				"com.ecadlabs.users.write_self": struct{}{},
 			},
@@ -383,31 +383,31 @@ var testRBAC = rbac.StaticRBAC{
 	},
 }
 
-func BeforeTest(t *testing.T) (srv *httptest.Server, userList []*storage.User, token string, tokenCh chan string, results *TenantsAndUsers) {
+func beforeTest() (srv *httptest.Server, userList []*storage.User, token string, tokenCh chan string, results *TenantsAndUsers, err error) {
 	// Clear everything
 	db, err := sqlx.Open("postgres", *dbURL)
 	if err != nil {
-		t.Error(err)
 		return
 	}
 	defer db.Close()
 
-	_, err = db.Exec(`DROP TABLE IF EXISTS schema_migrations, users, membership, tenants, roles, log, bootstrap`)
-	_, err = db.Exec(`DROP TYPE IF EXISTS membership_type, membership_status, tenant_type, log_id_type`)
+	_, err = db.Exec(`DROP TABLE IF EXISTS bootstrap, log, membership, roles, schema_migrations, service_account_ip, service_account_keys, tenants, users`)
 	if err != nil {
-		t.Error(err)
+		return
+	}
+
+	_, err = db.Exec(`DROP TYPE IF EXISTS account_type, log_id_type, membership_status, membership_type, tenant_type`)
+	if err != nil {
 		return
 	}
 
 	// Migrate
 	m, err := migrations.New(*dbURL)
 	if err != nil {
-		t.Error(err)
 		return
 	}
 
-	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
-		t.Error(err)
+	if err = m.Up(); err != nil && err != migrate.ErrNoChange {
 		return
 	}
 
@@ -428,7 +428,6 @@ func BeforeTest(t *testing.T) (srv *httptest.Server, userList []*storage.User, t
 
 	svc, err := service.New(&config, &testRBAC, false)
 	if err != nil {
-		t.Error(err)
 		return
 	}
 
@@ -446,7 +445,6 @@ func BeforeTest(t *testing.T) (srv *httptest.Server, userList []*storage.User, t
 	// Bootstrap
 	_, err = svc.Bootstrap(&bootstrapConf)
 	if err != nil {
-		t.Error(err)
 		return
 	}
 
@@ -455,12 +453,10 @@ func BeforeTest(t *testing.T) (srv *httptest.Server, userList []*storage.User, t
 	// Login as superuser
 	code, token, _, err := doLogin(srv, superUserEmail, testPassword, nil)
 	if err != nil {
-		t.Error(err)
 		return
 	}
 
 	if code != http.StatusOK {
-		t.Error(code)
 		return
 	}
 
@@ -468,21 +464,19 @@ func BeforeTest(t *testing.T) (srv *httptest.Server, userList []*storage.User, t
 	for i := 0; i < usersNum; i++ {
 		u := genTestUser(i)
 
-		code, _, err := createUser(srv, u, token, tokenCh)
+		var code int
+		code, _, err = createUser(srv, u, token, tokenCh)
 		if err != nil {
-			t.Error(err)
 			return
 		}
 
 		if code/100 != 2 {
-			t.Error(code)
 			return
 		}
 	}
 
 	results, err = fetchTenantAndUsers(srv, false)
 	if err != nil {
-		t.Error(err)
 		return
 	}
 
@@ -490,7 +484,11 @@ func BeforeTest(t *testing.T) (srv *httptest.Server, userList []*storage.User, t
 }
 
 func TestService(t *testing.T) {
-	srv, usersList, _, _, _ := BeforeTest(t)
+	srv, usersList, _, _, _, err := beforeTest()
+	if err != nil {
+		t.Error(err)
+		return
+	}
 
 	// Run all other tests in parallel
 	t.Run("TestRegularUser", func(t *testing.T) {

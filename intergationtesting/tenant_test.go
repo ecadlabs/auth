@@ -72,7 +72,12 @@ func givenUserInviteToTenant(srv *httptest.Server, email string, tenantID uuid.U
 }
 
 func TestInviteToTenant(t *testing.T) {
-	srv, _, token, tokenCh, results := BeforeTest(t)
+	srv, _, token, tokenCh, results, err := beforeTest()
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
 	firstTenant := results.GetTenantbyName(genTestEmail(3))
 
 	code, err := inviteTenant(srv, token, firstTenant.ID.String(), genTestEmail(0))
@@ -102,7 +107,12 @@ func TestInviteToTenant(t *testing.T) {
 }
 
 func TestCreateTenant(t *testing.T) {
-	srv, _, token, _, _ := BeforeTest(t)
+	srv, _, token, _, _, err := beforeTest()
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
 	code, token, _, err := doLogin(srv, superUserEmail, testPassword, nil)
 	if err != nil {
 		t.Error(err)
@@ -124,7 +134,12 @@ func TestCreateTenant(t *testing.T) {
 }
 
 func TestNewUserShouldNotBeAbleToInvite(t *testing.T) {
-	srv, _, token, tokenCh, _ := BeforeTest(t)
+	srv, _, token, tokenCh, _, err := beforeTest()
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
 	firstTenant, err := givenTenantExists(srv, "test")
 
 	if err != nil {
@@ -159,7 +174,12 @@ func TestNewUserShouldNotBeAbleToInvite(t *testing.T) {
 }
 
 func TestAdmincanPatchAnyMembership(t *testing.T) {
-	srv, _, token, tokenCh, results := BeforeTest(t)
+	srv, _, token, tokenCh, results, err := beforeTest()
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
 	firstTenant, err := givenTenantExists(srv, "test")
 
 	if err != nil {
@@ -206,7 +226,12 @@ func TestAdmincanPatchAnyMembership(t *testing.T) {
 }
 
 func TestOwnerShouldBeAbleToInviteInHisOwnTenant(t *testing.T) {
-	srv, _, token, tokenCh, results := BeforeTest(t)
+	srv, _, token, tokenCh, results, err := beforeTest()
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
 	firstTenant := results.GetTenantbyName(genTestEmail(0))
 	code, token, _, err := doLogin(srv, genTestEmail(0), testPassword, &firstTenant.ID)
 	if err != nil {
@@ -246,7 +271,12 @@ func TestOwnerShouldBeAbleToInviteInHisOwnTenant(t *testing.T) {
 }
 
 func TestOwnerShouldNotBeAbleToInviteInOtherTenant(t *testing.T) {
-	srv, _, _, _, results := BeforeTest(t)
+	srv, _, _, _, results, err := beforeTest()
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
 	rootTenant := results.GetTenantbyName("admin@admin")
 	tenantWithOwner := results.GetTenantbyName(genTestEmail(0))
 
@@ -276,7 +306,12 @@ func TestOwnerShouldNotBeAbleToInviteInOtherTenant(t *testing.T) {
 }
 
 func TestOwnerCantDelegateRoleInOtherTenant(t *testing.T) {
-	srv, _, _, _, results := BeforeTest(t)
+	srv, _, _, _, results, err := beforeTest()
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
 	rootTenant := results.GetTenantbyName("admin@admin")
 	tenantWithOwner := results.GetTenantbyName(genTestEmail(0))
 	if tenantWithOwner == nil {
@@ -304,7 +339,12 @@ func TestOwnerCantDelegateRoleInOtherTenant(t *testing.T) {
 }
 
 func TestRegularUserCantdeleteMembership(t *testing.T) {
-	srv, _, _, tokenCh, results := BeforeTest(t)
+	srv, _, _, tokenCh, results, err := beforeTest()
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
 	tenantWithOwner := results.GetTenantbyName(genTestEmail(0))
 	if tenantWithOwner == nil {
 		t.Error("Tenant do not exists")
@@ -339,7 +379,12 @@ func TestRegularUserCantdeleteMembership(t *testing.T) {
 }
 
 func TestOwnerCandeleteMembership(t *testing.T) {
-	srv, _, _, tokenCh, results := BeforeTest(t)
+	srv, _, _, tokenCh, results, err := beforeTest()
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
 	tenantWithOwner := results.GetTenantbyName(genTestEmail(0))
 	if tenantWithOwner == nil {
 		t.Error("Tenant do not exists")
@@ -375,7 +420,12 @@ func TestOwnerCandeleteMembership(t *testing.T) {
 }
 
 func TestOwnerCanSeeAllMembership(t *testing.T) {
-	srv, _, _, tokenCh, results := BeforeTest(t)
+	srv, _, _, tokenCh, results, err := beforeTest()
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
 	tenantWithOwner := results.GetTenantbyName(genTestEmail(0))
 	if tenantWithOwner == nil {
 		t.Error("Tenant do not exists")
@@ -403,7 +453,12 @@ func TestOwnerCanSeeAllMembership(t *testing.T) {
 }
 
 func TestRegularUserCantSeeAllMembership(t *testing.T) {
-	srv, _, _, tokenCh, results := BeforeTest(t)
+	srv, _, _, tokenCh, results, err := beforeTest()
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
 	tenantWithOwner := results.GetTenantbyName(genTestEmail(0))
 	if tenantWithOwner == nil {
 		t.Error("Tenant do not exists")
@@ -437,7 +492,12 @@ func TestRegularUserCantSeeAllMembership(t *testing.T) {
 }
 
 func TestUserShouldBeAbleToSeeAllHisMembership(t *testing.T) {
-	srv, _, _, tokenCh, results := BeforeTest(t)
+	srv, _, _, tokenCh, results, err := beforeTest()
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
 	tenantWithOwner := results.GetTenantbyName(genTestEmail(1))
 	if tenantWithOwner == nil {
 		t.Error("Tenant do not exists")
@@ -469,7 +529,12 @@ func TestUserShouldBeAbleToSeeAllHisMembership(t *testing.T) {
 }
 
 func TestRegularUserShouldNotBeAbleToSeeOtherMembership(t *testing.T) {
-	srv, _, _, _, results := BeforeTest(t)
+	srv, _, _, _, results, err := beforeTest()
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
 	tenantWithOwner := results.GetTenantbyName(genTestEmail(0))
 	if tenantWithOwner == nil {
 		t.Error("Tenant do not exists")
@@ -496,7 +561,12 @@ func TestRegularUserShouldNotBeAbleToSeeOtherMembership(t *testing.T) {
 }
 
 func TestInvitedUserShouldNotBeAbleToLogin(t *testing.T) {
-	srv, _, token, _, results := BeforeTest(t)
+	srv, _, token, _, results, err := beforeTest()
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
 	tenantWithOwner := results.GetTenantbyName(genTestEmail(0))
 	if tenantWithOwner == nil {
 		t.Error("Tenant do not exists")
@@ -528,7 +598,11 @@ func TestInvitedUserShouldNotBeAbleToLogin(t *testing.T) {
 }
 
 func TestDeleteUserShouldArchiveOrphanTenant(t *testing.T) {
-	srv, _, token, _, results := BeforeTest(t)
+	srv, _, token, _, results, err := beforeTest()
+	if err != nil {
+		t.Error(err)
+		return
+	}
 
 	user := results.GetUser(genTestEmail(5))
 
