@@ -32,7 +32,7 @@ type Memberships struct {
 }
 
 func (m *Memberships) membershipsURL(tenantID uuid.UUID) string {
-	return fmt.Sprintf("%s%s/members", m.BaseURL()+m.TenantsPath, tenantID)
+	return fmt.Sprintf("%s%s/members/", m.BaseURL()+m.TenantsPath, tenantID)
 }
 
 func (m *Memberships) usersURL() string {
@@ -374,7 +374,7 @@ func (m *Memberships) FindUserMemberships(w http.ResponseWriter, r *http.Request
 	}
 
 	if nextQuery != nil {
-		nextURL, err := url.Parse(fmt.Sprintf("%s/%s/memberships", m.usersURL(), userID))
+		nextURL, err := url.Parse(fmt.Sprintf("%s/%s/memberships/", m.usersURL(), userID))
 		if err != nil {
 			log.Error(err)
 			utils.JSONErrorResponse(w, err)

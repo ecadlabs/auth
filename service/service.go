@@ -22,7 +22,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/jmoiron/sqlx"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -87,7 +87,7 @@ func New(c *Config, ac rbac.RBAC, enableLog bool) (*Service, error) {
 func (s *Service) APIHandler() http.Handler {
 	baseURLFunc := s.config.GetBaseURLFunc()
 
-	dbLogger := logrus.New()
+	dbLogger := log.New()
 	if !s.enableLog {
 		dbLogger.Out = ioutil.Discard
 	}
@@ -226,7 +226,7 @@ func (s *Service) APIHandler() http.Handler {
 	umux.Methods("GET").Path("/{id}").HandlerFunc(usersHandler.GetUser)
 	umux.Methods("PATCH").Path("/{id}").HandlerFunc(usersHandler.PatchUser)
 	umux.Methods("DELETE").Path("/{id}").HandlerFunc(usersHandler.DeleteUser)
-	umux.Methods("GET").Path("/{userId}/memberships").HandlerFunc(membershipsHandler.FindUserMemberships)
+	umux.Methods("GET").Path("/{userId}/memberships/").HandlerFunc(membershipsHandler.FindUserMemberships)
 
 	umux.Methods("POST").Path("/{userId}/api_keys/").HandlerFunc(usersHandler.NewAPIKey)
 	umux.Methods("GET").Path("/{userId}/api_keys/{keyId}").HandlerFunc(usersHandler.GetAPIKey)
@@ -287,6 +287,17 @@ func (s *Service) APIHandler() http.Handler {
 
 	m.NotFoundHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		utils.JSONErrorResponse(w, errors.ErrResourceNotFound)
+		if !s.enableLog {
+			return
+		}
+
+		fields := log.Fields{
+			"status":   errors.ErrResourceNotFound,
+			"hostname": r.Host,
+			"method":   r.Method,
+			"path":     r.URL.Path,
+		}
+		log.WithFields(fields).Println(r.Method + " " + r.URL.Path)
 	})
 
 	return m

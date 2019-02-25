@@ -31,7 +31,8 @@ const (
 )
 
 var (
-	dbURL = flag.String("db", "postgres://auth:auth@localhost/userstest?connect_timeout=10&sslmode=disable", "PostgreSQL server URL")
+	dbURL     = flag.String("db", "postgres://auth:auth@localhost/userstest?connect_timeout=10&sslmode=disable", "PostgreSQL server URL")
+	enableLog = flag.Bool("log", false, "Enable request logging")
 )
 
 func init() {
@@ -426,7 +427,7 @@ func beforeTest() (srv *httptest.Server, userList []*storage.User, token string,
 		Notifier:               testNotifier(tokenCh),
 	}
 
-	svc, err := service.New(&config, &testRBAC, false)
+	svc, err := service.New(&config, &testRBAC, *enableLog)
 	if err != nil {
 		return
 	}
