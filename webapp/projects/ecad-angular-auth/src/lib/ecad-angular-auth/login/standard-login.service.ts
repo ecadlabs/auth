@@ -149,6 +149,15 @@ export class StandardLoginService implements ILoginService {
     );
   }
 
+  public hasOneOfRoles(allowedRoles: string[]) : Observable<boolean> {
+    return this.user.pipe(
+      map(user => {
+        const userRoles = user && user.roles && Array.isArray(user.roles) ? user.roles : [];
+        return userRoles.some(userRole => allowedRoles.includes(userRole));
+      })
+    );
+  }
+
   /*
   * Logout the user by removing his JWT from local storage
   */

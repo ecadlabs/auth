@@ -8,6 +8,7 @@ import { PasswordResetService } from './password-reset/password-reset.service';
 import { IpWhiteListedGuard } from './guards/ip-whitelisted.guard';
 import { LoggedinGuard } from './guards/loggedin.guard';
 import { PermissionsGuard } from './guards/permissions.guard';
+import { RoleGuard } from './guards/role.guard';
 import { JwtHelperService } from './jwt-helper.service';
 import { JwtInterceptor } from './jwt.interceptor';
 
@@ -34,7 +35,8 @@ export class EcadAngularAuthModule {
         JwtHelperService,
         IpWhiteListedGuard,
         LoggedinGuard,
-        PermissionsGuard
+        PermissionsGuard,
+        RoleGuard
       ]
     };
   }

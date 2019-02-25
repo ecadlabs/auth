@@ -12,4 +12,5 @@ export interface ILoginService<T = {}> {
     hasPermissions(permissions: string[]): Observable<boolean>;
     updateEmail(id: string, email: string): Observable<void>;
     validateEmailChange(token: string): Observable<void>;
+    hasOneOfRoles(allowedRoles: string[]): Observable<boolean>;
 }
