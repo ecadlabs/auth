@@ -129,12 +129,12 @@ func (s *Storage) GetTenant(ctx context.Context, tenantID, userID uuid.UUID, onl
 	return &model, nil
 }
 
-var tenantsQueryColumns = map[string]int{
-	"id":       query.ColQuery | query.ColSort,
-	"name":     query.ColQuery | query.ColSort,
-	"added":    query.ColQuery | query.ColSort,
-	"modified": query.ColQuery | query.ColSort,
-	"archived": query.ColQuery | query.ColSort,
+var tenantsQueryColumns = query.Columns{
+	"id":       {Name: "id", Flags: query.ColSort},
+	"name":     {Name: "name", Flags: query.ColSort},
+	"added":    {Name: "added", Flags: query.ColSort},
+	"modified": {Name: "modified", Flags: query.ColSort},
+	"archived": {Name: "archived", Flags: query.ColSort},
 }
 
 // GetTenantsSoleMember get a list of tenant where the user is the only member
@@ -196,12 +196,7 @@ func (s *Storage) GetTenants(ctx context.Context, userID uuid.UUID, onlySelf boo
 		SelectExpr: "scoped_tenants.*, scoped_tenants." + pq.QuoteIdentifier(q.SortBy) + " AS sorted_by",
 		FromExpr:   queryExtension,
 		IDColumn:   "id",
-		ColumnFlagsFunc: func(col string) int {
-			if flags, ok := tenantsQueryColumns[col]; ok {
-				return flags
-			}
-			return 0
-		},
+		ColumnFunc: tenantsQueryColumns.Func,
 	}
 
 	stmt, args, err := q.SelectStmt(&selOpt)
@@ -235,7 +230,10 @@ func (s *Storage) GetTenants(ctx context.Context, userID uuid.UUID, onlySelf boo
 
 	// Count
 	if q.TotalCount {
-		stmt, args := q.CountStmt(&selOpt)
+		if stmt, args, err = q.CountStmt(&selOpt); err != nil {
+			return
+		}
+
 		if err = s.DB.Get(&count, stmt, args...); err != nil {
 			return
 		}
@@ -245,9 +243,10 @@ func (s *Storage) GetTenants(ctx context.Context, userID uuid.UUID, onlySelf boo
 
 	if lastItem != nil {
 		// Update query
+		lastId := lastItem.ID.String()
 		ret := *q
-		ret.LastID = lastItem.ID.String()
-		ret.Last = lastItem.SortedBy
+		ret.LastID = &lastId
+		ret.Last = &lastItem.SortedBy
 		ret.TotalCount = false
 
 		next = &ret

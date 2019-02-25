@@ -6,8 +6,6 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
-
-	"github.com/lib/pq"
 )
 
 const (
@@ -31,8 +29,9 @@ const (
 )
 
 const (
-	ColQuery = 1 << iota
-	ColSort
+	ColSort = 1 << iota
+	ColNull
+	ColNumeric
 )
 
 type Expr struct {
@@ -41,13 +40,29 @@ type Expr struct {
 	Value string
 }
 
-type ColFlagsFunc func(string) int
+type ColumnFunc func(string) (column string, flags int)
+
+type PositionalArgFunc func(int) string
+
+type ColumnOptions struct {
+	Name  string
+	Flags int
+}
+
+type Columns map[string]ColumnOptions
+
+func (c Columns) Func(name string) (column string, flags int) {
+	if o, ok := c[name]; ok {
+		return o.Name, o.Flags
+	}
+	return "", 0
+}
 
 type Query struct {
 	SortBy     string
 	Order      string
-	Last       string
-	LastID     string
+	Last       *string
+	LastID     *string
 	Limit      int
 	TotalCount bool
 	Match      []Expr
@@ -73,14 +88,43 @@ var validOp = map[string]struct{}{
 	OpHas:    struct{}{},
 }
 
-func (e *Expr) Expr(val string) string {
-	col := pq.QuoteIdentifier(e.Col)
+func ColumnExpr(col string, fn ColumnFunc) (string, error) {
+	if fn == nil {
+		return col, nil
+	}
 
+	res, flags := fn(col)
+	if res == "" {
+		return "", fmt.Errorf("Unknown column `%s'", col)
+	}
+
+	// Emit COALESCE expression
+	if flags&ColNull != 0 {
+		var def string
+
+		if flags&ColNumeric != 0 {
+			def = "0"
+		} else {
+			def = "''"
+		}
+
+		return "COALESCE(" + res + ", " + def + ")", nil
+	}
+
+	return res, nil
+}
+
+func (e *Expr) expr(val string, fn ColumnFunc) (string, error) {
 	var neg bool
 	op := e.Op
 	if len(op) != 0 && op[0] == '!' {
 		op = op[1:]
 		neg = true
+	}
+
+	col, err := ColumnExpr(e.Col, fn)
+	if err != nil {
+		return "", err
 	}
 
 	var expr string
@@ -101,11 +145,11 @@ func (e *Expr) Expr(val string) string {
 	case OpLike:
 		expr = col + " LIKE " + val
 	case OpPrefix:
-		expr = col + " LIKE (" + val + " || '%')"
+		expr = col + " LIKE CONCAT(" + val + ", '%')"
 	case OpSuffix:
-		expr = col + " LIKE ('%' || " + val + ")"
+		expr = col + " LIKE CONCAT('%', " + val + ")"
 	case OpSubstr:
-		expr = col + " LIKE ('%' || " + val + " || '%')"
+		expr = col + " LIKE CONCAT('%', " + val + ", '%')"
 	case OpHas:
 		expr = "(" + col + " IS NOT NULL AND " + val + " = ANY(" + col + "))"
 	default:
@@ -113,25 +157,16 @@ func (e *Expr) Expr(val string) string {
 	}
 
 	if neg {
-		return "NOT " + expr
+		return "NOT " + expr, nil
 	}
 
-	return expr
+	return expr, nil
 }
 
-func FromValues(q url.Values, defaultValues map[string][]string) (*Query, error) {
+func FromValues(q url.Values) (*Query, error) {
 	var res Query
 
-	var values = defaultValues
-	if values == nil {
-		values = make(map[string][]string)
-	}
-
 	for k, val := range q {
-		values[k] = val
-	}
-
-	for k, val := range values {
 		if len(val) == 0 {
 			continue
 		}
@@ -163,9 +198,9 @@ func FromValues(q url.Values, defaultValues map[string][]string) (*Query, error)
 			case "sortBy":
 				res.SortBy = v
 			case "last":
-				res.Last = v
+				res.Last = &v
 			case "lastId":
-				res.LastID = v
+				res.LastID = &v
 			case "order":
 				if _, ok := validOrder[v]; !ok {
 					return nil, fmt.Errorf("Incorrect order: `%s'", v)
@@ -203,12 +238,12 @@ func (q *Query) Values() url.Values {
 		ret.Set("order", q.Order)
 	}
 
-	if q.Last != "" {
-		ret.Set("last", q.Last)
+	if q.Last != nil {
+		ret.Set("last", *q.Last)
 	}
 
-	if q.LastID != "" {
-		ret.Set("lastId", q.LastID)
+	if q.LastID != nil {
+		ret.Set("lastId", *q.LastID)
 	}
 
 	if q.Limit > 0 {
@@ -226,35 +261,53 @@ func (q *Query) Values() url.Values {
 	return ret
 }
 
-type argIndex int
-
-func (a *argIndex) Next() string {
-	(*a)++
-	return fmt.Sprintf("$%d", *a)
-}
-
 type SelectOptions struct {
-	SelectExpr      string
-	FromExpr        string
-	IDColumn        string
-	ColumnFlagsFunc ColFlagsFunc
+	SelectExpr        string
+	FromExpr          string
+	IDColumn          string
+	ColumnFunc        ColumnFunc
+	PositionalArgFunc PositionalArgFunc
 }
 
-func (q *Query) CountStmt(o *SelectOptions) (string, []interface{}) {
+func PostgresPositional(i int) string { return "$" + strconv.FormatInt(int64(i), 10) }
+func MySQLPositional(i int) string    { return "?" }
+
+func (s *SelectOptions) pos(i int) string {
+	if s.PositionalArgFunc != nil {
+		return s.PositionalArgFunc(i)
+	}
+
+	return PostgresPositional(i)
+}
+
+type argIndex struct {
+	i int
+	o *SelectOptions
+}
+
+func (a *argIndex) next() string {
+	a.i++
+	return a.o.pos(a.i)
+}
+
+func (q *Query) CountStmt(o *SelectOptions) (string, []interface{}, error) {
 	stmt := "SELECT COUNT(*) FROM " + o.FromExpr
 	arg := make([]interface{}, len(q.Match))
 
-	var (
-		idx  argIndex
-		cond string
-	)
+	idx := argIndex{o: o}
+	var cond string
 
 	for i, m := range q.Match {
 		if cond != "" {
 			cond += " AND "
 		}
 
-		cond += m.Expr(idx.Next())
+		ex, err := m.expr(idx.next(), o.ColumnFunc)
+		if err != nil {
+			return "", nil, err
+		}
+
+		cond += ex
 		arg[i] = m.Value
 	}
 
@@ -262,21 +315,33 @@ func (q *Query) CountStmt(o *SelectOptions) (string, []interface{}) {
 		stmt += " WHERE " + cond
 	}
 
-	return stmt, arg
+	return stmt, arg, nil
 }
 
 func (q *Query) SelectStmt(o *SelectOptions) (string, []interface{}, error) {
+	var (
+		sortBy  string // Input property name
+		sortCol string // Resulting column name
+	)
+
 	if q.SortBy == "" {
-		return "", nil, errors.New("Sorting column is not specified")
-	}
-
-	if o.ColumnFlagsFunc != nil {
-		if err := q.validateColumnsFunc(o.ColumnFlagsFunc); err != nil {
-			return "", nil, err
+		if o.IDColumn != "" {
+			sortBy = o.IDColumn
+		} else {
+			return "", nil, errors.New("Sorting column is not specified")
 		}
+	} else {
+		sortBy = q.SortBy
 	}
 
-	sortCol := pq.QuoteIdentifier(q.SortBy)
+	if o.ColumnFunc != nil {
+		var flags int
+		if sortCol, flags = o.ColumnFunc(sortBy); sortCol == "" || flags&ColSort == 0 {
+			return "", nil, fmt.Errorf("Can't sort by column `%s'", sortBy)
+		}
+	} else {
+		sortCol = sortBy
+	}
 
 	se := o.SelectExpr
 	if se == "" {
@@ -285,9 +350,8 @@ func (q *Query) SelectStmt(o *SelectOptions) (string, []interface{}, error) {
 
 	expr := "SELECT " + se + " FROM " + o.FromExpr
 
-	var i argIndex
+	i := argIndex{o: o}
 	arg := make([]interface{}, 0, len(q.Match)+1)
-	idCol := pq.QuoteIdentifier(o.IDColumn)
 
 	var cmp string
 	if q.Order == OrderDesc {
@@ -298,18 +362,19 @@ func (q *Query) SelectStmt(o *SelectOptions) (string, []interface{}, error) {
 
 	var cond string
 
-	if q.Last != "" {
-		if q.LastID != "" {
+	if q.Last != nil {
+		extendedExpr := q.LastID != nil && sortCol != o.IDColumn
+
+		if extendedExpr {
 			cond = "("
 		}
 
-		lastArg := i.Next()
-		cond += sortCol + " " + cmp + " " + lastArg
-		arg = append(arg, q.Last)
+		cond += sortCol + " " + cmp + " " + i.next()
+		arg = append(arg, *q.Last)
 
-		if q.LastID != "" {
-			cond += " OR " + sortCol + " = " + lastArg + " AND " + idCol + " " + cmp + " " + i.Next() + ")"
-			arg = append(arg, q.LastID)
+		if extendedExpr {
+			cond += " OR " + sortCol + " = " + i.next() + " AND " + o.IDColumn + " " + cmp + " " + i.next() + ")"
+			arg = append(arg, *q.Last, *q.LastID)
 		}
 	}
 
@@ -318,7 +383,12 @@ func (q *Query) SelectStmt(o *SelectOptions) (string, []interface{}, error) {
 			cond += " AND "
 		}
 
-		cond += m.Expr(i.Next())
+		ex, err := m.expr(i.next(), o.ColumnFunc)
+		if err != nil {
+			return "", nil, err
+		}
+
+		cond += ex
 		arg = append(arg, m.Value)
 	}
 
@@ -333,10 +403,13 @@ func (q *Query) SelectStmt(o *SelectOptions) (string, []interface{}, error) {
 		so = "ASC"
 	}
 
-	expr += " ORDER BY " + sortCol + " " + so + ", " + idCol + " " + so
+	expr += " ORDER BY " + sortCol + " " + so
+	if sortCol != o.IDColumn {
+		expr += ", " + o.IDColumn + " " + so
+	}
 
 	if q.Limit > 0 {
-		expr += " LIMIT " + i.Next()
+		expr += " LIMIT " + i.next()
 		arg = append(arg, q.Limit)
 	}
 
@@ -345,18 +418,4 @@ func (q *Query) SelectStmt(o *SelectOptions) (string, []interface{}, error) {
 
 func errCol(col string) error {
 	return fmt.Errorf("Invalid column name `%s'", col)
-}
-
-func (q *Query) validateColumnsFunc(f ColFlagsFunc) error {
-	if f(q.SortBy)&ColSort == 0 {
-		return errCol(q.SortBy)
-	}
-
-	for _, e := range q.Match {
-		if f(e.Col)&ColQuery == 0 {
-			return errCol(e.Col)
-		}
-	}
-
-	return nil
 }

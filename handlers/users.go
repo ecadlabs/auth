@@ -197,7 +197,7 @@ func (u *Users) GetUsers(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	member := r.Context().Value(MembershipContextKey{}).(*storage.Membership)
 
-	q, err := query.FromValues(r.Form, nil)
+	q, err := query.FromValues(r.Form)
 	if err != nil {
 		log.Error(err)
 		utils.JSONError(w, err.Error(), errors.CodeQuerySyntax)

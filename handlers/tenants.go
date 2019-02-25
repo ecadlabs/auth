@@ -138,15 +138,24 @@ func (t *Tenants) FindTenants(w http.ResponseWriter, r *http.Request) {
 		utils.JSONError(w, err.Error(), errors.CodeUnknown)
 	}
 
-	// Default archived value to false
-	defaults := make(map[string][]string)
-	defaults["archived[eq]"] = []string{"false"}
-
-	q, err := query.FromValues(r.Form, defaults)
+	q, err := query.FromValues(r.Form)
 	if err != nil {
 		log.Error(err)
 		utils.JSONError(w, err.Error(), errors.CodeQuerySyntax)
 		return
+	}
+
+	// Default archived value to false
+	var found bool
+	for _, e := range q.Match {
+		if e.Col == "archived" {
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		q.Match = append(q.Match, query.Expr{Col: "archived", Op: query.OpEq, Value: "false"})
 	}
 
 	if q.Limit <= 0 {

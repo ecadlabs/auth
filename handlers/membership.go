@@ -254,7 +254,7 @@ func (m *Memberships) FindTenantMemberships(w http.ResponseWriter, r *http.Reque
 	// Scope down the request to this particular tenant
 	r.Form.Set("tenant_id[eq]", tenantID.String())
 
-	q, err := query.FromValues(r.Form, nil)
+	q, err := query.FromValues(r.Form)
 	if err != nil {
 		log.Error(err)
 		utils.JSONError(w, err.Error(), errors.CodeQuerySyntax)
@@ -340,7 +340,7 @@ func (m *Memberships) FindUserMemberships(w http.ResponseWriter, r *http.Request
 	// Scope down the request to this particular user
 	r.Form.Set("user_id[eq]", userID.String())
 
-	q, err := query.FromValues(r.Form, nil)
+	q, err := query.FromValues(r.Form)
 	if err != nil {
 		log.Error(err)
 		utils.JSONError(w, err.Error(), errors.CodeQuerySyntax)

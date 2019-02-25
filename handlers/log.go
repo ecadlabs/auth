@@ -38,7 +38,7 @@ func (u *Users) GetLogs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	q, err := query.FromValues(r.Form, nil)
+	q, err := query.FromValues(r.Form)
 	if err != nil {
 		log.Error(err)
 		utils.JSONError(w, err.Error(), errors.CodeQuerySyntax)

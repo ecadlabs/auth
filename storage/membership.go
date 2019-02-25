@@ -260,14 +260,14 @@ func (s *Storage) UpdateMembership(ctx context.Context, id uuid.UUID, userID uui
 	return u.toMembership(), nil
 }
 
-var membershipsQueryColumns = map[string]int{
-	"user_id":           query.ColQuery | query.ColSort,
-	"tenant_id":         query.ColQuery | query.ColSort,
-	"added":             query.ColQuery | query.ColSort,
-	"modified":          query.ColQuery | query.ColSort,
-	"membership_type":   query.ColQuery | query.ColSort,
-	"membership_status": query.ColQuery | query.ColSort,
-	"roles":             query.ColQuery,
+var membershipsQueryColumns = query.Columns{
+	"user_id":           {Name: "membership.user_id", Flags: query.ColSort},
+	"tenant_id":         {Name: "membership.tenant_id", Flags: query.ColSort},
+	"added":             {Name: "membership.added", Flags: query.ColSort},
+	"modified":          {Name: "membership.modified", Flags: query.ColSort},
+	"membership_type":   {Name: "membership.membership_type", Flags: query.ColSort},
+	"membership_status": {Name: "membership.membership_status", Flags: query.ColSort},
+	"roles":             {Name: "r.roles"},
 }
 
 // GetMemberships get memberships from the database as a paged result
@@ -292,13 +292,8 @@ func (s *Storage) GetMemberships(ctx context.Context, q *query.Query) (membershi
 		  	GROUP BY
 		    	membership_id
 				) AS r ON r.membership_id = membership.id`,
-		IDColumn: "id",
-		ColumnFlagsFunc: func(col string) int {
-			if flags, ok := membershipsQueryColumns[col]; ok {
-				return flags
-			}
-			return 0
-		},
+		IDColumn:   "membership.id",
+		ColumnFunc: membershipsQueryColumns.Func,
 	}
 
 	stmt, args, err := q.SelectStmt(&selOpt)
@@ -332,7 +327,10 @@ func (s *Storage) GetMemberships(ctx context.Context, q *query.Query) (membershi
 
 	// Count
 	if q.TotalCount {
-		stmt, args := q.CountStmt(&selOpt)
+		if stmt, args, err = q.CountStmt(&selOpt); err != nil {
+			return
+		}
+
 		if err = s.DB.Get(&count, stmt, args...); err != nil {
 			return
 		}
@@ -342,9 +340,10 @@ func (s *Storage) GetMemberships(ctx context.Context, q *query.Query) (membershi
 
 	if lastItem != nil {
 		// Update query
+		lastId := lastItem.ID.String()
 		ret := *q
-		ret.LastID = lastItem.ID.String()
-		ret.Last = lastItem.SortedBy
+		ret.LastID = &lastId
+		ret.Last = &lastItem.SortedBy
 		ret.TotalCount = false
 
 		next = &ret

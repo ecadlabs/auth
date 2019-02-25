@@ -235,18 +235,18 @@ func (s *Storage) GetServiceAccountByAddress(ctx context.Context, address string
 	return u.toUser(), nil
 }
 
-var userQueryColumns = map[string]int{
-	"id":             query.ColQuery | query.ColSort,
-	"email":          query.ColQuery | query.ColSort,
-	"name":           query.ColQuery | query.ColSort,
-	"added":          query.ColQuery | query.ColSort,
-	"modified":       query.ColQuery | query.ColSort,
-	"email_verified": query.ColQuery | query.ColSort,
-	"login_addr":     query.ColQuery | query.ColSort,
-	"login_ts":       query.ColQuery | query.ColSort,
-	"refresh_addr":   query.ColQuery | query.ColSort,
-	"refresh_ts":     query.ColQuery | query.ColSort,
-	"account_type":   query.ColQuery | query.ColSort,
+var userQueryColumns = query.Columns{
+	"id":             {Name: "users.id", Flags: query.ColSort},
+	"email":          {Name: "users.email", Flags: query.ColSort},
+	"name":           {Name: "users.name", Flags: query.ColSort},
+	"added":          {Name: "users.added", Flags: query.ColSort},
+	"modified":       {Name: "users.modified", Flags: query.ColSort},
+	"email_verified": {Name: "users.email_verified", Flags: query.ColSort},
+	"login_addr":     {Name: "users.login_addr", Flags: query.ColSort},
+	"login_ts":       {Name: "users.login_ts", Flags: query.ColSort},
+	"refresh_addr":   {Name: "users.refresh_addr", Flags: query.ColSort},
+	"refresh_ts":     {Name: "users.refresh_ts", Flags: query.ColSort},
+	"account_type":   {Name: "users.account_type", Flags: query.ColSort},
 }
 
 // GetUsers retrieve a users according to a query and return a paged results
@@ -300,13 +300,8 @@ func (s *Storage) GetUsers(ctx context.Context, typ string, q *query.Query) (use
 			  GROUP BY
 				user_id
 			) AS ips ON ips.user_id = users.id`,
-		IDColumn: "id",
-		ColumnFlagsFunc: func(col string) int {
-			if flags, ok := userQueryColumns[col]; ok {
-				return flags
-			}
-			return 0
-		},
+		IDColumn:   "users.id",
+		ColumnFunc: userQueryColumns.Func,
 	}
 
 	tmp := *q
@@ -349,7 +344,10 @@ func (s *Storage) GetUsers(ctx context.Context, typ string, q *query.Query) (use
 
 	// Count
 	if tmp.TotalCount {
-		stmt, args := tmp.CountStmt(&selOpt)
+		if stmt, args, err = tmp.CountStmt(&selOpt); err != nil {
+			return
+		}
+
 		if err = s.DB.Get(&count, stmt, args...); err != nil {
 			return
 		}
@@ -359,9 +357,10 @@ func (s *Storage) GetUsers(ctx context.Context, typ string, q *query.Query) (use
 
 	if lastItem != nil {
 		// Update query
+		lastId := lastItem.ID.String()
 		ret := *q
-		ret.LastID = lastItem.ID.String()
-		ret.Last = lastItem.SortedBy
+		ret.LastID = &lastId
+		ret.Last = &lastItem.SortedBy
 		ret.TotalCount = false
 
 		next = &ret
