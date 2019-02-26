@@ -46,6 +46,7 @@ export function tokenSetter(value: string) { localStorage.setItem('token', value
       passwordResetUrl: '/api/v1/password_reset',
       sendResetEmailUrl: '/api/v1/request_password_reset',
       loginPageUrl: '',
+      roleGuardRedirectUrl: '',
       autoRefreshInterval: 5000,
       tokenPropertyPrefix: 'com.ecadlabs.auth',
       rolesPermissionsMapping: {

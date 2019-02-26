@@ -8,6 +8,7 @@ import { ResetPasswordEmailFormComponent } from './reset-password-email-form/res
 import { AlertComponent } from './alert/alert.component';
 import { EcadPermissionsDirective } from './ecad-permissions.directive';
 import { RequestEmailChangeComponent } from './request-email-change/request-email-change.component';
+import { EcadRolesDirective } from './ecad-roles.directive';
 
 @NgModule({
   imports: [
@@ -22,6 +23,7 @@ import { RequestEmailChangeComponent } from './request-email-change/request-emai
     ResetPasswordFormComponent,
     ResetPasswordEmailFormComponent,
     EcadPermissionsDirective,
+    EcadRolesDirective,
     AlertComponent,
     RequestEmailChangeComponent
   ],
@@ -30,7 +32,8 @@ import { RequestEmailChangeComponent } from './request-email-change/request-emai
     LoginComponent,
     ResetPasswordFormComponent,
     ResetPasswordEmailFormComponent,
-    EcadPermissionsDirective
+    EcadPermissionsDirective,
+    EcadRolesDirective
   ]
 })
 export class EcadAngularAuthComponentsModule {

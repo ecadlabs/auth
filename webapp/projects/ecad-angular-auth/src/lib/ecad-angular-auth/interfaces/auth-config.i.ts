@@ -14,4 +14,5 @@ export interface AuthConfig {
     emailValidationRegex?: RegExp;
     emailUpdateUrl: string;
     emailChangeValidationUrl: string;
+    roleGuardRedirectUrl: string;
 }
