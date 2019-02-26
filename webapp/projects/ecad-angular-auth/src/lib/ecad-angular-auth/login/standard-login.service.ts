@@ -149,7 +149,7 @@ export class StandardLoginService implements ILoginService {
     );
   }
 
-  public hasOneOfRoles(allowedRoles: string[]) : Observable<boolean> {
+  public hasOneOfRoles(allowedRoles: string[]): Observable<boolean> {
     return this.user.pipe(
       map(user => {
         const userRoles = user && user.roles && Array.isArray(user.roles) ? user.roles : [];

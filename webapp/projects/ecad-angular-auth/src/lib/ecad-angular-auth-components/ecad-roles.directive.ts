@@ -10,7 +10,7 @@ export class EcadRolesDirective implements OnDestroy {
   private rolesSub = null;
 
   @Input() set authEcadRoles(allowedRoles: string) {
-    allowedRoles = allowedRoles.replace(/\s/g,'');
+    allowedRoles = allowedRoles.replace(/\s/g, '');
 
     this.rolesSub = this.loginService.hasOneOfRoles(allowedRoles.split(',')).pipe(
       distinctUntilChanged(),
