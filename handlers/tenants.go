@@ -32,11 +32,10 @@ type CreateTenantModel struct {
 
 // Tenants handler for crud operation on tenant resources
 type Tenants struct {
-	UserStorage       *storage.Storage
-	Storage           *storage.TenantStorage
-	MembershipStorage *storage.MembershipStorage
-	Timeout           time.Duration
-	Enforcer          rbac.Enforcer
+	Storage Storage
+
+	Timeout  time.Duration
+	Enforcer rbac.Enforcer
 
 	BaseURL            func() string
 	TokenFactory       *TokenFactory
@@ -56,7 +55,7 @@ func (t *Tenants) context(r *http.Request) (context.Context, context.CancelFunc)
 
 // FindTenant is a endpoint handler to find a tenant by id
 func (t *Tenants) FindTenant(w http.ResponseWriter, r *http.Request) {
-	member := r.Context().Value(MembershipContextKey).(*storage.Membership)
+	member := r.Context().Value(MembershipContextKey{}).(*storage.Membership)
 	ctx, cancel := t.context(r)
 	defer cancel()
 
@@ -86,7 +85,7 @@ func (t *Tenants) FindTenant(w http.ResponseWriter, r *http.Request) {
 
 // FindTenant is a endpoint handler to delete a tenant
 func (t *Tenants) DeleteTenant(w http.ResponseWriter, r *http.Request) {
-	member := r.Context().Value(MembershipContextKey).(*storage.Membership)
+	member := r.Context().Value(MembershipContextKey{}).(*storage.Membership)
 	ctx, cancel := t.context(r)
 	defer cancel()
 
@@ -127,7 +126,7 @@ func (t *Tenants) DeleteTenant(w http.ResponseWriter, r *http.Request) {
 // FindTenants is a endpoint handler to get a list of tenants
 func (t *Tenants) FindTenants(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
-	member := r.Context().Value(MembershipContextKey).(*storage.Membership)
+	member := r.Context().Value(MembershipContextKey{}).(*storage.Membership)
 	ctx, cancel := t.context(r)
 	defer cancel()
 
@@ -139,15 +138,24 @@ func (t *Tenants) FindTenants(w http.ResponseWriter, r *http.Request) {
 		utils.JSONError(w, err.Error(), errors.CodeUnknown)
 	}
 
-	// Default archived value to false
-	defaults := make(map[string][]string)
-	defaults["archived[eq]"] = []string{"false"}
-
-	q, err := query.FromValues(r.Form, defaults)
+	q, err := query.FromValues(r.Form)
 	if err != nil {
 		log.Error(err)
 		utils.JSONError(w, err.Error(), errors.CodeQuerySyntax)
 		return
+	}
+
+	// Default archived value to false
+	var found bool
+	for _, e := range q.Match {
+		if e.Col == "archived" {
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		q.Match = append(q.Match, query.Expr{Col: "archived", Op: query.OpEq, Value: "false"})
 	}
 
 	if q.Limit <= 0 {
@@ -193,7 +201,7 @@ func (t *Tenants) FindTenants(w http.ResponseWriter, r *http.Request) {
 
 // CreateTenant is a endpoint handler to create a new tenant
 func (t *Tenants) CreateTenant(w http.ResponseWriter, r *http.Request) {
-	member := r.Context().Value(MembershipContextKey).(*storage.Membership)
+	member := r.Context().Value(MembershipContextKey{}).(*storage.Membership)
 
 	ctx, cancel := t.context(r)
 	defer cancel()
@@ -281,7 +289,7 @@ func (t *Tenants) canUpdateTenant(role rbac.Role, member *storage.Membership, ui
 
 // UpdateTenant is a endpoint handler to update a tenant resource
 func (t *Tenants) UpdateTenant(w http.ResponseWriter, r *http.Request) {
-	member := r.Context().Value(MembershipContextKey).(*storage.Membership)
+	member := r.Context().Value(MembershipContextKey{}).(*storage.Membership)
 	ctx, cancel := t.context(r)
 	defer cancel()
 
@@ -399,7 +407,7 @@ func (t *Tenants) AcceptInvite(w http.ResponseWriter, r *http.Request) {
 	updates := make(map[string]interface{})
 	updates["membership_status"] = storage.ActiveState
 
-	_, err = t.MembershipStorage.UpdateMembership(ctx, tenantID, id, &storage.RoleOps{
+	_, err = t.Storage.UpdateMembership(ctx, tenantID, id, &storage.Ops{
 		Update: updates,
 	})
 	if err != nil {
@@ -413,8 +421,8 @@ func (t *Tenants) AcceptInvite(w http.ResponseWriter, r *http.Request) {
 
 // InviteExistingUser is a endpoint handler to invite a user to a tenant
 func (t *Tenants) InviteExistingUser(w http.ResponseWriter, r *http.Request) {
-	self := r.Context().Value(UserContextKey).(*storage.User)
-	member := r.Context().Value(MembershipContextKey).(*storage.Membership)
+	self := r.Context().Value(UserContextKey{}).(*storage.User)
+	member := r.Context().Value(MembershipContextKey{}).(*storage.Membership)
 
 	ctx, cancel := t.context(r)
 	defer cancel()
@@ -466,7 +474,7 @@ func (t *Tenants) InviteExistingUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	target, err := t.UserStorage.GetUserByEmail(ctx, user.Email)
+	target, err := t.Storage.GetUserByEmail(ctx, storage.AccountRegular, user.Email)
 
 	if err != nil {
 		log.Error(err)
@@ -512,7 +520,7 @@ func (t *Tenants) InviteExistingUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	membership, _ := t.MembershipStorage.GetMembership(ctx, uid, target.ID)
+	membership, _ := t.Storage.GetMembership(ctx, uid, target.ID)
 
 	if membership != nil && membership.MembershipStatus != storage.InvitedState {
 		utils.JSONErrorResponse(w, errors.ErrMembershipExisits)
@@ -521,7 +529,7 @@ func (t *Tenants) InviteExistingUser(w http.ResponseWriter, r *http.Request) {
 
 	// Only create membership if it does not exists
 	if membership == nil {
-		err = t.MembershipStorage.AddMembership(ctx, uid, target, storage.InvitedState, user.MembershipType, user.Roles)
+		err = t.Storage.AddMembership(ctx, uid, target, storage.InvitedState, user.MembershipType, user.Roles)
 		if err != nil {
 			log.Error(err)
 			utils.JSONErrorResponse(w, err)

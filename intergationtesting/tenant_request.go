@@ -100,14 +100,12 @@ func deleteMembership(srv *httptest.Server, token string, uid, userID uuid.UUID)
 }
 
 func inviteTenant(srv *httptest.Server, token, tenantID string, email string) (int, error) {
-	roles := make(storage.Roles, 1)
-	roles["regular"] = "true"
 	data := struct {
 		Email string        `json:"email"`
 		Roles storage.Roles `json:"roles"`
 	}{
 		Email: email,
-		Roles: roles,
+		Roles: storage.Roles{"regular": "true"},
 	}
 
 	buf, err := json.Marshal(data)
@@ -115,7 +113,7 @@ func inviteTenant(srv *httptest.Server, token, tenantID string, email string) (i
 		return 0, err
 	}
 
-	req, err := http.NewRequest("POST", fmt.Sprintf(srv.URL+"/tenants/%s/members", tenantID), bytes.NewReader(buf))
+	req, err := http.NewRequest("POST", fmt.Sprintf(srv.URL+"/tenants/%s/members/", tenantID), bytes.NewReader(buf))
 	if err != nil {
 		return 0, err
 	}
@@ -274,7 +272,7 @@ func getTenantMembershipsList(srv *httptest.Server, token string, tenantID uuid.
 		return 0, nil, err
 	}
 
-	tmpURL.Path = fmt.Sprintf("/tenants/%s/members", tenantID)
+	tmpURL.Path = fmt.Sprintf("/tenants/%s/members/", tenantID)
 	tmpURL.RawQuery = query.Encode()
 	reqURL := tmpURL.String()
 
@@ -334,7 +332,7 @@ func getUserMembershipsList(srv *httptest.Server, token string, userID uuid.UUID
 		return 0, nil, err
 	}
 
-	tmpURL.Path = fmt.Sprintf("/users/%s/memberships", userID)
+	tmpURL.Path = fmt.Sprintf("/users/%s/memberships/", userID)
 	tmpURL.RawQuery = query.Encode()
 	reqURL := tmpURL.String()
 

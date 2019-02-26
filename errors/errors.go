@@ -78,6 +78,9 @@ const (
 	CodeRoleNotFound        Code = "role_not_found"
 	CodePermissionNotFound  Code = "permission_not_found"
 	CodeMembershipNotActive Code = "membership_not_active"
+	CodeService             Code = "service_account"
+	CodeKeyNotFound         Code = "api_key_not_found"
+	CodeAddrExists          Code = "address_exists"
 )
 
 var httpStatus = map[Code]int{
@@ -105,6 +108,10 @@ var httpStatus = map[Code]int{
 	CodeRolesEmpty:          http.StatusBadRequest,
 	CodeRoleNotFound:        http.StatusNotFound,
 	CodePermissionNotFound:  http.StatusNotFound,
+	CodeService:             http.StatusBadRequest,
+	CodeKeyNotFound:         http.StatusNotFound,
+	CodeAddrExists:          http.StatusConflict,
+	CodeMembershipNotFound:  http.StatusNotFound,
 }
 
 // Some predefined errors
@@ -132,4 +139,8 @@ var (
 	ErrRolesEmpty          = &Error{errors.New("Roles value is empty"), CodeRolesEmpty}
 	ErrRoleNotFound        = &Error{errors.New("Role not found"), CodeRoleNotFound}
 	ErrPermissionNotFound  = &Error{errors.New("Permission not found"), CodePermissionNotFound}
+	ErrService             = &Error{errors.New("Service account"), CodeService}
+	ErrKeyNotFound         = &Error{errors.New("Key not found"), CodeKeyNotFound}
+	ErrAddrExists          = &Error{errors.New("Address exists"), CodeAddrExists}
+	ErrAddrSyntax          = &Error{errors.New("Error parsing address"), CodeBadRequest}
 )

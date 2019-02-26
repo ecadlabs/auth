@@ -49,12 +49,12 @@ func (l *logEntryModel) toLogEntry() *LogEntry {
 	return ret
 }
 
-var logQueryColumns = map[string]int{
-	"ts":        query.ColQuery | query.ColSort,
-	"event":     query.ColQuery | query.ColSort,
-	"source_id": query.ColQuery | query.ColSort,
-	"target_id": query.ColQuery | query.ColSort,
-	"addr":      query.ColQuery | query.ColSort,
+var logQueryColumns = query.Columns{
+	"ts":        {Name: "ts", Flags: query.ColSort},
+	"event":     {Name: "event", Flags: query.ColSort},
+	"source_id": {Name: "source_id", Flags: query.ColSort},
+	"target_id": {Name: "target_id", Flags: query.ColSort},
+	"addr":      {Name: "addr", Flags: query.ColSort},
 }
 
 // GetLogs retrive logs from the database as a paged results
@@ -67,12 +67,7 @@ func (s *Storage) GetLogs(ctx context.Context, q *query.Query) (entries []*LogEn
 		SelectExpr: "*, " + pq.QuoteIdentifier(q.SortBy) + " AS sorted_by",
 		FromExpr:   "log",
 		IDColumn:   "id",
-		ColumnFlagsFunc: func(col string) int {
-			if flags, ok := logQueryColumns[col]; ok {
-				return flags
-			}
-			return 0
-		},
+		ColumnFunc: logQueryColumns.Func,
 	}
 
 	stmt, args, err := q.SelectStmt(&selOpt)
@@ -105,7 +100,10 @@ func (s *Storage) GetLogs(ctx context.Context, q *query.Query) (entries []*LogEn
 
 	// Count
 	if q.TotalCount {
-		stmt, args := q.CountStmt(&selOpt)
+		if stmt, args, err = q.CountStmt(&selOpt); err != nil {
+			return
+		}
+
 		if err = s.DB.Get(&count, stmt, args...); err != nil {
 			return
 		}
@@ -115,9 +113,10 @@ func (s *Storage) GetLogs(ctx context.Context, q *query.Query) (entries []*LogEn
 
 	if lastItem != nil {
 		// Update query
+		lastid := lastItem.ID.String()
 		ret := *q
-		ret.LastID = lastItem.ID.String()
-		ret.Last = lastItem.SortedBy
+		ret.LastID = &lastid
+		ret.Last = &lastItem.SortedBy
 		ret.TotalCount = false
 
 		next = &ret

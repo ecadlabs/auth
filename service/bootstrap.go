@@ -59,6 +59,7 @@ func (s *Service) Bootstrap(c *BootstrapConfig) (user *storage.User, err error) 
 			PasswordHash:  ([]byte)(cUser.Hash),
 			EmailVerified: true, // Allow logging in !!!
 			Roles:         roles,
+			Type:          storage.AccountRegular,
 		}
 
 		_, err = storage.NewUserInt(context.Background(), tx, &u)
@@ -73,7 +74,7 @@ func (s *Service) Bootstrap(c *BootstrapConfig) (user *storage.User, err error) 
 			Name: tenant.Name,
 		}
 
-		_, err := s.tenantStorage.CreateTenantInt(context.Background(), tx, &u)
+		_, err := s.storage.CreateTenantInt(context.Background(), tx, &u)
 		if err != nil {
 			return nil, err
 		}
@@ -83,7 +84,7 @@ func (s *Service) Bootstrap(c *BootstrapConfig) (user *storage.User, err error) 
 		roles := make(storage.Roles)
 		roles[member.Role] = true
 
-		err := s.membershipStorage.AddMembershipInt(
+		err := s.storage.AddMembershipInt(
 			context.Background(),
 			tx,
 			uuid.FromStringOrNil(member.TenantID),

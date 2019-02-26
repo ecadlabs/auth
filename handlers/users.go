@@ -23,16 +23,15 @@ import (
 )
 
 const (
-	UserContextKey       = "user"
-	MembershipContextKey = "membership"
-	DefaultLimit         = 20
+	DefaultLimit = 20
 )
 
+type UserContextKey struct{}
+type MembershipContextKey struct{}
+
 type Users struct {
-	Storage           *storage.Storage
-	TenantStorage     *storage.TenantStorage
-	MembershipStorage *storage.MembershipStorage
-	Timeout           time.Duration
+	Storage Storage
+	Timeout time.Duration
 
 	SessionMaxAge    time.Duration
 	JWTSecretGetter  func() ([]byte, error)
@@ -82,9 +81,85 @@ func (u *Users) context(r *http.Request) (context.Context, context.CancelFunc) {
 	return r.Context(), func() {}
 }
 
+func (u *Users) checkWritePermissions(role rbac.Role, typ string, self bool) (resTyp string, err error) {
+	perm := []string{permissionFull, permissionWrite}
+	if self {
+		perm = append(perm, permissionWriteSelf)
+	}
+
+	regularGranted, err := role.IsAnyGranted(perm...)
+	if err != nil {
+		return
+	}
+
+	perm = []string{permissionServiceFull, permissionServiceWrite}
+	if self {
+		perm = append(perm, permissionWriteSelf)
+	}
+
+	serviceGranted, err := role.IsAnyGranted(perm...)
+	if err != nil {
+		return
+	}
+
+	switch {
+	case regularGranted && !serviceGranted:
+		resTyp = storage.AccountRegular
+	case !regularGranted && serviceGranted:
+		resTyp = storage.AccountService
+	case !regularGranted && !serviceGranted:
+		err = errors.ErrForbidden
+		return
+	}
+
+	if typ != "" && resTyp != "" && typ != resTyp {
+		err = errors.ErrForbidden
+	}
+
+	return
+}
+
+func (u *Users) checkReadPermissions(role rbac.Role, typ string, self bool) (resTyp string, err error) {
+	perm := []string{permissionFull, permissionRead}
+	if self {
+		perm = append(perm, permissionReadSelf)
+	}
+
+	regularGranted, err := role.IsAnyGranted(perm...)
+	if err != nil {
+		return
+	}
+
+	perm = []string{permissionServiceFull, permissionServiceRead}
+	if self {
+		perm = append(perm, permissionReadSelf)
+	}
+
+	serviceGranted, err := role.IsAnyGranted(perm...)
+	if err != nil {
+		return
+	}
+
+	switch {
+	case regularGranted && !serviceGranted:
+		resTyp = storage.AccountRegular
+	case !regularGranted && serviceGranted:
+		resTyp = storage.AccountService
+	case !regularGranted && !serviceGranted:
+		err = errors.ErrForbidden
+		return
+	}
+
+	if typ != "" && resTyp != "" && typ != resTyp {
+		err = errors.ErrForbidden
+	}
+
+	return
+}
+
 func (u *Users) GetUser(w http.ResponseWriter, r *http.Request) {
-	self := r.Context().Value(UserContextKey).(*storage.User)
-	member := r.Context().Value(MembershipContextKey).(*storage.Membership)
+	self := r.Context().Value(UserContextKey{}).(*storage.User)
+	member := r.Context().Value(MembershipContextKey{}).(*storage.Membership)
 
 	uid, err := uuid.FromString(mux.Vars(r)["id"])
 	if err != nil {
@@ -102,26 +177,15 @@ func (u *Users) GetUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	perm := []string{permissionFull, permissionRead}
-	if self.ID == uid {
-		perm = append(perm, permissionReadSelf)
-	}
-
-	granted, err := role.IsAnyGranted(perm...)
+	user, err := u.Storage.GetUserByID(ctx, "", uid)
 	if err != nil {
 		log.Error(err)
 		utils.JSONErrorResponse(w, err)
 		return
 	}
 
-	if !granted {
-		utils.JSONErrorResponse(w, errors.ErrForbidden)
-		return
-	}
-
-	user, err := u.Storage.GetUserByID(ctx, uid)
+	_, err = u.checkReadPermissions(role, user.Type, self.ID == uid)
 	if err != nil {
-		log.Error(err)
 		utils.JSONErrorResponse(w, err)
 		return
 	}
@@ -131,7 +195,18 @@ func (u *Users) GetUser(w http.ResponseWriter, r *http.Request) {
 
 func (u *Users) GetUsers(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
-	member := r.Context().Value(MembershipContextKey).(*storage.Membership)
+	member := r.Context().Value(MembershipContextKey{}).(*storage.Membership)
+
+	q, err := query.FromValues(r.Form)
+	if err != nil {
+		log.Error(err)
+		utils.JSONError(w, err.Error(), errors.CodeQuerySyntax)
+		return
+	}
+
+	if q.Limit <= 0 {
+		q.Limit = DefaultLimit
+	}
 
 	ctx, cancel := u.context(r)
 	defer cancel()
@@ -143,30 +218,13 @@ func (u *Users) GetUsers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	granted, err := role.IsAnyGranted(permissionFull, permissionRead)
+	typ, err := u.checkReadPermissions(role, "", false)
 	if err != nil {
-		log.Error(err)
 		utils.JSONErrorResponse(w, err)
 		return
 	}
 
-	if !granted {
-		utils.JSONErrorResponse(w, errors.ErrForbidden)
-		return
-	}
-
-	q, err := query.FromValues(r.Form, nil)
-	if err != nil {
-		log.Error(err)
-		utils.JSONError(w, err.Error(), errors.CodeQuerySyntax)
-		return
-	}
-
-	if q.Limit <= 0 {
-		q.Limit = DefaultLimit
-	}
-
-	userSlice, count, nextQuery, err := u.Storage.GetUsers(ctx, q)
+	userSlice, count, nextQuery, err := u.Storage.GetUsers(ctx, typ, q)
 	if err != nil {
 		log.Error(err)
 		utils.JSONErrorResponse(w, err)
@@ -204,13 +262,12 @@ func (u *Users) GetUsers(w http.ResponseWriter, r *http.Request) {
 
 func (u *Users) resetToken(user *storage.User) (string, error) {
 	now := time.Now()
-
 	claims := jwt.MapClaims{
-		"sub": user.ID,
-		"exp": now.Add(u.ResetTokenMaxAge).Unix(),
-		"iat": now.Unix(),
-		"iss": u.BaseURL(),
-		"aud": u.ResetURL(),
+		"sub":                             user.ID,
+		"exp":                             now.Add(u.ResetTokenMaxAge).Unix(),
+		"iat":                             now.Unix(),
+		"iss":                             u.BaseURL(),
+		"aud":                             u.ResetURL(),
 		utils.NSClaim(u.Namespace, "gen"): user.PasswordGen,
 	}
 
@@ -225,17 +282,25 @@ func (u *Users) resetToken(user *storage.User) (string, error) {
 }
 
 func (u *Users) NewUser(w http.ResponseWriter, r *http.Request) {
-	self := r.Context().Value(UserContextKey).(*storage.User)
-	member := r.Context().Value(MembershipContextKey).(*storage.Membership)
+	self := r.Context().Value(UserContextKey{}).(*storage.User)
+	member := r.Context().Value(MembershipContextKey{}).(*storage.Membership)
 
 	var user storage.CreateUser
 	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
 		log.Error(err)
-		utils.JSONError(w, err.Error(), errors.CodeBadRequest)
+		utils.JSONError(w, "Invalid user data", errors.CodeBadRequest)
 		return
 	}
 
-	if !utils.ValidEmail(user.Email) {
+	if user.Type == "" {
+		user.Type = storage.AccountRegular
+	} else if user.Type != storage.AccountRegular && user.Type != storage.AccountService {
+		utils.JSONError(w, "Invalid account type", errors.CodeBadRequest)
+	}
+
+	service := user.Type == storage.AccountService
+
+	if !service && !utils.ValidEmail(user.Email) {
 		utils.JSONErrorResponse(w, errors.ErrEmailFmt)
 		return
 	}
@@ -256,14 +321,24 @@ func (u *Users) NewUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check write access
-	fullGranted, err := role.IsAnyGranted(permissionFull)
+	var fullGranted bool
+	if service {
+		fullGranted, err = role.IsAnyGranted(permissionServiceFull)
+	} else {
+		fullGranted, err = role.IsAnyGranted(permissionFull)
+	}
 	if err != nil {
 		log.Error(err)
 		utils.JSONErrorResponse(w, err)
 		return
 	}
 
-	writeGranted, err := role.IsAnyGranted(permissionWrite)
+	var writeGranted bool
+	if service {
+		writeGranted, err = role.IsAnyGranted(permissionServiceWrite)
+	} else {
+		writeGranted, err = role.IsAnyGranted(permissionWrite)
+	}
 	if err != nil {
 		log.Error(err)
 		utils.JSONErrorResponse(w, err)
@@ -308,14 +383,16 @@ func (u *Users) NewUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err = u.Notifier.Notify(ctx, notification.NotificationInvite, &notification.NotificationData{
-		Addr:        getRemoteAddr(r),
-		CurrentUser: self,
-		TargetUser:  ret,
-		Token:       token,
-		TokenMaxAge: u.ResetTokenMaxAge,
-	}); err != nil {
-		log.Error(err)
+	if user.Type == storage.AccountRegular {
+		if err = u.Notifier.Notify(ctx, notification.NotificationInvite, &notification.NotificationData{
+			Addr:        utils.GetRemoteAddr(r),
+			CurrentUser: self,
+			TargetUser:  ret,
+			Token:       token,
+			TokenMaxAge: u.ResetTokenMaxAge,
+		}); err != nil {
+			log.Error(err)
+		}
 	}
 
 	// Log
@@ -334,8 +411,8 @@ func (u *Users) NewUser(w http.ResponseWriter, r *http.Request) {
 
 func (u *Users) PatchUser(w http.ResponseWriter, r *http.Request) {
 	// TODO Email verification
-	self := r.Context().Value(UserContextKey).(*storage.User)
-	member := r.Context().Value(MembershipContextKey).(*storage.Membership)
+	self := r.Context().Value(UserContextKey{}).(*storage.User)
+	member := r.Context().Value(MembershipContextKey{}).(*storage.Membership)
 
 	uid, err := uuid.FromString(mux.Vars(r)["id"])
 	if err != nil {
@@ -345,7 +422,7 @@ func (u *Users) PatchUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var p jsonpatch.Patch
-	if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
+	if err = json.NewDecoder(r.Body).Decode(&p); err != nil {
 		log.Error(err)
 		utils.JSONError(w, err.Error(), errors.CodeBadRequest)
 		return
@@ -358,8 +435,32 @@ func (u *Users) PatchUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if _, ok := ops.Update["password_hash"]; ok {
-		utils.JSONError(w, "Invalid property", errors.CodeBadRequest)
+	ctx, cancel := u.context(r)
+	defer cancel()
+
+	role, err := u.Enforcer.GetRole(ctx, member.Roles.Get()...)
+	if err != nil {
+		log.Error(err)
+		utils.JSONErrorResponse(w, err)
+		return
+	}
+
+	user, err := u.Storage.GetUserByID(ctx, "", uid)
+	if err != nil {
+		utils.JSONErrorResponse(w, err)
+		return
+	}
+
+	typ, err := u.checkWritePermissions(role, user.Type, self.ID == uid)
+	if err != nil {
+		utils.JSONErrorResponse(w, err)
+		return
+	}
+
+	delete(ops.Update, "password_hash")
+
+	if typ == storage.AccountRegular && (ops.Add["address_whitelist"] != nil || ops.Remove["address_whitelist"] != nil) {
+		utils.JSONErrorResponse(w, errors.ErrForbidden)
 		return
 	}
 
@@ -372,8 +473,8 @@ func (u *Users) PatchUser(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
-			hash, err := bcrypt.GenerateFromPassword([]byte(p), bcrypt.DefaultCost)
-			if err != nil {
+			var hash []byte
+			if hash, err = bcrypt.GenerateFromPassword([]byte(p), bcrypt.DefaultCost); err != nil {
 				log.Error(err)
 				utils.JSONErrorResponse(w, err)
 				return
@@ -383,34 +484,7 @@ func (u *Users) PatchUser(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	ctx, cancel := u.context(r)
-	defer cancel()
-
-	role, err := u.Enforcer.GetRole(ctx, member.Roles.Get()...)
-	if err != nil {
-		log.Error(err)
-		utils.JSONErrorResponse(w, err)
-		return
-	}
-
-	perm := []string{permissionFull, permissionWrite}
-	if self.ID == uid {
-		perm = append(perm, permissionWriteSelf)
-	}
-
-	granted, err := role.IsAnyGranted(perm...)
-	if err != nil {
-		log.Error(err)
-		utils.JSONErrorResponse(w, err)
-		return
-	}
-
-	if !granted {
-		utils.JSONErrorResponse(w, errors.ErrForbidden)
-		return
-	}
-
-	user, err := u.Storage.UpdateUser(ctx, uid, ops)
+	user, err = u.Storage.UpdateUser(ctx, typ, uid, ops)
 	if err != nil {
 		log.Error(err)
 		utils.JSONErrorResponse(w, err)
@@ -429,8 +503,8 @@ func (u *Users) PatchUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func (u *Users) DeleteUser(w http.ResponseWriter, r *http.Request) {
-	self := r.Context().Value(UserContextKey).(*storage.User)
-	member := r.Context().Value(MembershipContextKey).(*storage.Membership)
+	self := r.Context().Value(UserContextKey{}).(*storage.User)
+	member := r.Context().Value(MembershipContextKey{}).(*storage.Membership)
 
 	uid, err := uuid.FromString(mux.Vars(r)["id"])
 	if err != nil {
@@ -448,25 +522,19 @@ func (u *Users) DeleteUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	perm := []string{permissionFull, permissionWrite}
-	if self.ID == uid {
-		perm = append(perm, permissionWriteSelf)
-	}
-
-	granted, err := role.IsAnyGranted(perm...)
+	user, err := u.Storage.GetUserByID(ctx, "", uid)
 	if err != nil {
-		log.Error(err)
 		utils.JSONErrorResponse(w, err)
 		return
 	}
 
-	if !granted {
-		utils.JSONErrorResponse(w, errors.ErrForbidden)
+	typ, err := u.checkWritePermissions(role, user.Type, self.ID == uid)
+	if err != nil {
+		utils.JSONErrorResponse(w, err)
 		return
 	}
 
-	tenants, err := u.TenantStorage.GetTenantsSoleMember(ctx, uid)
-
+	tenants, err := u.Storage.GetTenantsSoleMember(ctx, uid)
 	if err != nil {
 		log.Error(err)
 		utils.JSONErrorResponse(w, err)
@@ -474,7 +542,7 @@ func (u *Users) DeleteUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// TODO: archive user
-	if err = u.Storage.DeleteUser(ctx, uid); err != nil {
+	if err := u.Storage.DeleteUser(ctx, typ, uid); err != nil {
 		log.Error(err)
 		utils.JSONErrorResponse(w, err)
 		return
@@ -496,7 +564,7 @@ func (u *Users) DeleteUser(w http.ResponseWriter, r *http.Request) {
 	// Archive any individual tenant made orphan by this deletion
 	if len(individualTenants) > 0 {
 		for _, tenant := range individualTenants {
-			deleteErr := u.TenantStorage.DeleteTenant(ctx, tenant.ID)
+			deleteErr := u.Storage.DeleteTenant(ctx, tenant.ID)
 			// Log
 			if deleteErr == nil && u.AuxLogger != nil {
 				u.AuxLogger.WithFields(logFields(EvArchiveTenant, member.ID, tenant.ID, r)).Printf("User %v from tenant %v archived tenant %v", self.ID, member.TenantID, tenant.ID)
@@ -517,7 +585,7 @@ func (u *Users) DeleteUser(w http.ResponseWriter, r *http.Request) {
 	// Archive any tenant made orphan by this deletion
 	if len(tenants) > 0 {
 		for _, tenant := range tenants {
-			deleteErr := u.TenantStorage.DeleteTenant(ctx, tenant.ID)
+			deleteErr := u.Storage.DeleteTenant(ctx, tenant.ID)
 			// Log
 			if deleteErr == nil && u.AuxLogger != nil {
 				u.AuxLogger.WithFields(logFields(EvArchiveTenant, self.ID, tenant.ID, r)).Printf("User %v archived tenant %v", self.ID, tenant.ID)
@@ -667,9 +735,14 @@ func (u *Users) SendResetRequest(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := u.context(r)
 	defer cancel()
 
-	user, err := u.Storage.GetUserByEmail(ctx, request.Email)
+	user, err := u.Storage.GetUserByEmail(ctx, storage.AccountRegular, request.Email)
 	if err != nil {
 		log.Error(err)
+		return
+	}
+
+	if user.Type == storage.AccountService {
+		utils.JSONErrorResponse(w, errors.ErrService)
 		return
 	}
 
@@ -681,7 +754,7 @@ func (u *Users) SendResetRequest(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err = u.Notifier.Notify(r.Context(), notification.NotificationReset, &notification.NotificationData{
-		Addr:        getRemoteAddr(r),
+		Addr:        utils.GetRemoteAddr(r),
 		CurrentUser: user,
 		TargetUser:  user,
 		Token:       token,
@@ -698,8 +771,8 @@ func (u *Users) SendResetRequest(w http.ResponseWriter, r *http.Request) {
 }
 
 func (u *Users) SendUpdateEmailRequest(w http.ResponseWriter, r *http.Request) {
-	self := r.Context().Value(UserContextKey).(*storage.User)
-	member := r.Context().Value(MembershipContextKey).(*storage.Membership)
+	self := r.Context().Value(UserContextKey{}).(*storage.User)
+	member := r.Context().Value(MembershipContextKey{}).(*storage.Membership)
 
 	var request struct {
 		Email string    `json:"email"`
@@ -725,6 +798,13 @@ func (u *Users) SendUpdateEmailRequest(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := u.context(r)
 	defer cancel()
 
+	user, err := u.Storage.GetUserByID(ctx, storage.AccountRegular, request.ID)
+	if err != nil {
+		log.Error(err)
+		utils.JSONErrorResponse(w, err)
+		return
+	}
+
 	role, err := u.Enforcer.GetRole(ctx, member.Roles.Get()...)
 	if err != nil {
 		log.Error(err)
@@ -749,22 +829,15 @@ func (u *Users) SendUpdateEmailRequest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := u.Storage.GetUserByID(ctx, request.ID)
-	if err != nil {
-		log.Error(err)
-		utils.JSONErrorResponse(w, err)
-		return
-	}
-
 	// Create update token
 	now := time.Now()
 
 	claims := jwt.MapClaims{
-		"sub": user.ID,
-		"exp": now.Add(u.EmailUpdateTokenMaxAge).Unix(),
-		"iat": now.Unix(),
-		"iss": u.BaseURL(),
-		"aud": u.EmailUpdateURL(),
+		"sub":                               user.ID,
+		"exp":                               now.Add(u.EmailUpdateTokenMaxAge).Unix(),
+		"iat":                               now.Unix(),
+		"iss":                               u.BaseURL(),
+		"aud":                               u.EmailUpdateURL(),
 		utils.NSClaim(u.Namespace, "email"): request.Email,
 		utils.NSClaim(u.Namespace, "gen"):   user.EmailGen,
 	}
@@ -786,7 +859,7 @@ func (u *Users) SendUpdateEmailRequest(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err = u.Notifier.Notify(ctx, notification.NotificationEmailUpdateRequest, &notification.NotificationData{
-		Addr:        getRemoteAddr(r),
+		Addr:        utils.GetRemoteAddr(r),
 		To:          []string{request.Email},
 		Email:       request.Email,
 		CurrentUser: user,
@@ -887,7 +960,7 @@ func (u *Users) UpdateEmail(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err = u.Notifier.Notify(ctx, notification.NotificationEmailUpdate, &notification.NotificationData{
-		Addr:        getRemoteAddr(r),
+		Addr:        utils.GetRemoteAddr(r),
 		Email:       prevEmail,
 		To:          []string{prevEmail, user.Email},
 		CurrentUser: user,

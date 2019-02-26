@@ -21,11 +21,9 @@ import (
 
 //Memberships is a handler for memberships
 type Memberships struct {
-	UserStorage       *storage.Storage
-	Storage           *storage.TenantStorage
-	MembershipStorage *storage.MembershipStorage
-	Timeout           time.Duration
-	Enforcer          rbac.Enforcer
+	Storage  storage.MembershipStorage
+	Timeout  time.Duration
+	Enforcer rbac.Enforcer
 
 	BaseURL     func() string
 	TenantsPath string
@@ -34,7 +32,7 @@ type Memberships struct {
 }
 
 func (m *Memberships) membershipsURL(tenantID uuid.UUID) string {
-	return fmt.Sprintf("%s%s/members", m.BaseURL()+m.TenantsPath, tenantID)
+	return fmt.Sprintf("%s%s/members/", m.BaseURL()+m.TenantsPath, tenantID)
 }
 
 func (m *Memberships) usersURL() string {
@@ -50,7 +48,7 @@ func (m *Memberships) context(r *http.Request) (context.Context, context.CancelF
 
 // PatchMembership is an endpoint handler to update membership item
 func (m *Memberships) PatchMembership(w http.ResponseWriter, r *http.Request) {
-	member := r.Context().Value(MembershipContextKey).(*storage.Membership)
+	member := r.Context().Value(MembershipContextKey{}).(*storage.Membership)
 
 	ctx, cancel := m.context(r)
 	defer cancel()
@@ -95,7 +93,7 @@ func (m *Memberships) PatchMembership(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ops, err := storage.RoleOpsFromPatch(p)
+	ops, err := storage.OpsFromPatch(p)
 	if err != nil {
 		log.Error(err)
 		utils.JSONErrorResponse(w, err)
@@ -103,14 +101,16 @@ func (m *Memberships) PatchMembership(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check role manipulation permissions
-	if len(ops.AddRoles) != 0 || len(ops.RemoveRoles) != 0 {
-		tmp := make(map[string]struct{}, len(ops.AddRoles)+len(ops.RemoveRoles))
+	addRoles, removeRoles := ops.Add["roles"], ops.Remove["roles"]
 
-		for _, r := range ops.AddRoles {
+	if len(addRoles) != 0 || len(removeRoles) != 0 {
+		tmp := make(map[string]struct{}, len(addRoles)+len(removeRoles))
+
+		for _, r := range addRoles {
 			tmp[permissionDelegatePrefix+r] = struct{}{}
 		}
 
-		for _, r := range ops.RemoveRoles {
+		for _, r := range removeRoles {
 			tmp[permissionDelegatePrefix+r] = struct{}{}
 		}
 
@@ -132,7 +132,7 @@ func (m *Memberships) PatchMembership(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	updatedMember, err := m.MembershipStorage.UpdateMembership(ctx, tenantID, userID, ops)
+	updatedMember, err := m.Storage.UpdateMembership(ctx, tenantID, userID, ops)
 	if err != nil {
 		log.Error(err)
 		utils.JSONErrorResponse(w, err)
@@ -145,11 +145,11 @@ func (m *Memberships) PatchMembership(w http.ResponseWriter, r *http.Request) {
 			m.AuxLogger.WithFields(logFields(EvUpdate, member.UserID, userID, r)).WithFields(log.Fields(ops.Update)).Printf("User %v updated account %v in tenant %v", member.UserID, userID, tenantID)
 		}
 
-		for _, role := range ops.AddRoles {
-			m.AuxLogger.WithFields(logFields(EvAddRole, member.UserID, userID, r)).WithField("role", role).Printf("User %v added role `%s' to account %v in tenant %v", member.UserID, userID, tenantID)
+		for _, role := range addRoles {
+			m.AuxLogger.WithFields(logFields(EvAddRole, member.UserID, userID, r)).WithField("role", role).Printf("User %v added role `%s' to account %v in tenant %v", member.UserID, role, userID, tenantID)
 		}
 
-		for _, role := range ops.RemoveRoles {
+		for _, role := range removeRoles {
 			m.AuxLogger.WithFields(logFields(EvRemoveRole, member.UserID, userID, r)).WithField("role", role).Printf("User %v removed role `%s' from account %v in tenant %v", member.UserID, role, userID, tenantID)
 		}
 	}
@@ -159,7 +159,7 @@ func (m *Memberships) PatchMembership(w http.ResponseWriter, r *http.Request) {
 
 // DeleteMembership is an endpoint handler to delete membership item
 func (m *Memberships) DeleteMembership(w http.ResponseWriter, r *http.Request) {
-	member := r.Context().Value(MembershipContextKey).(*storage.Membership)
+	member := r.Context().Value(MembershipContextKey{}).(*storage.Membership)
 
 	ctx, cancel := m.context(r)
 	defer cancel()
@@ -202,7 +202,7 @@ func (m *Memberships) DeleteMembership(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = m.MembershipStorage.DeleteMembership(ctx, tenantID, userID)
+	err = m.Storage.DeleteMembership(ctx, tenantID, userID)
 
 	if err != nil {
 		utils.JSONErrorResponse(w, err)
@@ -219,7 +219,7 @@ func (m *Memberships) DeleteMembership(w http.ResponseWriter, r *http.Request) {
 // FindTenantMemberships is an endpoint handler to get list of membership item for a particular tenant
 func (m *Memberships) FindTenantMemberships(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
-	member := r.Context().Value(MembershipContextKey).(*storage.Membership)
+	member := r.Context().Value(MembershipContextKey{}).(*storage.Membership)
 
 	ctx, cancel := m.context(r)
 	defer cancel()
@@ -254,7 +254,7 @@ func (m *Memberships) FindTenantMemberships(w http.ResponseWriter, r *http.Reque
 	// Scope down the request to this particular tenant
 	r.Form.Set("tenant_id[eq]", tenantID.String())
 
-	q, err := query.FromValues(r.Form, nil)
+	q, err := query.FromValues(r.Form)
 	if err != nil {
 		log.Error(err)
 		utils.JSONError(w, err.Error(), errors.CodeQuerySyntax)
@@ -265,7 +265,7 @@ func (m *Memberships) FindTenantMemberships(w http.ResponseWriter, r *http.Reque
 		q.Limit = DefaultLimit
 	}
 
-	memberships, count, nextQuery, err := m.MembershipStorage.GetMemberships(ctx, q)
+	memberships, count, nextQuery, err := m.Storage.GetMemberships(ctx, q)
 
 	if err != nil {
 		log.Error(err)
@@ -305,7 +305,7 @@ func (m *Memberships) FindTenantMemberships(w http.ResponseWriter, r *http.Reque
 // FindUserMemberships is an endpoint handler to get list of membership item for a particular user
 func (m *Memberships) FindUserMemberships(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
-	member := r.Context().Value(MembershipContextKey).(*storage.Membership)
+	member := r.Context().Value(MembershipContextKey{}).(*storage.Membership)
 
 	ctx, cancel := m.context(r)
 	defer cancel()
@@ -340,7 +340,7 @@ func (m *Memberships) FindUserMemberships(w http.ResponseWriter, r *http.Request
 	// Scope down the request to this particular user
 	r.Form.Set("user_id[eq]", userID.String())
 
-	q, err := query.FromValues(r.Form, nil)
+	q, err := query.FromValues(r.Form)
 	if err != nil {
 		log.Error(err)
 		utils.JSONError(w, err.Error(), errors.CodeQuerySyntax)
@@ -351,7 +351,7 @@ func (m *Memberships) FindUserMemberships(w http.ResponseWriter, r *http.Request
 		q.Limit = DefaultLimit
 	}
 
-	memberships, count, nextQuery, err := m.MembershipStorage.GetMemberships(ctx, q)
+	memberships, count, nextQuery, err := m.Storage.GetMemberships(ctx, q)
 
 	if err != nil {
 		log.Error(err)
@@ -374,7 +374,7 @@ func (m *Memberships) FindUserMemberships(w http.ResponseWriter, r *http.Request
 	}
 
 	if nextQuery != nil {
-		nextURL, err := url.Parse(fmt.Sprintf("%s/%s/memberships", m.usersURL(), userID))
+		nextURL, err := url.Parse(fmt.Sprintf("%s/%s/memberships/", m.usersURL(), userID))
 		if err != nil {
 			log.Error(err)
 			utils.JSONErrorResponse(w, err)

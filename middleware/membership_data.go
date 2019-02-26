@@ -14,16 +14,21 @@ import (
 
 // Gets user data from DB
 type MembershipData struct {
-	Storage              *storage.MembershipStorage
-	TokenContextKey      string
-	MembershipContextKey string
+	Storage              storage.MembershipStorage
+	TokenContextKey      interface{}
+	MembershipContextKey interface{}
 	Namespace            string
 }
 
 func (m *MembershipData) Handler(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		var err error
+		if _, ok := r.Context().Value(m.MembershipContextKey).(*storage.Membership); ok {
+			// Already got from the service account key
+			h.ServeHTTP(w, r)
+			return
+		}
 
+		var err error
 		if token, ok := r.Context().Value(m.TokenContextKey).(*jwt.Token); ok {
 			claims := token.Claims.(jwt.MapClaims)
 
@@ -32,9 +37,9 @@ func (m *MembershipData) Handler(h http.Handler) http.Handler {
 
 				if id, err = uuid.FromString(sub); err == nil {
 
-					if tenantIdStr, ok := claims["tenant"].(string); ok {
-						if tenantId, err := uuid.FromString(tenantIdStr); err == nil {
-							membership, err := m.Storage.GetMembership(r.Context(), tenantId, id)
+					if tenantIDStr, ok := claims[utils.NSClaim(m.Namespace, "tenant")].(string); ok {
+						if tenantID, err := uuid.FromString(tenantIDStr); err == nil {
+							membership, err := m.Storage.GetMembership(r.Context(), tenantID, id)
 
 							if err == nil {
 								req := r.WithContext(context.WithValue(r.Context(), m.MembershipContextKey, membership))

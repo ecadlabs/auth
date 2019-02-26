@@ -6,8 +6,20 @@
 // data/11_add_tenants_table.up.sql
 // data/12_role_per_tenant.down.sql
 // data/12_role_per_tenant.up.sql
-// data/13_update_log_table.down.sql
-// data/13_update_log_table.up.sql
+// data/13_ip_whitelist.down.sql
+// data/13_ip_whitelist.up.sql
+// data/14_roles_ref.down.sql
+// data/14_roles_ref.up.sql
+// data/15_role_membership_ref.down.sql
+// data/15_role_membership_ref.up.sql
+// data/16_user_id_default.down.sql
+// data/16_user_id_default.up.sql
+// data/17_service_account_keys.down.sql
+// data/17_service_account_keys.up.sql
+// data/18_service_constraints.down.sql
+// data/18_service_constraints.up.sql
+// data/19_update_log_table.down.sql
+// data/19_update_log_table.up.sql
 // data/1_add_users_table.down.sql
 // data/1_add_users_table.up.sql
 // data/2_add_roles_table.down.sql
@@ -148,7 +160,7 @@ func _11_add_tenants_tableDownSql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "11_add_tenants_table.down.sql", size: 129, mode: os.FileMode(420), modTime: time.Unix(1546529690, 0)}
+	info := bindataFileInfo{name: "11_add_tenants_table.down.sql", size: 129, mode: os.FileMode(420), modTime: time.Unix(1547515824, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -168,7 +180,7 @@ func _11_add_tenants_tableUpSql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "11_add_tenants_table.up.sql", size: 1336, mode: os.FileMode(420), modTime: time.Unix(1546529698, 0)}
+	info := bindataFileInfo{name: "11_add_tenants_table.up.sql", size: 1336, mode: os.FileMode(420), modTime: time.Unix(1547515824, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -188,7 +200,7 @@ func _12_role_per_tenantDownSql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "12_role_per_tenant.down.sql", size: 319, mode: os.FileMode(420), modTime: time.Unix(1546448917, 0)}
+	info := bindataFileInfo{name: "12_role_per_tenant.down.sql", size: 319, mode: os.FileMode(420), modTime: time.Unix(1547515824, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -208,47 +220,287 @@ func _12_role_per_tenantUpSql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "12_role_per_tenant.up.sql", size: 370, mode: os.FileMode(420), modTime: time.Unix(1546481020, 0)}
+	info := bindataFileInfo{name: "12_role_per_tenant.up.sql", size: 370, mode: os.FileMode(420), modTime: time.Unix(1547515824, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
 
-var __13_update_log_tableDownSql = []byte("\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\x72\x72\x75\xf7\xf4\xb3\xe6\xe2\x72\x09\xf2\x0f\x50\x08\x89\x0c\x70\x55\xf0\x74\x53\x70\x8d\xf0\x0c\x0e\x09\x56\xc8\xc9\x4f\x8f\xcf\x4c\x89\x2f\xa9\x2c\x48\xb5\xe6\xe2\x72\xf4\x09\x71\x0d\x52\x08\x71\x74\xf2\x71\x05\xc9\x28\x80\x75\x38\xfb\xfb\x84\xfa\xfa\x29\x14\xe7\x97\x16\x25\xa7\x42\x55\xe2\x53\x58\x92\x58\x94\x9e\x5a\x82\x43\x61\x90\xab\x9f\xa3\xaf\x2b\x9a\x99\x99\x29\x0a\x21\xfe\x0a\xa5\xc5\xa9\x45\xf1\x99\x29\xd6\x5c\x5c\xce\xfe\xbe\xbe\x9e\x21\xd6\x80\x00\x00\x00\xff\xff\x6d\x36\xc3\x5b\xb8\x00\x00\x00")
+var __13_ip_whitelistDownSql = []byte("\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\x72\x72\x75\xf7\xf4\xb3\xe6\x72\xf4\x09\x71\x0d\x52\x08\x71\x74\xf2\x71\x55\x28\x2d\x4e\x2d\x2a\x56\x70\x09\xf2\x0f\x50\x70\xf6\xf7\x09\xf5\xf5\x53\x48\x4c\x4e\xce\x2f\xcd\x2b\x89\x2f\xa9\x2c\x48\xb5\xe6\x02\xcb\x40\x94\x16\xa7\x16\x95\x65\x26\xa7\xc6\xc3\x14\x64\x16\x58\x73\x39\xfb\xfb\xfa\x7a\x86\x58\x73\x01\x02\x00\x00\xff\xff\xb9\xf2\x03\x27\x5a\x00\x00\x00")
 
-func _13_update_log_tableDownSqlBytes() ([]byte, error) {
+func _13_ip_whitelistDownSqlBytes() ([]byte, error) {
 	return bindataRead(
-		__13_update_log_tableDownSql,
-		"13_update_log_table.down.sql",
+		__13_ip_whitelistDownSql,
+		"13_ip_whitelist.down.sql",
 	)
 }
 
-func _13_update_log_tableDownSql() (*asset, error) {
-	bytes, err := _13_update_log_tableDownSqlBytes()
+func _13_ip_whitelistDownSql() (*asset, error) {
+	bytes, err := _13_ip_whitelistDownSqlBytes()
 	if err != nil {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "13_update_log_table.down.sql", size: 184, mode: os.FileMode(420), modTime: time.Unix(1546529662, 0)}
+	info := bindataFileInfo{name: "13_ip_whitelist.down.sql", size: 90, mode: os.FileMode(420), modTime: time.Unix(1550854335, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
 
-var __13_update_log_tableUpSql = []byte("\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\xa4\xd0\xbd\xaa\x83\x40\x10\x05\xe0\xde\xa7\x98\x6e\xef\x85\xfb\x06\x56\xab\xce\x0d\xc2\xfe\x04\x33\x5b\xa4\x12\x13\x07\xb3\x10\x7f\x58\xd7\x22\x6f\x1f\x8c\x08\xa9\xd2\xa4\x9b\x62\xf8\xce\xe1\x64\x78\x28\x4d\x9a\x24\x79\x85\x92\x10\xe8\x7c\x44\xb8\x8f\x5d\xed\xdb\x3a\x3e\x26\x06\x79\x02\x34\x4e\xc3\x8f\x58\x66\x0e\xe2\x0f\x44\xe4\xa1\x19\xe2\x7a\xf5\xdc\x5f\x38\xcc\x37\x3f\x89\xdf\x34\x91\x8a\xb0\x02\x92\x99\x7a\x09\x20\x8b\x02\x72\xab\x9c\x36\x30\x8f\x4b\xb8\xf2\x06\xbe\xe3\xc6\x12\x18\xa7\x14\x14\xf8\x2f\x9d\x22\xd8\x42\x3e\x5a\xb1\x09\x1d\xc7\x2f\xac\x0a\x8d\xd4\xb8\x73\xeb\x53\xed\x5b\x20\xbb\xb7\xf4\xed\x3a\x87\xd5\xba\xa4\xf4\x19\x00\x00\xff\xff\x12\x83\xc9\x9d\x1e\x01\x00\x00")
+var __13_ip_whitelistUpSql = []byte("\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\x94\x90\xcd\x4a\xc3\x40\x14\x85\xd7\x9d\xa7\x38\xbb\xa4\x90\x37\xe8\x6a\x3a\x73\xab\x03\xf3\x13\x93\x19\x8a\x6e\x42\xc8\x8c\x32\xa0\xb6\x24\x8d\xe0\xdb\x4b\xaa\x55\x8b\x2b\x97\xf7\xc0\xf9\xce\xc7\xdd\xd2\x8d\xb2\x1b\xc6\x44\x43\xdc\x13\xfc\x7d\x4d\xe8\x87\xe1\x30\xbf\x9e\xba\xd3\xfb\x31\x81\xb7\x20\x1b\x0c\xca\x62\x4c\x4f\xf3\x73\x3f\x16\x15\x8a\x29\x8d\x6f\x79\x48\xc5\x7a\xc3\x18\xd7\x9e\x1a\x78\xbe\xd5\x84\x79\x4a\xe3\x04\x2e\x25\x84\xd3\xc1\xd8\x6b\xd4\xd5\x61\x9d\x87\x0d\x5a\x43\xd2\x8e\x07\xed\xf1\xcd\xff\x65\x73\x86\x7e\x8d\x75\x97\x7a\x3e\x96\x0c\x00\xfa\x18\x47\x28\x4b\x1e\xc1\xaa\xbb\x40\x15\x5b\x2d\xfb\x5d\x8e\x08\x41\x49\x34\xb4\xa3\x86\xac\xa0\xf6\xd3\xab\xcc\x71\x0d\x67\x11\x6a\xb9\xc0\x05\x6f\x05\x97\xb4\x24\x92\x34\xfd\x24\xd5\x85\x9e\x22\xbc\x32\xd4\x7a\x6e\x6a\xec\x95\xbf\x3d\x9f\x78\x70\x96\xfe\xea\x5b\xb7\x2f\xd7\x15\x5b\xbd\x1c\x62\x7e\xcc\xff\xaf\xb2\xe5\x97\xc2\x19\xa3\xfc\x86\x7d\x04\x00\x00\xff\xff\x87\x89\x73\x72\x96\x01\x00\x00")
 
-func _13_update_log_tableUpSqlBytes() ([]byte, error) {
+func _13_ip_whitelistUpSqlBytes() ([]byte, error) {
 	return bindataRead(
-		__13_update_log_tableUpSql,
-		"13_update_log_table.up.sql",
+		__13_ip_whitelistUpSql,
+		"13_ip_whitelist.up.sql",
 	)
 }
 
-func _13_update_log_tableUpSql() (*asset, error) {
-	bytes, err := _13_update_log_tableUpSqlBytes()
+func _13_ip_whitelistUpSql() (*asset, error) {
+	bytes, err := _13_ip_whitelistUpSqlBytes()
 	if err != nil {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "13_update_log_table.up.sql", size: 286, mode: os.FileMode(420), modTime: time.Unix(1546529712, 0)}
+	info := bindataFileInfo{name: "13_ip_whitelist.up.sql", size: 406, mode: os.FileMode(420), modTime: time.Unix(1550854335, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
+var __14_roles_refDownSql = []byte("\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\x72\xf4\x09\x71\x0d\x52\x08\x71\x74\xf2\x71\x55\x28\xca\xcf\x49\x2d\x56\x70\x09\xf2\x0f\x50\x70\xf6\xf7\x0b\x0e\x09\x72\xf4\xf4\x0b\x81\x88\xc6\x97\x16\xa7\x16\xc5\x67\xa6\xc4\xa7\x65\xa7\x56\x5a\x73\x01\x02\x00\x00\xff\xff\x75\x0e\xcd\x18\x36\x00\x00\x00")
+
+func _14_roles_refDownSqlBytes() ([]byte, error) {
+	return bindataRead(
+		__14_roles_refDownSql,
+		"14_roles_ref.down.sql",
+	)
+}
+
+func _14_roles_refDownSql() (*asset, error) {
+	bytes, err := _14_roles_refDownSqlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "14_roles_ref.down.sql", size: 54, mode: os.FileMode(420), modTime: time.Unix(1550854335, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
+var __14_roles_refUpSql = []byte("\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\x44\xc9\x31\x0a\x02\x31\x10\x05\xd0\x7e\x4f\xf1\xcb\xf5\x0c\x56\x63\xf2\x57\x16\x97\x89\x4c\xc6\xc2\x2a\x8d\x11\x44\x41\xd8\x60\xe1\xed\x25\x28\xd8\xbe\x27\x8b\xd3\xe0\xb2\x5b\x88\xf5\xf9\xa8\x6d\x00\x00\x89\x11\x21\x69\x76\x93\x59\xfd\x1b\xe5\xd5\xea\x5a\x6e\x97\x72\xbd\xd7\x37\xa6\x64\x9c\xf7\x8a\x03\xcf\x18\x7f\xb3\x81\x71\xa2\x51\x03\x33\xba\xb5\xb1\x63\x52\x44\x2e\x74\x22\x48\x0e\x12\xd9\xe5\x74\x8c\xf2\x97\xed\xf0\x09\x00\x00\xff\xff\x4f\x06\x81\xe4\x88\x00\x00\x00")
+
+func _14_roles_refUpSqlBytes() ([]byte, error) {
+	return bindataRead(
+		__14_roles_refUpSql,
+		"14_roles_ref.up.sql",
+	)
+}
+
+func _14_roles_refUpSql() (*asset, error) {
+	bytes, err := _14_roles_refUpSqlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "14_roles_ref.up.sql", size: 136, mode: os.FileMode(420), modTime: time.Unix(1550854335, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
+var __15_role_membership_refDownSql = []byte("\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\x94\xcc\x41\x0a\xc2\x30\x10\x46\xe1\x7d\x4f\xf1\x2f\x15\xbc\x81\xab\x31\x33\x82\x10\x9b\x92\x26\xeb\xa2\x64\xc0\x80\xad\x92\xd4\xfb\x8b\x8a\x08\xe2\xc6\xed\x7b\xf0\x91\x0d\xe2\x11\x68\x63\x05\xe5\x72\xd6\xda\x00\x00\x31\xc3\x38\x1b\xf7\x2d\x6e\x55\xcb\x90\x13\x62\xdc\x31\xbc\x6c\xc5\x4b\x6b\xa4\x7f\xf6\xba\xc8\x69\x09\xd7\x22\x76\x4c\x41\x60\xa8\x37\xc4\xf2\x28\x2c\x56\x3e\x65\xf5\xad\xce\x3a\x1d\xa6\xf9\x97\xfb\x3a\x7f\xca\xec\x5d\xf7\xa6\x47\x1d\x8f\x5a\xea\x29\x5f\x87\x9c\xd6\xcd\x3d\x00\x00\xff\xff\xce\x10\x1c\xcd\xe1\x00\x00\x00")
+
+func _15_role_membership_refDownSqlBytes() ([]byte, error) {
+	return bindataRead(
+		__15_role_membership_refDownSql,
+		"15_role_membership_ref.down.sql",
+	)
+}
+
+func _15_role_membership_refDownSql() (*asset, error) {
+	bytes, err := _15_role_membership_refDownSqlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "15_role_membership_ref.down.sql", size: 225, mode: os.FileMode(420), modTime: time.Unix(1550854335, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
+var __15_role_membership_refUpSql = []byte("\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\x8c\x90\xc1\x4e\xc3\x30\x10\x44\xef\xfe\x8a\x3d\xb6\x52\xd5\x1f\x88\x38\xb8\xf6\xa6\x58\x24\xeb\xe2\xac\x85\x38\x45\xa0\x1a\x11\x41\x0b\x4a\xca\x81\xbf\x47\x71\xdc\x2a\x4d\x38\xf4\xe8\x37\xb3\xe3\xd9\xdd\xe0\xd6\x50\x26\x84\x2c\x18\x1d\xb0\xdc\x14\x08\xed\xd7\x67\xe8\x40\x6a\x0d\xca\x16\xbe\x24\x38\x84\xc3\x6b\x68\xbb\xf7\xe6\xbb\x6e\xf6\xe0\xbd\xd1\x99\x10\x7e\xa7\x25\x27\xb3\x00\x00\xa8\x90\x27\xce\xbb\xd1\x7b\xdd\xec\xa3\x2b\x77\xb6\x1c\xe1\xc8\x9e\xee\xd1\xa5\xa4\xf5\x4f\x17\xda\xd9\xec\x19\x4a\xd2\xc9\x76\x0a\xc7\x97\xe3\x69\x66\xbc\xe0\xff\x56\x8a\x7f\x69\x67\x77\xe7\xbd\x52\xec\x6a\x26\x5c\x62\x06\x69\x38\x05\x55\xec\xa4\x21\x1e\xc2\xea\xab\x55\xeb\xb7\x8f\xf0\x0b\xb9\x75\x68\xb6\x04\x0f\xf8\x0c\x8b\x2b\x7d\x09\x0e\x73\x74\x48\x0a\xab\x51\xdf\x45\xaf\x58\x02\x8d\x05\x32\x82\x92\x95\x92\x1a\x7b\x92\xae\x9b\xc8\xcd\x35\x7a\x56\xf7\x55\x3c\x99\x47\x8f\x93\x16\xab\x38\xb3\xcc\x84\x50\xb6\x2c\x0d\x67\xe2\x2f\x00\x00\xff\xff\x88\x2d\x38\x7e\xff\x01\x00\x00")
+
+func _15_role_membership_refUpSqlBytes() ([]byte, error) {
+	return bindataRead(
+		__15_role_membership_refUpSql,
+		"15_role_membership_ref.up.sql",
+	)
+}
+
+func _15_role_membership_refUpSql() (*asset, error) {
+	bytes, err := _15_role_membership_refUpSqlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "15_role_membership_ref.up.sql", size: 511, mode: os.FileMode(420), modTime: time.Unix(1550854335, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
+var __16_user_id_defaultDownSql = []byte("\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\x72\xf4\x09\x71\x0d\x52\x08\x71\x74\xf2\x71\x55\x28\x2d\x4e\x2d\x2a\x56\x80\x88\x38\xfb\xfb\x84\xfa\xfa\x29\x64\xa6\x28\xb8\x04\xf9\x07\x28\xb8\xb8\xba\x39\x86\xfa\x84\x58\x73\x01\x02\x00\x00\xff\xff\xa9\xc0\x97\xbc\x30\x00\x00\x00")
+
+func _16_user_id_defaultDownSqlBytes() ([]byte, error) {
+	return bindataRead(
+		__16_user_id_defaultDownSql,
+		"16_user_id_default.down.sql",
+	)
+}
+
+func _16_user_id_defaultDownSql() (*asset, error) {
+	bytes, err := _16_user_id_defaultDownSqlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "16_user_id_default.down.sql", size: 48, mode: os.FileMode(420), modTime: time.Unix(1550854343, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
+var __16_user_id_defaultUpSql = []byte("\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\x72\xf4\x09\x71\x0d\x52\x08\x71\x74\xf2\x71\x55\x28\x2d\x4e\x2d\x2a\x56\x80\x88\x38\xfb\xfb\x84\xfa\xfa\x29\x64\xa6\x28\x04\xbb\x86\x28\xb8\xb8\xba\x39\x86\xfa\x84\x28\x94\x96\x66\xa6\xc4\xa7\xa7\xe6\xa5\x16\x25\x96\xa4\xc6\x97\x99\x68\x68\x5a\x73\x01\x02\x00\x00\xff\xff\xe5\x69\x10\x4f\x42\x00\x00\x00")
+
+func _16_user_id_defaultUpSqlBytes() ([]byte, error) {
+	return bindataRead(
+		__16_user_id_defaultUpSql,
+		"16_user_id_default.up.sql",
+	)
+}
+
+func _16_user_id_defaultUpSql() (*asset, error) {
+	bytes, err := _16_user_id_defaultUpSqlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "16_user_id_default.up.sql", size: 66, mode: os.FileMode(420), modTime: time.Unix(1550854343, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
+var __17_service_account_keysDownSql = []byte("\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\x72\x72\x75\xf7\xf4\xb3\xe6\xe2\x72\x09\xf2\x0f\x50\x08\x71\x74\xf2\x71\x55\x28\x4e\x2d\x2a\xcb\x4c\x4e\x8d\x4f\x4c\x4e\xce\x2f\xcd\x2b\x89\xcf\x4e\xad\x2c\xb6\x86\x28\xf0\xf4\x73\x71\x8d\x50\x28\x2d\x4e\x2d\x2a\x8e\x4f\xcd\x4d\xcc\xcc\x01\x49\x5a\x73\x39\xfa\x84\xb8\x06\x41\x75\x83\x25\x15\x1c\x5d\x5c\x14\x9c\xfd\xfd\x82\x43\x82\x1c\x3d\xfd\x42\xd0\x75\x28\x84\xfa\x79\x06\x86\xba\x2a\x68\x80\x45\x34\xad\xb9\xb8\x9c\xfd\x7d\x7d\x3d\x43\xac\xb9\x00\x01\x00\x00\xff\xff\xf2\x27\xb4\x09\x8f\x00\x00\x00")
+
+func _17_service_account_keysDownSqlBytes() ([]byte, error) {
+	return bindataRead(
+		__17_service_account_keysDownSql,
+		"17_service_account_keys.down.sql",
+	)
+}
+
+func _17_service_account_keysDownSql() (*asset, error) {
+	bytes, err := _17_service_account_keysDownSqlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "17_service_account_keys.down.sql", size: 143, mode: os.FileMode(420), modTime: time.Unix(1550854343, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
+var __17_service_account_keysUpSql = []byte("\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\x64\x91\xc1\x6e\xf2\x30\x10\x84\xef\x7e\x8a\xb9\x91\x48\xff\xf1\xbf\x45\x3d\x98\x78\x29\x56\x13\x3b\x75\x6c\x51\x7a\x89\x52\xb2\xa2\x51\x81\xa2\x84\x20\xf1\xf6\x55\x42\x11\x55\x7b\xf4\xa7\xf1\xec\xec\xec\x9c\x1e\xb5\x49\x84\x48\x1d\x49\x4f\xf0\x72\x9e\x11\x7a\xee\xce\xed\x86\xab\x7a\xb3\xf9\x1c\x0e\xa7\xea\x83\x2f\x7d\x24\x00\xa0\x6d\x10\x82\x56\x30\xd6\xc3\x84\x2c\x43\xe1\x74\x2e\xdd\x1a\x4f\xb4\x86\xa2\x85\x0c\x99\xc7\x30\xb4\x4d\xb5\xe5\x03\x77\xf5\x89\xab\xf3\xff\x28\xfe\x37\x7d\xde\xf3\xfe\x8d\xbb\xfe\xbd\x3d\x56\x7f\x7c\x1c\x2d\xc8\x91\x49\xa9\xfc\x21\x8b\xda\x26\x86\x35\x50\x94\x91\x27\xa4\xb2\x4c\xa5\xa2\x91\x84\x42\xc9\x3b\xb9\xda\xd7\x4d\xc3\x0d\xbc\xce\xa9\xf4\x32\x2f\xb0\xd2\x7e\x39\x3d\xf1\x6a\x0d\xdd\x47\xdd\x62\x1a\xbb\x8a\x62\x11\x27\x42\xc8\xcc\x93\xfb\xde\x7d\xe8\xb9\xeb\xa1\x9c\x2d\x90\x5a\x53\x7a\x27\xb5\xf1\x57\x5a\xf1\xbe\x6e\x77\x63\x1b\xc9\xad\xaf\x60\xf4\x73\x20\x68\xa3\xe8\xe5\xb7\x68\xcc\x39\xa1\x68\x42\x31\x56\x4b\x72\x84\x5b\xa9\xa7\xcb\x91\xf1\x80\x59\xc7\xdb\x61\x57\x77\xb3\xf1\x08\x36\xcf\xb5\x4f\xc4\x57\x00\x00\x00\xff\xff\xa8\x45\x58\xee\x95\x01\x00\x00")
+
+func _17_service_account_keysUpSqlBytes() ([]byte, error) {
+	return bindataRead(
+		__17_service_account_keysUpSql,
+		"17_service_account_keys.up.sql",
+	)
+}
+
+func _17_service_account_keysUpSql() (*asset, error) {
+	bytes, err := _17_service_account_keysUpSqlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "17_service_account_keys.up.sql", size: 405, mode: os.FileMode(420), modTime: time.Unix(1550854343, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
+var __18_service_constraintsDownSql = []byte("\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\x72\xf4\x09\x71\x0d\x52\x08\x71\x74\xf2\x71\x55\x28\x2d\x4e\x2d\x2a\x56\x70\x09\xf2\x0f\x50\x70\xf6\xf7\x0b\x0e\x09\x72\xf4\xf4\x0b\x81\x88\xc6\x17\xa7\x16\x95\x65\x26\xa7\xc6\xe7\xe5\xc7\xa7\xe6\x26\x66\xe6\xc4\x17\x94\xa7\x58\x73\x01\x02\x00\x00\xff\xff\x51\x7e\xf4\xba\x3e\x00\x00\x00")
+
+func _18_service_constraintsDownSqlBytes() ([]byte, error) {
+	return bindataRead(
+		__18_service_constraintsDownSql,
+		"18_service_constraints.down.sql",
+	)
+}
+
+func _18_service_constraintsDownSql() (*asset, error) {
+	bytes, err := _18_service_constraintsDownSqlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "18_service_constraints.down.sql", size: 62, mode: os.FileMode(420), modTime: time.Unix(1550854343, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
+var __18_service_constraintsUpSql = []byte("\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\x24\xca\x41\xaa\x83\x30\x10\x06\xe0\xfd\x3b\xc5\xbf\x53\xcf\xf0\xe8\x22\xd5\x40\x4b\x25\x42\x9a\xfd\x10\xe2\x50\x05\x6b\x42\xc6\x54\x7a\xfb\x52\xbb\xfd\xf8\x54\xef\xb4\x85\x53\xe7\x5e\xa3\x08\x67\x81\xea\x3a\xb4\x83\xb9\x3b\xab\xae\xc6\xfd\x90\x84\xf3\x6b\x0e\x4c\x6b\x24\x7e\xfa\x79\xa1\xb4\x8f\x68\x2f\xba\xbd\xa1\xf6\x21\xc4\xb2\x6e\xb4\xbd\x13\xe3\x84\x2a\xf3\xa3\x2c\x3e\x57\x18\x2c\xea\x63\x7f\xb5\x82\x32\x1d\x92\x17\xd9\x63\x1e\x69\xf2\x32\x1d\xdc\x34\xff\x7f\x9f\x00\x00\x00\xff\xff\xc6\x38\xc2\x4a\x85\x00\x00\x00")
+
+func _18_service_constraintsUpSqlBytes() ([]byte, error) {
+	return bindataRead(
+		__18_service_constraintsUpSql,
+		"18_service_constraints.up.sql",
+	)
+}
+
+func _18_service_constraintsUpSql() (*asset, error) {
+	bytes, err := _18_service_constraintsUpSqlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "18_service_constraints.up.sql", size: 133, mode: os.FileMode(420), modTime: time.Unix(1550854343, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
+var __19_update_log_tableDownSql = []byte("\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\x72\x72\x75\xf7\xf4\xb3\xe6\xe2\x72\x09\xf2\x0f\x50\x08\x89\x0c\x70\x55\xf0\x74\x53\x70\x8d\xf0\x0c\x0e\x09\x56\xc8\xc9\x4f\x8f\xcf\x4c\x89\x2f\xa9\x2c\x48\xb5\xe6\xe2\x72\xf4\x09\x71\x0d\x52\x08\x71\x74\xf2\x71\x05\xc9\x28\x80\x75\x38\xfb\xfb\x84\xfa\xfa\x29\x14\xe7\x97\x16\x25\xa7\x42\x55\xe2\x53\x58\x92\x58\x94\x9e\x5a\x82\x43\x61\x90\xab\x9f\xa3\xaf\x2b\x9a\x99\x99\x29\x0a\x21\xfe\x0a\xa5\xc5\xa9\x45\xf1\x99\x29\xd6\x5c\x5c\xce\xfe\xbe\xbe\x9e\x21\xd6\x80\x00\x00\x00\xff\xff\x6d\x36\xc3\x5b\xb8\x00\x00\x00")
+
+func _19_update_log_tableDownSqlBytes() ([]byte, error) {
+	return bindataRead(
+		__19_update_log_tableDownSql,
+		"19_update_log_table.down.sql",
+	)
+}
+
+func _19_update_log_tableDownSql() (*asset, error) {
+	bytes, err := _19_update_log_tableDownSqlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "19_update_log_table.down.sql", size: 184, mode: os.FileMode(420), modTime: time.Unix(1550854944, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
+var __19_update_log_tableUpSql = []byte("\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\xa4\xd0\xbd\xaa\x83\x40\x10\x05\xe0\xde\xa7\x98\x6e\xef\x85\xfb\x06\x56\xab\xce\x0d\xc2\xfe\x04\x33\x5b\xa4\x12\x13\x07\xb3\x10\x7f\x58\xd7\x22\x6f\x1f\x8c\x08\xa9\xd2\xa4\x9b\x62\xf8\xce\xe1\x64\x78\x28\x4d\x9a\x24\x79\x85\x92\x10\xe8\x7c\x44\xb8\x8f\x5d\xed\xdb\x3a\x3e\x26\x06\x79\x02\x34\x4e\xc3\x8f\x58\x66\x0e\xe2\x0f\x44\xe4\xa1\x19\xe2\x7a\xf5\xdc\x5f\x38\xcc\x37\x3f\x89\xdf\x34\x91\x8a\xb0\x02\x92\x99\x7a\x09\x20\x8b\x02\x72\xab\x9c\x36\x30\x8f\x4b\xb8\xf2\x06\xbe\xe3\xc6\x12\x18\xa7\x14\x14\xf8\x2f\x9d\x22\xd8\x42\x3e\x5a\xb1\x09\x1d\xc7\x2f\xac\x0a\x8d\xd4\xb8\x73\xeb\x53\xed\x5b\x20\xbb\xb7\xf4\xed\x3a\x87\xd5\xba\xa4\xf4\x19\x00\x00\xff\xff\x12\x83\xc9\x9d\x1e\x01\x00\x00")
+
+func _19_update_log_tableUpSqlBytes() ([]byte, error) {
+	return bindataRead(
+		__19_update_log_tableUpSql,
+		"19_update_log_table.up.sql",
+	)
+}
+
+func _19_update_log_tableUpSql() (*asset, error) {
+	bytes, err := _19_update_log_tableUpSqlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "19_update_log_table.up.sql", size: 286, mode: os.FileMode(420), modTime: time.Unix(1550854946, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -671,8 +923,20 @@ var _bindata = map[string]func() (*asset, error){
 	"11_add_tenants_table.up.sql": _11_add_tenants_tableUpSql,
 	"12_role_per_tenant.down.sql": _12_role_per_tenantDownSql,
 	"12_role_per_tenant.up.sql": _12_role_per_tenantUpSql,
-	"13_update_log_table.down.sql": _13_update_log_tableDownSql,
-	"13_update_log_table.up.sql": _13_update_log_tableUpSql,
+	"13_ip_whitelist.down.sql": _13_ip_whitelistDownSql,
+	"13_ip_whitelist.up.sql": _13_ip_whitelistUpSql,
+	"14_roles_ref.down.sql": _14_roles_refDownSql,
+	"14_roles_ref.up.sql": _14_roles_refUpSql,
+	"15_role_membership_ref.down.sql": _15_role_membership_refDownSql,
+	"15_role_membership_ref.up.sql": _15_role_membership_refUpSql,
+	"16_user_id_default.down.sql": _16_user_id_defaultDownSql,
+	"16_user_id_default.up.sql": _16_user_id_defaultUpSql,
+	"17_service_account_keys.down.sql": _17_service_account_keysDownSql,
+	"17_service_account_keys.up.sql": _17_service_account_keysUpSql,
+	"18_service_constraints.down.sql": _18_service_constraintsDownSql,
+	"18_service_constraints.up.sql": _18_service_constraintsUpSql,
+	"19_update_log_table.down.sql": _19_update_log_tableDownSql,
+	"19_update_log_table.up.sql": _19_update_log_tableUpSql,
 	"1_add_users_table.down.sql": _1_add_users_tableDownSql,
 	"1_add_users_table.up.sql": _1_add_users_tableUpSql,
 	"2_add_roles_table.down.sql": _2_add_roles_tableDownSql,
@@ -739,8 +1003,20 @@ var _bintree = &bintree{nil, map[string]*bintree{
 	"11_add_tenants_table.up.sql": &bintree{_11_add_tenants_tableUpSql, map[string]*bintree{}},
 	"12_role_per_tenant.down.sql": &bintree{_12_role_per_tenantDownSql, map[string]*bintree{}},
 	"12_role_per_tenant.up.sql": &bintree{_12_role_per_tenantUpSql, map[string]*bintree{}},
-	"13_update_log_table.down.sql": &bintree{_13_update_log_tableDownSql, map[string]*bintree{}},
-	"13_update_log_table.up.sql": &bintree{_13_update_log_tableUpSql, map[string]*bintree{}},
+	"13_ip_whitelist.down.sql": &bintree{_13_ip_whitelistDownSql, map[string]*bintree{}},
+	"13_ip_whitelist.up.sql": &bintree{_13_ip_whitelistUpSql, map[string]*bintree{}},
+	"14_roles_ref.down.sql": &bintree{_14_roles_refDownSql, map[string]*bintree{}},
+	"14_roles_ref.up.sql": &bintree{_14_roles_refUpSql, map[string]*bintree{}},
+	"15_role_membership_ref.down.sql": &bintree{_15_role_membership_refDownSql, map[string]*bintree{}},
+	"15_role_membership_ref.up.sql": &bintree{_15_role_membership_refUpSql, map[string]*bintree{}},
+	"16_user_id_default.down.sql": &bintree{_16_user_id_defaultDownSql, map[string]*bintree{}},
+	"16_user_id_default.up.sql": &bintree{_16_user_id_defaultUpSql, map[string]*bintree{}},
+	"17_service_account_keys.down.sql": &bintree{_17_service_account_keysDownSql, map[string]*bintree{}},
+	"17_service_account_keys.up.sql": &bintree{_17_service_account_keysUpSql, map[string]*bintree{}},
+	"18_service_constraints.down.sql": &bintree{_18_service_constraintsDownSql, map[string]*bintree{}},
+	"18_service_constraints.up.sql": &bintree{_18_service_constraintsUpSql, map[string]*bintree{}},
+	"19_update_log_table.down.sql": &bintree{_19_update_log_tableDownSql, map[string]*bintree{}},
+	"19_update_log_table.up.sql": &bintree{_19_update_log_tableUpSql, map[string]*bintree{}},
 	"1_add_users_table.down.sql": &bintree{_1_add_users_tableDownSql, map[string]*bintree{}},
 	"1_add_users_table.up.sql": &bintree{_1_add_users_tableUpSql, map[string]*bintree{}},
 	"2_add_roles_table.down.sql": &bintree{_2_add_roles_tableDownSql, map[string]*bintree{}},
