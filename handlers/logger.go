@@ -63,6 +63,8 @@ var evSourceTypeMap = map[string]string{
 	EvLogin:              MembeshipIdType,
 	EvEmailUpdateRequest: UserIdType,
 	EvEmailUpdate:        UserIdType,
+	EvDeleteAPIKey:       UserIdType,
+	EvNewAPIKey:          UserIdType,
 }
 
 var evTargetTypeMap = map[string]string{
@@ -80,6 +82,8 @@ var evTargetTypeMap = map[string]string{
 	EvLogin:              MembeshipIdType,
 	EvEmailUpdateRequest: UserIdType,
 	EvEmailUpdate:        UserIdType,
+	EvDeleteAPIKey:       UserIdType,
+	EvNewAPIKey:          UserIdType,
 }
 
 func logFields(ev string, self, id uuid.UUID, r *http.Request) logrus.Fields {
