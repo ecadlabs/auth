@@ -39,6 +39,12 @@ func (t *TenantModel) Clone() *TenantModel {
 }
 
 func (s *Storage) CreateTenantInt(ctx context.Context, tx *sqlx.Tx, tenant *TenantModel) (*TenantModel, error) {
+
+	// If ID is not set yet we create it
+	if tenant.ID == uuid.Nil {
+		tenant.ID = uuid.NewV4()
+	}
+
 	var newTenant TenantModel
 	err := sqlx.GetContext(ctx, tx, &newTenant, "INSERT INTO tenants (id, name) VALUES ($1, $2) RETURNING *", tenant.ID, tenant.Name)
 	if err != nil {
@@ -51,7 +57,6 @@ func (s *Storage) CreateTenantInt(ctx context.Context, tx *sqlx.Tx, tenant *Tena
 func (s *Storage) CreateTenant(ctx context.Context, name string) (*TenantModel, error) {
 	tenant := TenantModel{
 		Name: name,
-		ID:   uuid.NewV4(),
 	}
 
 	tx, err := s.DB.Beginx()
