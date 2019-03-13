@@ -474,6 +474,12 @@ func beforeTest() (srv *httptest.Server, userList []*storage.User, token string,
 		if code/100 != 2 {
 			return
 		}
+
+		code, _, _, err2 := doLogin(srv, u.Email, testPassword, nil)
+		if code != 200 {
+			err = err2
+			return
+		}
 	}
 
 	results, err = fetchTenantAndUsers(srv, false)
@@ -750,8 +756,9 @@ func TestService(t *testing.T) {
 				return
 			}
 
-			if len(list) != 25 {
-				t.Error("Len is not 25", len(list))
+			// There should be 35 logs entry
+			if len(list) != 35 {
+				t.Error("Len is not 35", len(list))
 			}
 
 			if code != http.StatusOK {

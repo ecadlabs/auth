@@ -448,9 +448,11 @@ func (t *Tenants) InviteExistingUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var user struct {
+		ID             uuid.UUID     `json:"id"`
 		Email          string        `json:"email"`
 		MembershipType string        `json:"type"`
 		Roles          storage.Roles `json:"roles"`
+		BypassInvite   bool          `json:"bypass_invite"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
@@ -474,7 +476,12 @@ func (t *Tenants) InviteExistingUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	target, err := t.Storage.GetUserByEmail(ctx, storage.AccountRegular, user.Email)
+	var target *storage.User
+	if user.Email != "" {
+		target, err = t.Storage.GetUserByEmail(ctx, storage.AccountRegular, user.Email)
+	} else {
+		target, err = t.Storage.GetUserByID(ctx, "", user.ID)
+	}
 
 	if err != nil {
 		log.Error(err)
@@ -505,14 +512,6 @@ func (t *Tenants) InviteExistingUser(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Create invite token
-	token, err := t.inviteToken(target, uid)
-	if err != nil {
-		log.Error(err)
-		utils.JSONErrorResponse(w, err)
-		return
-	}
-
 	tenant, err := t.Storage.GetTenant(ctx, uid, member.UserID, !granted)
 	if err != nil {
 		log.Error(err)
@@ -527,9 +526,16 @@ func (t *Tenants) InviteExistingUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	invitedState := storage.ActiveState
+
+	// Regular user need to be invited
+	if target.Type == storage.AccountRegular && !user.BypassInvite {
+		invitedState = storage.InvitedState
+	}
+
 	// Only create membership if it does not exists
 	if membership == nil {
-		err = t.Storage.AddMembership(ctx, uid, target, storage.InvitedState, user.MembershipType, user.Roles)
+		err = t.Storage.AddMembership(ctx, uid, target, invitedState, user.MembershipType, user.Roles)
 		if err != nil {
 			log.Error(err)
 			utils.JSONErrorResponse(w, err)
@@ -537,14 +543,25 @@ func (t *Tenants) InviteExistingUser(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if err = t.Notifier.Notify(ctx, notification.NotificationTenantInvite, &notification.NotificationData{
-		Tenant:      tenant,
-		CurrentUser: self,
-		TargetUser:  target,
-		Token:       token,
-		TokenMaxAge: t.TokenFactory.SessionMaxAge,
-	}); err != nil {
-		log.Error(err)
+	// If the state is invite we need to send an email to the user
+	if invitedState == storage.InvitedState {
+		// Create invite token
+		token, err := t.inviteToken(target, uid)
+		if err != nil {
+			log.Error(err)
+			utils.JSONErrorResponse(w, err)
+			return
+		}
+
+		if err = t.Notifier.Notify(ctx, notification.NotificationTenantInvite, &notification.NotificationData{
+			Tenant:      tenant,
+			CurrentUser: self,
+			TargetUser:  target,
+			Token:       token,
+			TokenMaxAge: t.TokenFactory.SessionMaxAge,
+		}); err != nil {
+			log.Error(err)
+		}
 	}
 
 	w.WriteHeader(http.StatusNoContent)
