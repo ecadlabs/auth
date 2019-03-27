@@ -1,6 +1,6 @@
 {
   "name": "@ecadlabs/angular-auth",
-  "version": "0.13.0",
+  "version": "0.13.3",
   "private": false,
   "peerDependencies": {
     "@angular/common": "^7.0.3",
