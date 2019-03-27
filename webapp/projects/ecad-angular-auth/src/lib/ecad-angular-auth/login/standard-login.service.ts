@@ -40,9 +40,9 @@ export class StandardLoginService implements ILoginService {
     return obserbable.pipe(
       tap(result => this.config.tokenSetter(result.token)),
       tap(result => localStorage.setItem('refreshTokenUrl', result.refresh)),
-      tap(() => this.user.next(this.token))
+      tap(() => this.user.next(this.getTokenAndCheckExp()))
     );
-  }
+  };
 
   constructor(
     @Optional()
@@ -69,7 +69,7 @@ export class StandardLoginService implements ILoginService {
             })
           );
         }),
-        tap(() => this.user.next(this.token))
+        tap(() => this.user.next(this.getTokenAndCheckExp()))
       )
       .subscribe();
   }
@@ -100,7 +100,6 @@ export class StandardLoginService implements ILoginService {
   }
 
   private get token(): UserToken {
-    this.logoutIfExpired();
     const token = this.config.tokenGetter();
     if (token) {
       const decodedToken = this.jwtHelper.decodeToken(token);
@@ -111,6 +110,11 @@ export class StandardLoginService implements ILoginService {
     } else {
       return null;
     }
+  }
+
+  private getTokenAndCheckExp(): UserToken {
+    this.logoutIfExpired();
+    return this.token;
   }
 
   /**
