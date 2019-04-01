@@ -439,6 +439,7 @@ func beforeTest() (srv *httptest.Server, userList []*storage.User, token string,
 				Hash:  "$2y$10$FnvgJTFgKxLVbJ/Xo0dCb.10N3Rbdr5Z49a0G4MiM8XAC4Wz2DkSe",
 				Role:  "admin",
 				ID:    "a6573daa-4d0a-49a4-a281-93d0d3dafb06",
+				Type:  "regular",
 			},
 		},
 	}
