@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"net"
 
 	"github.com/satori/go.uuid"
 
@@ -53,13 +54,25 @@ func (s *Service) Bootstrap(c *BootstrapConfig) (user *storage.User, err error) 
 	for _, cUser := range c.Users {
 		roles := make(storage.Roles)
 		roles[cUser.Role] = true
+
 		u := storage.CreateUser{
 			ID:            uuid.FromStringOrNil(cUser.ID),
 			Email:         cUser.Email,
 			PasswordHash:  ([]byte)(cUser.Hash),
 			EmailVerified: true, // Allow logging in !!!
 			Roles:         roles,
-			Type:          storage.AccountRegular,
+			Type:          cUser.Type,
+		}
+
+		ips := []net.IP{}
+		for _, ip := range cUser.AddressWhiteList {
+			if netIp, _, err := net.ParseCIDR(ip); err == nil {
+				u.AddressWhiteList = append(ips, netIp)
+			}
+		}
+
+		if len(ips) > 0 {
+			u.AddressWhiteList = ips
 		}
 
 		_, err = storage.NewUserInt(context.Background(), tx, &u)
