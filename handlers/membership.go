@@ -311,7 +311,7 @@ func (m *Memberships) FindUserMemberships(w http.ResponseWriter, r *http.Request
 	defer cancel()
 
 	role, err := m.Enforcer.GetRole(ctx, member.Roles.Get()...)
-	granted, err := role.IsAnyGranted(permissionTenantsFull, permissionRead)
+	granted, err := role.IsAnyGranted(permissionTenantsFull, permissionFull, permissionTenantsRead, permissionRead)
 
 	if err != nil {
 		log.Error(err)

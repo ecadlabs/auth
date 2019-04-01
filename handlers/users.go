@@ -157,18 +157,9 @@ func (u *Users) checkReadPermissions(role rbac.Role, typ string, self bool) (res
 	return
 }
 
-func (u *Users) GetUser(w http.ResponseWriter, r *http.Request) {
+func (u *Users) getUserById(ctx context.Context, uid uuid.UUID, w http.ResponseWriter, r *http.Request) {
 	self := r.Context().Value(UserContextKey{}).(*storage.User)
 	member := r.Context().Value(MembershipContextKey{}).(*storage.Membership)
-
-	uid, err := uuid.FromString(mux.Vars(r)["id"])
-	if err != nil {
-		utils.JSONError(w, err.Error(), errors.CodeBadRequest)
-		return
-	}
-
-	ctx, cancel := u.context(r)
-	defer cancel()
 
 	role, err := u.Enforcer.GetRole(ctx, member.Roles.Get()...)
 	if err != nil {
@@ -191,6 +182,19 @@ func (u *Users) GetUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	utils.JSONResponse(w, http.StatusOK, user)
+}
+
+func (u *Users) GetUser(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := u.context(r)
+	defer cancel()
+
+	uid, err := uuid.FromString(mux.Vars(r)["id"])
+	if err != nil {
+		utils.JSONError(w, err.Error(), errors.CodeBadRequest)
+		return
+	}
+
+	u.getUserById(ctx, uid, w, r)
 }
 
 func (u *Users) GetUsers(w http.ResponseWriter, r *http.Request) {
@@ -263,11 +267,11 @@ func (u *Users) GetUsers(w http.ResponseWriter, r *http.Request) {
 func (u *Users) resetToken(user *storage.User) (string, error) {
 	now := time.Now()
 	claims := jwt.MapClaims{
-		"sub":                             user.ID,
-		"exp":                             now.Add(u.ResetTokenMaxAge).Unix(),
-		"iat":                             now.Unix(),
-		"iss":                             u.BaseURL(),
-		"aud":                             u.ResetURL(),
+		"sub": user.ID,
+		"exp": now.Add(u.ResetTokenMaxAge).Unix(),
+		"iat": now.Unix(),
+		"iss": u.BaseURL(),
+		"aud": u.ResetURL(),
 		utils.NSClaim(u.Namespace, "gen"): user.PasswordGen,
 	}
 
@@ -833,11 +837,11 @@ func (u *Users) SendUpdateEmailRequest(w http.ResponseWriter, r *http.Request) {
 	now := time.Now()
 
 	claims := jwt.MapClaims{
-		"sub":                               user.ID,
-		"exp":                               now.Add(u.EmailUpdateTokenMaxAge).Unix(),
-		"iat":                               now.Unix(),
-		"iss":                               u.BaseURL(),
-		"aud":                               u.EmailUpdateURL(),
+		"sub": user.ID,
+		"exp": now.Add(u.EmailUpdateTokenMaxAge).Unix(),
+		"iat": now.Unix(),
+		"iss": u.BaseURL(),
+		"aud": u.EmailUpdateURL(),
 		utils.NSClaim(u.Namespace, "email"): request.Email,
 		utils.NSClaim(u.Namespace, "gen"):   user.EmailGen,
 	}
@@ -977,4 +981,24 @@ func (u *Users) UpdateEmail(w http.ResponseWriter, r *http.Request) {
 	if u.AuxLogger != nil {
 		u.AuxLogger.WithFields(logFields(EvEmailUpdate, id, id, r)).WithField("email", email).Printf("Email for account %v updated", id)
 	}
+}
+
+func (u *Users) FindUserByMembershipID(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := u.context(r)
+	defer cancel()
+
+	membershipID, err := uuid.FromString(mux.Vars(r)["memberId"])
+	if err != nil {
+		utils.JSONError(w, err.Error(), errors.CodeBadRequest)
+		return
+	}
+
+	userID, err := u.Storage.GetUserIDByMembershipID(ctx, "", membershipID)
+
+	if err != nil {
+		utils.JSONErrorResponse(w, err)
+		return
+	}
+
+	u.getUserById(ctx, userID, w, r)
 }

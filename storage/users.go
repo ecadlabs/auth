@@ -777,3 +777,14 @@ func (s *Storage) Ping(ctx context.Context) error {
 
 	return nil
 }
+
+func (s *Storage) GetUserIDByMembershipID(ctx context.Context, account_type string, membershipID uuid.UUID) (uuid.UUID, error) {
+	var uid uuid.UUID
+	if err := s.DB.GetContext(ctx, &uid, "SELECT user_id from membership WHERE id = $1", membershipID); err != nil {
+		if err == sql.ErrNoRows {
+			err = errors.ErrMembershipNotFound
+		}
+		return uid, err
+	}
+	return uid, nil
+}

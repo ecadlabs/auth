@@ -256,6 +256,15 @@ func (s *Service) APIHandler() http.Handler {
 
 	amux.Methods("POST").Path("").HandlerFunc(tenantsHandler.AcceptInvite)
 
+	// Members API
+	mmux := m.PathPrefix("/members").Subrouter()
+	mmux.Use(jwtMiddleware.Handler)
+	mmux.Use(aud.Handler)
+	mmux.Use(userdata.Handler)
+	mmux.Use(membershipData.Handler)
+
+	mmux.Methods("GET").Path("/{memberId}/user").HandlerFunc(usersHandler.FindUserByMembershipID)
+
 	// Log API
 	lmux := m.PathPrefix("/logs").Subrouter()
 	lmux.Use(jwtMiddleware.Handler)
