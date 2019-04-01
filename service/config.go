@@ -47,10 +47,12 @@ type BootstrapTenant struct {
 }
 
 type BootstrapUser struct {
-	Email string `yaml:"email"`
-	Hash  string `yaml:"hash"`
-	ID    string `yaml:"uuid"`
-	Role  string `yaml:"role"`
+	Email            string   `yaml:"email"`
+	Hash             string   `yaml:"hash"`
+	ID               string   `yaml:"uuid"`
+	Role             string   `yaml:"role"`
+	Type             string   `yaml:"account_type"`
+	AddressWhiteList []string `yaml:"address_whitelist"`
 }
 
 type BootstrapMember struct {
