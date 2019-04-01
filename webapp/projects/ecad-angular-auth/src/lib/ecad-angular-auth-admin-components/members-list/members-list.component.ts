@@ -75,7 +75,7 @@ export class MembersListComponent implements OnInit {
 
   archiveMember({ tenant_id, user_id }: Membership) {
     this.dialog
-      .open(this.deleteMember)
+      .open(this.deleteMember, { width: '500px' })
       .afterClosed()
       .pipe(
         takeWhile(x => x),
@@ -90,7 +90,8 @@ export class MembersListComponent implements OnInit {
 
   updateMember(member: Membership) {
     this.dialogRef = this.dialog.open(this.editMemberRoles, {
-      data: { member }
+      data: { member },
+      width: '500px'
     });
   }
 
