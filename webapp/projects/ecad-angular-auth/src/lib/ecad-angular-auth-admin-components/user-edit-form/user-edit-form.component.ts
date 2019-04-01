@@ -28,6 +28,10 @@ export class UserEditFormComponent implements OnInit {
     private _fb: FormBuilder
   ) {}
 
+  public get roles() {
+    return this.userService.getRoles();
+  }
+
   public get value() {
     return JSON.stringify(this.userForm.value);
   }
@@ -56,24 +60,31 @@ export class UserEditFormComponent implements OnInit {
     return this.dialogData.email !== this.userForm.value.email;
   }
 
+  private async createUser() {
+    const createUserPayload: CreateUser = this.userForm.value;
+    createUserPayload.roles = { [this.authConfig.defaultRole]: true };
+    await this.userService.create(createUserPayload).toPromise();
+  }
+
+  private async editUser() {
+    const payload = this.userForm.value;
+    if (this.isEmailUpdated) {
+      await this.userService
+        .updateEmail(this.dialogData.id, this.userForm.value.email)
+        .toPromise();
+    }
+
+    await this.userService
+      .update(Object.assign(payload, { id: this.dialogData.id }))
+      .toPromise();
+  }
+
   async submit() {
     try {
       if (!this.dialogData) {
-        const createUserPayload: CreateUser = this.userForm.value;
-        await this.userService
-          .create({ ...createUserPayload, roles: { owner: true } })
-          .toPromise();
+        await this.createUser();
       } else {
-        const payload = this.userForm.value;
-        if (this.isEmailUpdated) {
-          await this.userService
-            .updateEmail(this.dialogData.id, this.userForm.value.email)
-            .toPromise();
-        }
-
-        await this.userService
-          .update(Object.assign(payload, { id: this.dialogData.id }))
-          .toPromise();
+        await this.editUser();
       }
       this.error = {};
       this.dialogRef.close();

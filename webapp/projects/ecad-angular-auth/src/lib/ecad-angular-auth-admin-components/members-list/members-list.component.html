@@ -1,0 +1,103 @@
+<ng-template #editMemberRoles let-data>
+  <h1 class="mat-title">Edit member</h1>
+  <p *ngIf="error.serverError" class="error-box" i18n>
+    An error occured, please try again later.
+  </p>
+  <auth-member-edit-form
+    (memberUpdated)="submitUpdateMember(data.member, $event)"
+    [member]="data.member"
+  ></auth-member-edit-form>
+</ng-template>
+
+<ng-template #deleteMember>
+  <h1 class="mat-title" i18n>Remove member</h1>
+  <p>Are you sure you want to remove this memberships</p>
+  <mat-dialog-actions
+    ><button [matDialogClose]="true" color="accent" mat-raised-button>
+      Confirm
+    </button>
+    <button [matDialogClose]="false" mat-raised-button>
+      Cancel
+    </button>
+  </mat-dialog-actions>
+</ng-template>
+
+<table
+  class="members-table"
+  mat-table
+  #table
+  [dataSource]="dataSource"
+  matSort
+  multiTemplateDataRows
+>
+  <ng-container matColumnDef="tenant_id">
+    <th mat-header-cell class="col-lg" *matHeaderCellDef mat-sort-header i18n>
+      Tenant ID
+    </th>
+    <td mat-cell class="col-lg" *matCellDef="let element">
+      {{ element.tenant_id }}
+    </td>
+  </ng-container>
+
+  <ng-container matColumnDef="status">
+    <th mat-header-cell class="col-lg" *matHeaderCellDef mat-sort-header i18n>
+      Status
+    </th>
+    <td mat-cell class="col-lg" *matCellDef="let element">
+      {{ element.status }}
+    </td>
+  </ng-container>
+
+  <ng-container matColumnDef="added">
+    <th mat-header-cell class="col-lg" *matHeaderCellDef mat-sort-header i18n>
+      Added
+    </th>
+    <td mat-cell class="col-lg" *matCellDef="let element">
+      {{ element.added | date: 'medium' }}
+    </td>
+  </ng-container>
+
+  <ng-container matColumnDef="updated">
+    <th mat-header-cell class="col-lg" *matHeaderCellDef mat-sort-header i18n>
+      Updated
+    </th>
+    <td mat-cell class="col-lg" *matCellDef="let element">
+      {{ element.modified | date: 'medium' }}
+    </td>
+  </ng-container>
+
+  <ng-container matColumnDef="roles">
+    <th mat-header-cell class="col-lg" *matHeaderCellDef mat-sort-header i18n>
+      Roles
+    </th>
+    <td mat-cell class="col-lg" *matCellDef="let element">
+      {{ element | roles }}
+    </td>
+  </ng-container>
+
+  <ng-container matColumnDef="actions">
+    <th mat-header-cell class="col-lg" *matHeaderCellDef></th>
+    <td mat-cell class="col-lg" *matCellDef="let element">
+      <button
+        matTooltip="Edit Member"
+        mat-icon-button
+        (click)="updateMember(element)"
+        color="accent"
+      >
+        <mat-icon>edit</mat-icon>
+      </button>
+
+      <button
+        matTooltip="Archive Member"
+        mat-icon-button
+        (click)="archiveMember(element)"
+        color="accent"
+      >
+        <mat-icon>archive</mat-icon>
+      </button>
+    </td>
+  </ng-container>
+
+  <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+  <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+</table>

@@ -20,7 +20,7 @@ import { ReactiveFormsModule } from '@angular/forms';
 import { UserDetailComponent } from './user-detail/user-detail.component';
 import { UserLogsComponent } from './user-logs/user-logs.component';
 import { ConfirmDialogModule } from '../confirm-dialog/confirm-dialog.module';
-
+import { MembersListModule } from './members-list/members-list.module';
 @NgModule({
   imports: [
     CommonModule,
@@ -38,10 +38,16 @@ import { ConfirmDialogModule } from '../confirm-dialog/confirm-dialog.module';
     ConfirmDialogModule,
     MatTooltipModule,
     MatDividerModule,
-    MatCardModule
+    MatCardModule,
+    MembersListModule
   ],
-  declarations: [UsersListComponent, UserEditFormComponent, UserDetailComponent, UserLogsComponent],
+  declarations: [
+    UsersListComponent,
+    UserEditFormComponent,
+    UserDetailComponent,
+    UserLogsComponent
+  ],
   entryComponents: [UserEditFormComponent],
   exports: [UsersListComponent, UserDetailComponent, UserLogsComponent]
 })
-export class EcadAngularAuthAdminComponentsModule { }
+export class EcadAngularAuthAdminComponentsModule {}

@@ -1,0 +1,21 @@
+<div [formGroup]="memberForm">
+  <mat-form-field>
+    <mat-select formControlName="roles" placeholder="Roles" multiple>
+      <mat-option *ngFor="let role of roles" [value]="role.value">{{
+        role.displayValue
+      }}</mat-option>
+    </mat-select>
+    <mat-error *ngIf="memberForm.get('roles')!.hasError('minSelection')" i18n>
+      Please select at least one role
+    </mat-error>
+  </mat-form-field>
+  <div>
+    <button
+      [disabled]="memberForm.invalid"
+      (click)="submit()"
+      mat-raised-button
+    >
+      Submit
+    </button>
+  </div>
+</div>
