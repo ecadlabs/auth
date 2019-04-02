@@ -21,7 +21,7 @@ export class RolesPipe implements PipeTransform {
 
   transform(value: { roles: { [key: string]: any } }, args?: any): any {
     return Object.keys(value.roles || [])
-      .map(this.getRoleDisplayValue)
+      .map(role => this.getRoleDisplayValue(role))
       .join(', ');
   }
 }
