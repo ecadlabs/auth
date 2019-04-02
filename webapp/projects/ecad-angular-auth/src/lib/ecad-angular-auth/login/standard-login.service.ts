@@ -124,7 +124,7 @@ export class StandardLoginService implements ILoginService {
       const roles = this.getPrefixed(
         decodedToken,
         'roles',
-        StandardLoginService.DEFAULT_PREFIX
+        this.config.tokenPropertyPrefix
       );
       return { email, name, roles, tenant, member, ...decodedToken };
     } else {
