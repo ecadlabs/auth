@@ -54,5 +54,10 @@
         [userId$]="userId$"
       ></auth-user-logs>
     </mat-card>
+    <br />
+    <mat-card>
+      <mat-card-title>Memberships</mat-card-title>
+      <auth-members-list [userId]="userId$ | async"></auth-members-list>
+    </mat-card>
   </div>
 </div>

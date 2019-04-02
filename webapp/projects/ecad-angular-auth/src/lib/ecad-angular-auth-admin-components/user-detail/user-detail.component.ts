@@ -1,31 +1,17 @@
 import {
   Component,
-  OnInit,
-  Input,
+  EventEmitter,
   Inject,
-  ViewChild,
-  Output,
-  EventEmitter
+  Input,
+  OnInit,
+  Output
 } from '@angular/core';
-import {
-  USERS_SERVICE,
-  USER_LOG_SERVICE
-} from '../../ecad-angular-auth-admin/tokens';
-import { IUsersService } from '../../ecad-angular-auth-admin/interfaces/user-service.i';
-import { shareReplay, first, map, catchError, switchMap } from 'rxjs/operators';
-import { Observable, Subject, forkJoin, of } from 'rxjs';
-import { User } from '../../ecad-angular-auth-admin/interfaces/user.i';
-import { IUserLogService } from '../../ecad-angular-auth-admin/interfaces/user-log-service.i';
+import { Observable } from 'rxjs';
+import { switchMap } from 'rxjs/operators';
 import { UserLogEntry } from '../../ecad-angular-auth-admin/interfaces/user-log-entry.i';
-import { FilteredDatasource } from '../../filterable-datasource/filtered-datasource';
-import { MatSort } from '@angular/material';
-import {
-  trigger,
-  state,
-  transition,
-  animate,
-  style
-} from '@angular/animations';
+import { IUsersService } from '../../ecad-angular-auth-admin/interfaces/user-service.i';
+import { User } from '../../ecad-angular-auth-admin/interfaces/user.i';
+import { USERS_SERVICE } from '../../ecad-angular-auth-admin/tokens';
 
 @Component({
   selector: 'auth-user-detail',

@@ -22,6 +22,7 @@ import { JwtHelperService } from '../jwt-helper.service';
   providedIn: 'root'
 })
 export class StandardLoginService implements ILoginService {
+  static readonly DEFAULT_PREFIX = 'com.ecadlabs.auth';
   private readonly AUTO_REFRESH_INTERVAL =
     (this.config && this.config.autoRefreshInterval) || 60000;
   public user: BehaviorSubject<UserToken> = new BehaviorSubject(this.token);
@@ -33,7 +34,6 @@ export class StandardLoginService implements ILoginService {
     })
   );
 
-  private readonly DEFAULT_PREFIX = 'com.ecadlabs.auth';
   private readonly postLoginOperations: MonoTypeOperatorFunction<
     LoginResult
   > = (obserbable: Observable<LoginResult>) => {
@@ -86,10 +86,8 @@ export class StandardLoginService implements ILoginService {
     };
   }
 
-  private getPrefixed(token: any, propName: string) {
-    return token[
-      `${this.config.tokenPropertyPrefix || this.DEFAULT_PREFIX}.${propName}`
-    ];
+  private getPrefixed(token: any, propName: string, prefix: string) {
+    return token[`${prefix}.${propName}`];
   }
 
   private logoutIfExpired() {
@@ -103,10 +101,32 @@ export class StandardLoginService implements ILoginService {
     const token = this.config.tokenGetter();
     if (token) {
       const decodedToken = this.jwtHelper.decodeToken(token);
-      const email = this.getPrefixed(decodedToken, 'email');
-      const name = this.getPrefixed(decodedToken, 'name');
-      const roles = this.getPrefixed(decodedToken, 'roles');
-      return { email, name, roles, ...decodedToken };
+      const email = this.getPrefixed(
+        decodedToken,
+        'email',
+        this.config.tokenPropertyPrefix
+      );
+      const name = this.getPrefixed(
+        decodedToken,
+        'name',
+        this.config.tokenPropertyPrefix
+      );
+      const tenant = this.getPrefixed(
+        decodedToken,
+        'tenant',
+        this.config.tokenPropertyPrefix
+      );
+      const member = this.getPrefixed(
+        decodedToken,
+        'member',
+        this.config.tokenPropertyPrefix
+      );
+      const roles = this.getPrefixed(
+        decodedToken,
+        'roles',
+        this.config.tokenPropertyPrefix
+      );
+      return { email, name, roles, tenant, member, ...decodedToken };
     } else {
       return null;
     }
@@ -166,8 +186,8 @@ export class StandardLoginService implements ILoginService {
         }
 
         return user.roles.reduce((prevSet: Set<string>, role) => {
-          this.config.rolesPermissionsMapping[role].forEach(permission =>
-            prevSet.add(permission)
+          (this.config.rolesPermissionsMapping[role] || []).forEach(
+            permission => prevSet.add(permission)
           );
           return prevSet;
         }, new Set<string>());

@@ -58,9 +58,9 @@ export class UserLogsComponent implements OnInit {
   userClicked: EventEmitter<User> = new EventEmitter();
 
   @ViewChild(MatSort) sort: MatSort;
-  public dataSource: FilteredDatasource<UserLogEntry>;
   private nextPage$ = new Subject<void>();
   private prevousPage$ = new Subject<void>();
+  public dataSource: FilteredDatasource<UserLogEntry>;
 
   public displayedColumns = ['event', 'ts', 'user_id', 'target_id', 'addr'];
 
@@ -119,11 +119,25 @@ export class UserLogsComponent implements OnInit {
     });
   }
 
+  private selectUserFromType(
+    log: UserLogEntry,
+    select: 'source' | 'target'
+  ): Observable<User> {
+    switch (log[`${select}_type`]) {
+      case 'membership':
+        return this.userService.findByMembership(log[`${select}_id`]);
+      case 'user':
+        return this.userService.find(log[`${select}_id`]);
+      default:
+        return of();
+    }
+  }
+
   expand(log: UserLogEntry) {
     this.expandedElement = log;
     forkJoin(
-      this.userService.find(log.target_id).pipe(catchError(() => of(null))),
-      this.userService.find(log.source_id).pipe(catchError(() => of(null)))
+      this.selectUserFromType(log, 'source').pipe(catchError(() => of(null))),
+      this.selectUserFromType(log, 'target').pipe(catchError(() => of(null)))
     )
       .pipe(
         first(),

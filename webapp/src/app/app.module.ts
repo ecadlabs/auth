@@ -23,8 +23,12 @@ import { RequestEmailChangeComponent } from './request-email-change/request-emai
 import { HTTP_INTERCEPTORS } from '@angular/common/http';
 import { ErrorHttpInterceptor } from './error-http-interceptor';
 
-export function tokenGetter() { return localStorage.getItem('token'); }
-export function tokenSetter(value: string) { localStorage.setItem('token', value); }
+export function tokenGetter() {
+  return localStorage.getItem('token');
+}
+export function tokenSetter(value: string) {
+  localStorage.setItem('token', value);
+}
 
 @NgModule({
   declarations: [
@@ -35,7 +39,7 @@ export function tokenSetter(value: string) { localStorage.setItem('token', value
     ProtectedComponent,
     UserDetailPageComponent,
     UserLogsComponent,
-    RequestEmailChangeComponent,
+    RequestEmailChangeComponent
   ],
   imports: [
     EcadAngularAuthModule.forRoot({
@@ -50,8 +54,9 @@ export function tokenSetter(value: string) { localStorage.setItem('token', value
       autoRefreshInterval: 5000,
       tokenPropertyPrefix: 'com.ecadlabs.auth',
       rolesPermissionsMapping: {
-        'admin': ['show.is-admin']
+        admin: ['show.is-admin']
       },
+      defaultRole: 'owner',
       emailChangeValidationUrl: '/api/v1/email_update',
       emailUpdateUrl: '/api/v1/request_email_update'
     }),
@@ -91,15 +96,15 @@ export function tokenSetter(value: string) { localStorage.setItem('token', value
         canActivate: [LoggedinGuard, PermissionsGuard]
       }
     ]),
-    MatToolbarModule,
+    MatToolbarModule
   ],
   providers: [
     {
       provide: HTTP_INTERCEPTORS,
       useClass: ErrorHttpInterceptor,
       multi: true
-    },
+    }
   ],
   bootstrap: [AppComponent]
 })
-export class AppModule { }
+export class AppModule {}

@@ -12,6 +12,7 @@ export interface AuthConfig {
     [key: string]: string[];
   };
   emailValidationRegex?: RegExp;
+  defaultRole: string;
   emailUpdateUrl: string;
   emailChangeValidationUrl: string;
   roleGuardRedirectUrl?: string;

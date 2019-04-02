@@ -12,7 +12,19 @@ import { AUTH_ADMIN_CONFIG } from '../tokens';
 import { Observable } from 'rxjs';
 import { IUsersService } from '../interfaces/user-service.i';
 import { HttpClient } from '@angular/common/http';
+import {
+  getPatchOpsFromObj,
+  getPatchAddRemoveOpsFromObj,
+  SubType
+} from '../utils';
+import { Membership } from '../interfaces/membership.i';
+import { UpdateMembership } from '../interfaces/update-membership.i';
 
+type UpdateAddRemoveUser = SubType<UpdateUser, { [key: string]: boolean }>;
+type UpdateAddRemoveMember = SubType<
+  UpdateMembership,
+  { [key: string]: boolean }
+>;
 @Injectable({
   providedIn: 'root'
 })
@@ -25,7 +37,15 @@ export class UsersService implements IUsersService {
   ) {}
 
   private get apiEndpoint() {
-    return this.authAdminConfigVal.apiEndpoint;
+    return `${this.authAdminConfigVal.apiEndpoint}/users`;
+  }
+
+  private get apiEndpointMembers() {
+    return `${this.authAdminConfigVal.apiEndpoint}/members`;
+  }
+
+  private get apiEndpointTenants() {
+    return `${this.authAdminConfigVal.apiEndpoint}/tenants`;
   }
 
   public getRoles() {
@@ -44,23 +64,36 @@ export class UsersService implements IUsersService {
   }
 
   update(payload: UpdateUser): Observable<User> {
-    const allowedKeyForReplace: (keyof User)[] = ['name'];
-    const operations = (Object.keys(payload) as (keyof User)[])
-      .filter(key => allowedKeyForReplace.includes(key))
-      .reduce((prev, key) => {
-        return [
-          ...prev,
-          {
-            op: 'replace',
-            path: `/${key}`,
-            value: payload[key] || ''
-          }
-        ];
-      }, []);
-    return this.resourcesService.patch(
-      this.apiEndpoint,
-      payload.id,
-      operations
+    const allowedKeyForReplace: (keyof UpdateUser)[] = ['name'];
+    const allowedKeyForAddRemove: (keyof UpdateAddRemoveUser)[] = [
+      'address_whitelist'
+    ];
+    const operations = getPatchOpsFromObj(allowedKeyForReplace, payload);
+    const addRemoveoperations = getPatchAddRemoveOpsFromObj<
+      UpdateAddRemoveUser
+    >(allowedKeyForAddRemove, payload);
+    return this.resourcesService.patch(this.apiEndpoint, payload.id, [
+      ...addRemoveoperations,
+      ...operations
+    ]);
+  }
+
+  updateMembership(payload: UpdateMembership): Observable<Membership> {
+    const allowedKeyForAddRemove: (keyof UpdateAddRemoveMember)[] = ['roles'];
+    const addRemoveoperations = getPatchAddRemoveOpsFromObj<
+      UpdateAddRemoveMember
+    >(allowedKeyForAddRemove, payload);
+    return this.httpClient.patch<Membership>(
+      `${this.apiEndpointTenants}/${payload.tenantId}/members/${
+        payload.userId
+      }`,
+      addRemoveoperations
+    );
+  }
+
+  archiveMembership(userId: string, tenantId: string): Observable<{}> {
+    return this.httpClient.delete<{}>(
+      `${this.apiEndpointTenants}/${tenantId}/members/${userId}`
     );
   }
 
@@ -83,6 +116,12 @@ export class UsersService implements IUsersService {
 
   find(id: string): Observable<User> {
     return this.resourcesService.find(this.apiEndpoint, id);
+  }
+
+  findByMembership(id: string): Observable<User> {
+    return this.resourcesService.fetchAndCache(
+      `${this.apiEndpointMembers}/${id}/user`
+    );
   }
 
   fetchNextPage(result: PagedResult<User>): Observable<PagedResult<User>> {
