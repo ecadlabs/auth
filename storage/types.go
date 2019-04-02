@@ -246,6 +246,7 @@ type APIKeyStorage interface {
 
 type UserStorage interface {
 	GetUserByID(ctx context.Context, typ string, id uuid.UUID) (*User, error)
+	GetUserIDByMembershipID(ctx context.Context, typ string, id uuid.UUID) (uuid.UUID, error)
 	GetUserByEmail(ctx context.Context, typ, email string) (*User, error)
 	GetServiceAccountByAddress(ctx context.Context, address string) (*User, error)
 	GetUsers(ctx context.Context, typ string, q *query.Query) (users []*User, count int, next *query.Query, err error)
