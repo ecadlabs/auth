@@ -41,7 +41,7 @@ export function userMembershipsFactory(
 ) {
   class UserMembershipsServiceCreate {
     static create(userId: string) {
-      let result = new UserMembershipsService(
+      const result = new UserMembershipsService(
         userId,
         resourceService,
         authConfig

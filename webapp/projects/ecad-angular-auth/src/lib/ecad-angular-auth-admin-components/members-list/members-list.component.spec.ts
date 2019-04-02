@@ -19,9 +19,11 @@ import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 
 @Component({
   selector: 'auth-member-edit-form',
+  // tslint:disable-next-line: use-input-property-decorator
   inputs: ['member'],
   template: ''
 })
+// tslint:disable-next-line: component-class-suffix
 export class MockMemberEditForm {}
 
 describe('MembersListComponent', () => {

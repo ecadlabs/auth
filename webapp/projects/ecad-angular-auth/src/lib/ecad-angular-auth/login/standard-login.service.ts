@@ -42,7 +42,7 @@ export class StandardLoginService implements ILoginService {
       tap(result => localStorage.setItem('refreshTokenUrl', result.refresh)),
       tap(() => this.user.next(this.getTokenAndCheckExp()))
     );
-  };
+  }
 
   constructor(
     @Optional()
