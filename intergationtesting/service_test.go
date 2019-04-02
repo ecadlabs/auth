@@ -58,9 +58,6 @@ func genTestUser(n int) *storage.CreateUser {
 	return &storage.CreateUser{
 		Email: genTestEmail(n),
 		Name:  genTestName(n),
-		Roles: storage.Roles{
-			"regular": struct{}{},
-		},
 	}
 }
 
@@ -333,6 +330,7 @@ func fetchTenantAndUsers(srv *httptest.Server, refresh bool) (*TenantsAndUsers, 
 }
 
 var testRBAC = rbac.StaticRBAC{
+	DefaultRole: "owner",
 	Roles: map[string]*rbac.StaticRole{
 		"admin": &rbac.StaticRole{
 			RoleName:    "admin",
@@ -445,7 +443,7 @@ func beforeTest() (srv *httptest.Server, userList []*storage.User, token string,
 	}
 
 	// Bootstrap
-	_, err = svc.Bootstrap(&bootstrapConf)
+	_, err = svc.Bootstrap(&bootstrapConf, "owner")
 	if err != nil {
 		return
 	}

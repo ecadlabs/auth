@@ -26,7 +26,7 @@ const (
 
 var ErrNoBootstrap = errors.New("No bootstrapping")
 
-func (s *Service) Bootstrap(c *BootstrapConfig) (user *storage.User, err error) {
+func (s *Service) Bootstrap(c *BootstrapConfig, defaultRole string) (user *storage.User, err error) {
 	db := sqlx.NewDb(s.DB, "postgres")
 
 	tx, err := db.Beginx()
@@ -75,7 +75,7 @@ func (s *Service) Bootstrap(c *BootstrapConfig) (user *storage.User, err error) 
 			u.AddressWhiteList = ips
 		}
 
-		_, err = storage.NewUserInt(context.Background(), tx, &u)
+		_, err = storage.NewUserInt(context.Background(), tx, &u, defaultRole)
 		if err != nil {
 			return
 		}

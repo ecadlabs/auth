@@ -76,7 +76,7 @@ func New(c *Config, ac rbac.RBAC, enableLog bool) (*Service, error) {
 
 	return &Service{
 		config:    *c,
-		storage:   &storage.Storage{DB: dbCon},
+		storage:   &storage.Storage{DB: dbCon, DefaultRole: ac.GetDefaultRole()},
 		DB:        db,
 		notifier:  notifier,
 		ac:        ac,

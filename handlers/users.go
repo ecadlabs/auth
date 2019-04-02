@@ -309,11 +309,6 @@ func (u *Users) NewUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if len(user.Roles) == 0 {
-		utils.JSONErrorResponse(w, errors.ErrRolesEmpty)
-		return
-	}
-
 	ctx, cancel := u.context(r)
 	defer cancel()
 

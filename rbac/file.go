@@ -11,6 +11,7 @@ import (
 type yamlRole struct {
 	Description string   `yaml:"description"`
 	Permissions []string `yaml:"permissions"`
+	Default     bool     `yaml:"default"`
 }
 
 type yamlFile struct {
@@ -35,7 +36,15 @@ func LoadYAML(name string) (*StaticRBAC, error) {
 
 	roles := make(map[string]*StaticRole)
 
+	defaultRoleCount := 0
+	var defaultRoleName string
+
 	for name, role := range data.Roles {
+		if role.Default {
+			defaultRoleCount++
+			defaultRoleName = name
+		}
+
 		// verify
 		perms := make(map[string]struct{})
 
@@ -56,9 +65,14 @@ func LoadYAML(name string) (*StaticRBAC, error) {
 		roles[name] = &role
 	}
 
+	if defaultRoleCount != 1 {
+		return nil, fmt.Errorf("YAML RBAC: Exactly one default role must be defined")
+	}
+
 	res := StaticRBAC{
 		Roles:       roles,
 		Permissions: data.Permissions,
+		DefaultRole: defaultRoleName,
 	}
 
 	return &res, nil

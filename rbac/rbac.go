@@ -133,6 +133,11 @@ func (r RoleList) Permissions() []string {
 type StaticRBAC struct {
 	Roles       map[string]*StaticRole
 	Permissions map[string]string
+	DefaultRole string
+}
+
+func (s *StaticRBAC) GetDefaultRole() string {
+	return s.DefaultRole
 }
 
 func (s *StaticRBAC) GetRole(ctx context.Context, ids ...string) (Role, error) {

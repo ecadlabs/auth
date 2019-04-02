@@ -17,6 +17,7 @@ type RoleDesc struct {
 }
 
 type RoleDB interface {
+	GetDefaultRole() string
 	GetRolesDesc(ctx context.Context, perm ...string) ([]*RoleDesc, error)
 	GetPermissionsDesc(ctx context.Context, role ...string) ([]*PermissionDesc, error)
 	GetRoleDesc(context.Context, string) (*RoleDesc, error)

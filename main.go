@@ -185,7 +185,7 @@ func main() {
 	if bootstrap != "" {
 		bootstrapConfig := service.BootstrapConfig{}
 		bootstrapConfig.Load(bootstrap)
-		if _, err := svc.Bootstrap(&bootstrapConfig); err != nil {
+		if _, err := svc.Bootstrap(&bootstrapConfig, ac.GetDefaultRole()); err != nil {
 			if err != service.ErrNoBootstrap {
 				log.Fatal(err)
 			}
