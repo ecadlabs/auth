@@ -62,7 +62,6 @@ export class UserEditFormComponent implements OnInit {
 
   private async createUser() {
     const createUserPayload: CreateUser = this.userForm.value;
-    createUserPayload.roles = { [this.authConfig.defaultRole]: true };
     await this.userService.create(createUserPayload).toPromise();
   }
 

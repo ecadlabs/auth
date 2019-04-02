@@ -17,7 +17,7 @@ export class UserMembershipsService implements FilterableService<Membership> {
   private get apiEndpoint() {
     return `${this.authAdminConfigVal.apiEndpoint}/users/${
       this.userId
-    }/memberships/`;
+    }/memberships`;
   }
 
   fetch(
