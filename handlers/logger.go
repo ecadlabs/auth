@@ -58,7 +58,7 @@ var evSourceTypeMap = map[string]string{
 	EvDelete:             MembeshipIdType,
 	EvArchiveTenant:      MembeshipIdType,
 	EvMembershipDelete:   MembeshipIdType,
-	EvReset:              MembeshipIdType,
+	EvReset:              UserIdType,
 	EvResetRequest:       UserIdType,
 	EvLogin:              MembeshipIdType,
 	EvEmailUpdateRequest: UserIdType,

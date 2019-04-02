@@ -587,7 +587,7 @@ func (u *Users) DeleteUser(w http.ResponseWriter, r *http.Request) {
 			deleteErr := u.Storage.DeleteTenant(ctx, tenant.ID)
 			// Log
 			if deleteErr == nil && u.AuxLogger != nil {
-				u.AuxLogger.WithFields(logFields(EvArchiveTenant, self.ID, tenant.ID, r)).Printf("User %v archived tenant %v", self.ID, tenant.ID)
+				u.AuxLogger.WithFields(logFields(EvArchiveTenant, member.ID, tenant.ID, r)).Printf("User %v archived tenant %v", self.ID, tenant.ID)
 			}
 
 			if deleteErr != nil {

@@ -142,15 +142,15 @@ func (m *Memberships) PatchMembership(w http.ResponseWriter, r *http.Request) {
 	// Log
 	if m.AuxLogger != nil {
 		if len(ops.Update) != 0 {
-			m.AuxLogger.WithFields(logFields(EvUpdate, member.UserID, userID, r)).WithFields(log.Fields(ops.Update)).Printf("User %v updated account %v in tenant %v", member.UserID, userID, tenantID)
+			m.AuxLogger.WithFields(logFields(EvUpdate, member.ID, updatedMember.UserID, r)).WithFields(log.Fields(ops.Update)).Printf("User %v updated account %v in tenant %v", member.UserID, userID, tenantID)
 		}
 
 		for _, role := range addRoles {
-			m.AuxLogger.WithFields(logFields(EvAddRole, member.UserID, userID, r)).WithField("role", role).Printf("User %v added role `%s' to account %v in tenant %v", member.UserID, role, userID, tenantID)
+			m.AuxLogger.WithFields(logFields(EvAddRole, member.ID, updatedMember.ID, r)).WithField("role", role).Printf("User %v added role `%s' to account %v in tenant %v", member.UserID, role, userID, tenantID)
 		}
 
 		for _, role := range removeRoles {
-			m.AuxLogger.WithFields(logFields(EvRemoveRole, member.UserID, userID, r)).WithField("role", role).Printf("User %v removed role `%s' from account %v in tenant %v", member.UserID, role, userID, tenantID)
+			m.AuxLogger.WithFields(logFields(EvRemoveRole, member.ID, updatedMember.ID, r)).WithField("role", role).Printf("User %v removed role `%s' from account %v in tenant %v", member.UserID, role, userID, tenantID)
 		}
 	}
 
@@ -210,7 +210,7 @@ func (m *Memberships) DeleteMembership(w http.ResponseWriter, r *http.Request) {
 
 	// Log
 	if m.AuxLogger != nil {
-		m.AuxLogger.WithFields(logFields(EvMembershipDelete, member.UserID, userID, r)).Printf("User %v removed member %v in tenant %v", member.UserID, userID, tenantID)
+		m.AuxLogger.WithFields(logFields(EvMembershipDelete, member.ID, userID, r)).Printf("User %v removed member %v in tenant %v", member.UserID, userID, tenantID)
 	}
 
 	w.WriteHeader(http.StatusNoContent)
