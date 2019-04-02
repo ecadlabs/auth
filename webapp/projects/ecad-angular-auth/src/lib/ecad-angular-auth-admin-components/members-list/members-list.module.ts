@@ -16,8 +16,8 @@ import { MemberEditFormModule } from '../member-edit-form/member-edit-form.modul
   declarations: [MembersListComponent],
   imports: [
     CommonModule,
-    AuthAdminComponentsUtilsModule,
     MemberEditFormModule,
+    AuthAdminComponentsUtilsModule,
     MatDialogModule,
     MatButtonModule,
     MatSortModule,

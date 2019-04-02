@@ -1,19 +1,16 @@
-import { Injectable, Inject } from '@angular/core';
-import { AUTH_ADMIN_CONFIG } from '../tokens';
-import { AuthAdminConfig } from '../interfaces/auth-admin-config.i';
-import {
-  ResourcesService,
-  FilterCondition,
-  PagedResult
-} from '../../resource-util/resources.service';
-import { Membership } from '../interfaces/membership.i';
-import { FilterableService } from '../../filterable-datasource/filtered-datasource';
 import { Observable } from 'rxjs';
+import { FilterableService } from '../../filterable-datasource/filtered-datasource';
+import {
+  FilterCondition,
+  PagedResult,
+  ResourcesService
+} from '../../resource-util/resources.service';
+import { AuthAdminConfig } from '../interfaces/auth-admin-config.i';
+import { Membership } from '../interfaces/membership.i';
 export class UserMembershipsService implements FilterableService<Membership> {
   constructor(
     private userId: string,
     private resourcesService: ResourcesService<Membership, any>,
-    @Inject(AUTH_ADMIN_CONFIG)
     private authAdminConfigVal: AuthAdminConfig
   ) {}
 
