@@ -82,7 +82,8 @@ func (u *userModel) toUser() *User {
 
 // Storage service that manage database operation for the user resource
 type Storage struct {
-	DB *sqlx.DB
+	DB          *sqlx.DB
+	DefaultRole string
 }
 
 const getUserQuery = `
@@ -375,7 +376,7 @@ func isUniqueViolation(err error, constraint string) bool {
 }
 
 // NewUserInt insert a new user in the database along with his initial tenant
-func NewUserInt(ctx context.Context, tx *sqlx.Tx, user *CreateUser) (res *User, err error) {
+func NewUserInt(ctx context.Context, tx *sqlx.Tx, user *CreateUser, defaultRole string) (res *User, err error) {
 	model := userModel{
 		ID:            user.ID,
 		Email:         user.Email,
@@ -426,7 +427,9 @@ func NewUserInt(ctx context.Context, tx *sqlx.Tx, user *CreateUser) (res *User, 
 		return
 	}
 
-	user.Roles["owner"] = true
+	if len(user.Roles) == 0 {
+		user.Roles = Roles{defaultRole: true}
+	}
 
 	// Create roles
 	valuesExprs := make([]string, len(user.Roles))
@@ -486,7 +489,7 @@ func (s *Storage) NewUser(ctx context.Context, user *CreateUser) (res *User, err
 
 	user.ID = uuid.NewV4()
 
-	tmp, err := NewUserInt(ctx, tx, user)
+	tmp, err := NewUserInt(ctx, tx, user, s.DefaultRole)
 	if err != nil {
 		return nil, err
 	}
