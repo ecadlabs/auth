@@ -1,27 +1,45 @@
+# this example rbac file allows the operator to define roles and permission
+# strings.
+#
+# roles are simply collections of permissions.
+#
+# permission strings that are assigned to a user via a role are included in the
+# users jwt token. the list of permissions can be inspected by downstream
+# services. when implementing permission checks in a service, it is recommended
+# to namespace your permission strings, and codify them in this file. for
+# example `net.example.service.full_control` can be used. the namespace is
+# arbitrary, but followings ones own domain name reduces chances of collision.
+#
+# the namespace `com.ecadlabs` defined herein are consumed by authd itself for
+# the purpose of permissions. the example `net.example.service.full_control` is
+# not consumed by authd, but might be consumed by a downstream jwt consumer.
+# what the logic that the jwt consumer enforces based on the presence or
+# absence of a particular permission property is outside authd's scope of
+# concern. 
 permissions:
-  com.ecadlabs.users.write: Allows user to create new users
-  com.ecadlabs.users.read: Allows user to view users
-  com.ecadlabs.users.read_self: Allows user to view their own user resource record
-  com.ecadlabs.users.write_self: Allows user to edit their own user resource record
-  com.ecadlabs.users.full_control: Allows user to manage all accounts
-  com.ecadlabs.tenants.full_control: Allows user to manage all tenants
-  com.ecadlabs.tenants.write_owned: Allows user to write to owned tenants
-  com.ecadlabs.tenants.read_owned: Allows user to read owned tenants
-  com.ecadlabs.users.read_logs: Allows user to access logs
-  com.ecadlabs.users.delegate:noc: Assign `noc' role
-  com.ecadlabs.users.delegate:admin: Assign `admin' role
-  com.ecadlabs.users.delegate:owner: Assign `owner' role
-  com.ecadlabs.users.delegate:ops: Assign `ops' role
+  com.ecadlabs.users.write: Allow user to create new users
+  com.ecadlabs.users.read: Allow user to view users
+  com.ecadlabs.users.read_self: Allow user to view their own user resource record
+  com.ecadlabs.users.write_self: Allow user to edit their own user resource record
+  com.ecadlabs.users.full_control: Allow user to manage all accounts
+  com.ecadlabs.tenants.full_control: Allow user to manage all tenants
+  com.ecadlabs.tenants.write_owned: Allow user to write to owned tenants
+  com.ecadlabs.tenants.read_owned: Allow user to read owned tenants
+  com.ecadlabs.users.read_logs: Allow user to access logs
+  # The 'delegate' permission allows the user to assign said permission
+  # to another user. 
+  com.ecadlabs.users.delegate:noc: Allow assignment of 'noc' to other users
+  com.ecadlabs.users.delegate:admin: Allow assignment of 'admin' to other users
+  com.ecadlabs.users.delegate:owner: Allow assignment of 'owner' to other users
+  com.ecadlabs.users.delegate:ops: Allow assignment of 'ops' to other users
   com.ecadlabs.users.delegate:com.ecadlabs.auth.default_personal_role: Assign `Default' role
-  com.ecadlabs.service_accounts.full_control: Allows user to manage service accounts
-  # The org permsissions are speculative/future looking permissions included
-  # here to provoke analysis/critical evaluation
-  com.ecadlabs.org.read_self: Allows user to view the organizations to which they are assigned
-  com.ecadlabs.org.write_self: Allows user to view the organizations to which they are assigned
-  com.ecadlabs.org.billing.read_self: Allows user to view the organizations billing details
-  com.ecadlabs.org.billing.write_self: Allows user to view & edit the organizations billing details
-  net.example.service.full_control: Allows user to use all features of this example service
-  net.example.service.read: Allows user to read resources of this example service
+  com.ecadlabs.service_accounts.full_control: Allow user to manage service accounts
+  com.ecadlabs.org.read_self: Allow user to view the organizations to which they are assigned
+  com.ecadlabs.org.write_self: Allow user to view the organizations to which they are assigned
+  com.ecadlabs.org.billing.read_self: Allow user to view the organizations billing details
+  com.ecadlabs.org.billing.write_self: Allow user to view & edit the organizations billing details
+  net.example.service.full_control: Allow user to use all features of this example service
+  net.example.service.read: Allow user to read resources of this example service
 
 roles:
   default_personal_role:
