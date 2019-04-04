@@ -66,7 +66,7 @@ func LoadYAML(name string) (*StaticRBAC, error) {
 	}
 
 	if defaultRoleCount != 1 {
-		return nil, fmt.Errorf("YAML RBAC: Exactly one default role must be defined")
+		return nil, fmt.Errorf("YAML RBAC: Only One default role must be defined, got %d", defaultRoleCount)
 	}
 
 	res := StaticRBAC{
