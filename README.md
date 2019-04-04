@@ -9,6 +9,9 @@ It's features include;
 * User Roles that allow assignment of permissions to users 
 * Multi-tenant allowing "teams" of users. Suitable for supporting multiple
     tenant customers, each of which have users as members in their tenant
+* Roles are assigned to users membership in a tenant, allowing a user to have
+    a different set of permissions depending on the tenant they are a member
+    of
 * User creation life-cycle using invitation tokens via email
 * User password reset functionality.
 * Role Based Access Control (RBAC) based on collections (roles) of permission
