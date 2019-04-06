@@ -9,7 +9,7 @@ import (
 
 	"github.com/ecadlabs/auth/query"
 	"github.com/ecadlabs/auth/rbac"
-	"github.com/satori/go.uuid"
+	uuid "github.com/satori/go.uuid"
 )
 
 // SortOrder int alias used for sort direction
@@ -248,7 +248,7 @@ type UserStorage interface {
 	GetUserByID(ctx context.Context, typ string, id uuid.UUID) (*User, error)
 	GetUserIDByMembershipID(ctx context.Context, typ string, id uuid.UUID) (uuid.UUID, error)
 	GetUserByEmail(ctx context.Context, typ, email string) (*User, error)
-	GetServiceAccountByAddress(ctx context.Context, address string) (*User, error)
+	GetServiceAccountByAddress(ctx context.Context, address net.IP) (*User, error)
 	GetUsers(ctx context.Context, typ string, q *query.Query) (users []*User, count int, next *query.Query, err error)
 	NewUser(ctx context.Context, user *CreateUser) (res *User, err error)
 	UpdateUser(ctx context.Context, typ string, id uuid.UUID, ops *Ops) (user *User, err error)
