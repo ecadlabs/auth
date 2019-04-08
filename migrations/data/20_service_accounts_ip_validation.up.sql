@@ -8,6 +8,7 @@ CREATE FUNCTION ip_overlap_check() RETURNS trigger AS $$
         IF FOUND THEN
             RAISE EXCEPTION '% conflicts with existing network or host address %', NEW.addr, ip USING ERRCODE = 'integrity_constraint_violation', CONSTRAINT = 'service_account_ip_addr_key';
         END IF;
+        RETURN NEW;
     END;
 $$ LANGUAGE plpgsql;
 

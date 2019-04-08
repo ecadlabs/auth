@@ -122,7 +122,7 @@ func _10_add_email_gen_columnDownSql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "10_add_email_gen_column.down.sql", size: 41, mode: os.FileMode(420), modTime: time.Unix(1542054575, 0)}
+	info := bindataFileInfo{name: "10_add_email_gen_column.down.sql", size: 41, mode: os.FileMode(420), modTime: time.Unix(1532446858, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -142,7 +142,7 @@ func _10_add_email_gen_columnUpSql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "10_add_email_gen_column.up.sql", size: 67, mode: os.FileMode(420), modTime: time.Unix(1542054575, 0)}
+	info := bindataFileInfo{name: "10_add_email_gen_column.up.sql", size: 67, mode: os.FileMode(420), modTime: time.Unix(1532446858, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -162,7 +162,7 @@ func _11_add_tenants_tableDownSql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "11_add_tenants_table.down.sql", size: 129, mode: os.FileMode(420), modTime: time.Unix(1547505179, 0)}
+	info := bindataFileInfo{name: "11_add_tenants_table.down.sql", size: 129, mode: os.FileMode(420), modTime: time.Unix(1547515824, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -182,7 +182,7 @@ func _11_add_tenants_tableUpSql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "11_add_tenants_table.up.sql", size: 1336, mode: os.FileMode(420), modTime: time.Unix(1547505179, 0)}
+	info := bindataFileInfo{name: "11_add_tenants_table.up.sql", size: 1336, mode: os.FileMode(420), modTime: time.Unix(1547515824, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -202,7 +202,7 @@ func _12_role_per_tenantDownSql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "12_role_per_tenant.down.sql", size: 319, mode: os.FileMode(420), modTime: time.Unix(1547505179, 0)}
+	info := bindataFileInfo{name: "12_role_per_tenant.down.sql", size: 319, mode: os.FileMode(420), modTime: time.Unix(1547515824, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -222,7 +222,7 @@ func _12_role_per_tenantUpSql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "12_role_per_tenant.up.sql", size: 370, mode: os.FileMode(420), modTime: time.Unix(1547505179, 0)}
+	info := bindataFileInfo{name: "12_role_per_tenant.up.sql", size: 370, mode: os.FileMode(420), modTime: time.Unix(1547515824, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -242,7 +242,7 @@ func _13_ip_whitelistDownSql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "13_ip_whitelist.down.sql", size: 90, mode: os.FileMode(420), modTime: time.Unix(1554546187, 0)}
+	info := bindataFileInfo{name: "13_ip_whitelist.down.sql", size: 90, mode: os.FileMode(420), modTime: time.Unix(1552434309, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -262,7 +262,7 @@ func _13_ip_whitelistUpSql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "13_ip_whitelist.up.sql", size: 406, mode: os.FileMode(420), modTime: time.Unix(1554546187, 0)}
+	info := bindataFileInfo{name: "13_ip_whitelist.up.sql", size: 406, mode: os.FileMode(420), modTime: time.Unix(1552434309, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -282,7 +282,7 @@ func _14_roles_refDownSql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "14_roles_ref.down.sql", size: 54, mode: os.FileMode(420), modTime: time.Unix(1554546187, 0)}
+	info := bindataFileInfo{name: "14_roles_ref.down.sql", size: 54, mode: os.FileMode(420), modTime: time.Unix(1552434309, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -302,7 +302,7 @@ func _14_roles_refUpSql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "14_roles_ref.up.sql", size: 136, mode: os.FileMode(420), modTime: time.Unix(1554546187, 0)}
+	info := bindataFileInfo{name: "14_roles_ref.up.sql", size: 136, mode: os.FileMode(420), modTime: time.Unix(1552434309, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -322,7 +322,7 @@ func _15_role_membership_refDownSql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "15_role_membership_ref.down.sql", size: 225, mode: os.FileMode(420), modTime: time.Unix(1554546187, 0)}
+	info := bindataFileInfo{name: "15_role_membership_ref.down.sql", size: 225, mode: os.FileMode(420), modTime: time.Unix(1552434309, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -342,7 +342,7 @@ func _15_role_membership_refUpSql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "15_role_membership_ref.up.sql", size: 511, mode: os.FileMode(420), modTime: time.Unix(1554546187, 0)}
+	info := bindataFileInfo{name: "15_role_membership_ref.up.sql", size: 511, mode: os.FileMode(420), modTime: time.Unix(1552434309, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -362,7 +362,7 @@ func _16_user_id_defaultDownSql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "16_user_id_default.down.sql", size: 48, mode: os.FileMode(420), modTime: time.Unix(1554546187, 0)}
+	info := bindataFileInfo{name: "16_user_id_default.down.sql", size: 48, mode: os.FileMode(420), modTime: time.Unix(1552434309, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -382,7 +382,7 @@ func _16_user_id_defaultUpSql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "16_user_id_default.up.sql", size: 66, mode: os.FileMode(420), modTime: time.Unix(1554546187, 0)}
+	info := bindataFileInfo{name: "16_user_id_default.up.sql", size: 66, mode: os.FileMode(420), modTime: time.Unix(1552434309, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -402,7 +402,7 @@ func _17_service_account_keysDownSql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "17_service_account_keys.down.sql", size: 143, mode: os.FileMode(420), modTime: time.Unix(1554546187, 0)}
+	info := bindataFileInfo{name: "17_service_account_keys.down.sql", size: 143, mode: os.FileMode(420), modTime: time.Unix(1552434309, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -422,7 +422,7 @@ func _17_service_account_keysUpSql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "17_service_account_keys.up.sql", size: 405, mode: os.FileMode(420), modTime: time.Unix(1554546187, 0)}
+	info := bindataFileInfo{name: "17_service_account_keys.up.sql", size: 405, mode: os.FileMode(420), modTime: time.Unix(1552434309, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -442,7 +442,7 @@ func _18_service_constraintsDownSql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "18_service_constraints.down.sql", size: 62, mode: os.FileMode(420), modTime: time.Unix(1554546187, 0)}
+	info := bindataFileInfo{name: "18_service_constraints.down.sql", size: 62, mode: os.FileMode(420), modTime: time.Unix(1552434309, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -462,7 +462,7 @@ func _18_service_constraintsUpSql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "18_service_constraints.up.sql", size: 133, mode: os.FileMode(420), modTime: time.Unix(1554546187, 0)}
+	info := bindataFileInfo{name: "18_service_constraints.up.sql", size: 133, mode: os.FileMode(420), modTime: time.Unix(1552434309, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -482,7 +482,7 @@ func _19_update_log_tableDownSql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "19_update_log_table.down.sql", size: 184, mode: os.FileMode(420), modTime: time.Unix(1554546187, 0)}
+	info := bindataFileInfo{name: "19_update_log_table.down.sql", size: 184, mode: os.FileMode(420), modTime: time.Unix(1552434309, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -502,7 +502,7 @@ func _19_update_log_tableUpSql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "19_update_log_table.up.sql", size: 286, mode: os.FileMode(420), modTime: time.Unix(1554546187, 0)}
+	info := bindataFileInfo{name: "19_update_log_table.up.sql", size: 286, mode: os.FileMode(420), modTime: time.Unix(1552434309, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -522,7 +522,7 @@ func _1_add_users_tableDownSql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "1_add_users_table.down.sql", size: 18, mode: os.FileMode(420), modTime: time.Unix(1542054575, 0)}
+	info := bindataFileInfo{name: "1_add_users_table.down.sql", size: 18, mode: os.FileMode(420), modTime: time.Unix(1529430051, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -542,7 +542,7 @@ func _1_add_users_tableUpSql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "1_add_users_table.up.sql", size: 286, mode: os.FileMode(420), modTime: time.Unix(1542054575, 0)}
+	info := bindataFileInfo{name: "1_add_users_table.up.sql", size: 286, mode: os.FileMode(420), modTime: time.Unix(1529430051, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -562,12 +562,12 @@ func _20_service_accounts_ip_validationDownSql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "20_service_accounts_ip_validation.down.sql", size: 41, mode: os.FileMode(420), modTime: time.Unix(1554576050, 0)}
+	info := bindataFileInfo{name: "20_service_accounts_ip_validation.down.sql", size: 41, mode: os.FileMode(420), modTime: time.Unix(1554735689, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
 
-var __20_service_accounts_ip_validationUpSql = []byte("\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\x74\x52\x41\x8f\x9b\x3c\x14\xbc\xf3\x2b\xe6\x90\x5d\xbe\x4f\x8a\xfa\x07\x50\x0f\xd4\x3c\x88\xa5\xc4\x8e\x1e\x46\xd9\x1b\x42\xac\x4b\xac\x20\xa0\xe0\x66\xbb\xff\xbe\x32\xbb\x4a\x2a\x35\x7d\xa7\x67\xfb\x8d\x67\xc6\xe3\x6f\x54\x48\x95\x44\x91\x60\x4a\x0d\x21\xaf\x94\x30\x52\x2b\xb8\xa9\x1e\xaf\x76\xee\x9b\xa9\x6e\xcf\xb6\xbd\xfc\xf7\x3f\x98\x4c\xc5\xaa\x84\x9f\x5d\xd7\xd9\x19\x69\x89\xcd\x26\x02\x80\x8c\xc4\x3e\x65\x5a\xfb\x50\x6e\x82\x1b\xac\x4f\xd6\x8d\x95\xe1\x76\x54\xd2\x9e\x84\xc1\x62\xe7\xab\x6b\x6d\xdd\xb4\xed\xf8\x73\xf0\xb5\x9b\xbe\x34\xaf\xaf\x33\xa4\x32\x3a\xc0\x73\xd6\x87\x07\x43\x38\xed\x88\xe9\x9f\xe8\xe7\x67\x28\x3a\xad\x7d\x72\x63\x94\x39\x72\x5d\xa9\x0c\x66\x47\x77\x1d\xa1\x38\x95\x25\x81\x5e\x04\x1d\x57\xcf\xf1\x13\xda\x71\xf8\xde\xbb\xd6\x2f\x78\x73\xfe\x0c\xfb\xcb\x2d\xde\x0d\x1d\x06\xeb\xdf\xc6\xf9\x82\x71\xc6\x79\x5c\x3c\x02\x85\x5d\x16\x3c\xc5\xdb\x1b\xe5\x36\x08\xaf\x4a\xa9\x0a\x10\xb3\xd0\x19\xe1\x2b\x62\x37\x78\xdb\xcd\xce\xbf\xd7\xed\x38\x2c\x7e\x6e\xdc\xe0\xeb\xab\x1b\xfb\xc6\xbb\x71\x88\xb7\x10\x5a\x95\x86\x53\xa9\x4c\x18\xff\xdb\x5a\x1d\xee\xae\x2f\xf6\x3d\xbe\x7b\x22\x95\x41\xe6\x1f\x6b\x52\x59\x12\x6d\x36\xd8\xa7\xaa\xa8\xd2\x82\x30\xf5\x53\xb7\xfc\xe8\xef\xa1\x1a\x96\x45\x41\xfc\x67\xa6\x9f\x19\x7e\x06\x94\x6b\x26\x48\x55\x12\x1b\x68\x46\x75\xcc\x02\x4c\xab\x07\x0f\xbd\x22\x72\xcd\xa0\x54\xec\xc0\xfa\xf4\xa1\xe1\x85\x44\x65\x08\x47\xd6\x82\xb2\x8a\xe9\xc1\xff\x09\x7a\xf4\xe1\x20\x4d\x12\xfd\x0e\x00\x00\xff\xff\x7f\xae\xf9\x8b\x75\x02\x00\x00")
+var __20_service_accounts_ip_validationUpSql = []byte("\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\x74\x52\xd1\x8e\x9b\x30\x10\x7c\xcf\x57\xcc\x43\xee\x68\xa5\xa8\x3f\x80\xfa\x40\xcd\x42\x2c\x25\x76\xb4\x18\xe5\xde\x10\xe2\x5c\x62\x05\x01\x05\x37\xd7\xfb\xfb\xca\xe4\x94\x54\x6a\x6e\x9f\x96\x65\xc7\x33\xe3\xf1\x0f\xca\xa5\x8a\x57\x2b\xc1\x94\x18\x42\x56\x2a\x61\xa4\x56\x70\x63\x35\x5c\xec\xd4\xd5\x63\xd5\x9c\x6c\x73\xfe\xf2\x15\x4c\xa6\x64\x55\xc0\x4f\xae\x6d\xed\x84\xa4\xc0\x7a\xbd\x02\x80\x94\xc4\x2e\x61\x5a\xfa\x50\x6e\x84\xeb\xad\x8f\x97\xc1\xc2\x70\xfb\x55\xd0\x8e\x84\xc1\x6c\xa7\x8b\x6b\x6c\x55\x37\xcd\xf0\xbb\xf7\x95\x1b\xbf\xd5\xaf\xaf\x13\xa4\x32\x3a\xc0\x33\xd6\xfb\x07\x4b\x38\x6e\x89\xe9\x53\xf4\xf3\x33\x14\x1d\x97\x3e\xbe\x31\xca\x0c\x99\x2e\x55\x0a\xb3\xa5\xbb\x8e\x50\x9c\xc8\x82\x40\x2f\x82\x0e\x8b\xe7\xe8\x09\xcd\xd0\xff\xec\x5c\xe3\x67\xbc\x39\x7f\x82\xfd\xe3\x66\xef\xfa\x16\xbd\xf5\x6f\xc3\x74\xc6\x30\xe1\x34\xcc\x1e\x81\xc2\xce\x33\x9e\xa2\xcd\x8d\x72\x13\x84\x97\x85\x54\x39\x88\x59\xe8\x94\xf0\x1d\x91\xeb\xbd\x6d\x27\xe7\xdf\xab\x66\xe8\x67\x3f\xd5\xae\xf7\xd5\xc5\x0d\x5d\xed\xdd\xd0\x47\x1b\x08\xad\x0a\xc3\x89\x54\x26\xac\xff\x6f\xad\x0a\x67\x57\x67\xfb\x1e\xdd\x3d\x91\x4a\x21\xb3\xfb\xf7\x35\x9a\xa0\xe4\x3a\x23\x95\xc6\xab\xf5\x1a\xbb\x44\xe5\x65\x92\x13\xc6\x6e\x6c\xe7\x5f\xdd\x3d\x68\xc3\x32\xcf\x89\xff\xcd\xf9\x23\xd7\x8f\xd0\x32\xcd\x04\xa9\x0a\x62\x03\xcd\x28\x0f\x69\x80\x69\xf5\xe0\xf2\x17\x44\xa6\x19\x94\x88\x2d\x58\x1f\xaf\x1a\x5e\x48\x94\x86\x70\x60\x2d\x28\x2d\x99\x1e\xbc\xa9\xa0\x47\xef\xf7\xd2\xc4\xab\xbf\x01\x00\x00\xff\xff\x82\x4d\xad\x3c\x89\x02\x00\x00")
 
 func _20_service_accounts_ip_validationUpSqlBytes() ([]byte, error) {
 	return bindataRead(
@@ -582,7 +582,7 @@ func _20_service_accounts_ip_validationUpSql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "20_service_accounts_ip_validation.up.sql", size: 629, mode: os.FileMode(420), modTime: time.Unix(1554577059, 0)}
+	info := bindataFileInfo{name: "20_service_accounts_ip_validation.up.sql", size: 649, mode: os.FileMode(420), modTime: time.Unix(1554739932, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -602,7 +602,7 @@ func _2_add_roles_tableDownSql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "2_add_roles_table.down.sql", size: 17, mode: os.FileMode(420), modTime: time.Unix(1542054575, 0)}
+	info := bindataFileInfo{name: "2_add_roles_table.down.sql", size: 17, mode: os.FileMode(420), modTime: time.Unix(1529430051, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -622,7 +622,7 @@ func _2_add_roles_tableUpSql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "2_add_roles_table.up.sql", size: 87, mode: os.FileMode(420), modTime: time.Unix(1542054575, 0)}
+	info := bindataFileInfo{name: "2_add_roles_table.up.sql", size: 87, mode: os.FileMode(420), modTime: time.Unix(1529430051, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -642,7 +642,7 @@ func _3_add_log_tableDownSql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "3_add_log_table.down.sql", size: 15, mode: os.FileMode(420), modTime: time.Unix(1542054575, 0)}
+	info := bindataFileInfo{name: "3_add_log_table.down.sql", size: 15, mode: os.FileMode(420), modTime: time.Unix(1529430051, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -662,7 +662,7 @@ func _3_add_log_tableUpSql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "3_add_log_table.up.sql", size: 136, mode: os.FileMode(420), modTime: time.Unix(1542054575, 0)}
+	info := bindataFileInfo{name: "3_add_log_table.up.sql", size: 136, mode: os.FileMode(420), modTime: time.Unix(1529430051, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -682,7 +682,7 @@ func _4_not_nullDownSql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "4_not_null.down.sql", size: 50, mode: os.FileMode(420), modTime: time.Unix(1542054575, 0)}
+	info := bindataFileInfo{name: "4_not_null.down.sql", size: 50, mode: os.FileMode(420), modTime: time.Unix(1529711024, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -702,7 +702,7 @@ func _4_not_nullUpSql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "4_not_null.up.sql", size: 145, mode: os.FileMode(420), modTime: time.Unix(1542054575, 0)}
+	info := bindataFileInfo{name: "4_not_null.up.sql", size: 145, mode: os.FileMode(420), modTime: time.Unix(1529711024, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -722,7 +722,7 @@ func _5_bootstrapDownSql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "5_bootstrap.down.sql", size: 21, mode: os.FileMode(420), modTime: time.Unix(1542054575, 0)}
+	info := bindataFileInfo{name: "5_bootstrap.down.sql", size: 21, mode: os.FileMode(420), modTime: time.Unix(1529711024, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -742,7 +742,7 @@ func _5_bootstrapUpSql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "5_bootstrap.up.sql", size: 124, mode: os.FileMode(420), modTime: time.Unix(1542054575, 0)}
+	info := bindataFileInfo{name: "5_bootstrap.up.sql", size: 124, mode: os.FileMode(420), modTime: time.Unix(1529711024, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -762,7 +762,7 @@ func _6_add_gen_columnDownSql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "6_add_gen_column.down.sql", size: 43, mode: os.FileMode(420), modTime: time.Unix(1542054575, 0)}
+	info := bindataFileInfo{name: "6_add_gen_column.down.sql", size: 43, mode: os.FileMode(420), modTime: time.Unix(1529711024, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -782,7 +782,7 @@ func _6_add_gen_columnUpSql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "6_add_gen_column.up.sql", size: 69, mode: os.FileMode(420), modTime: time.Unix(1542054575, 0)}
+	info := bindataFileInfo{name: "6_add_gen_column.up.sql", size: 69, mode: os.FileMode(420), modTime: time.Unix(1529711024, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -802,7 +802,7 @@ func _7_add_ip_columnDownSql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "7_add_ip_column.down.sql", size: 34, mode: os.FileMode(420), modTime: time.Unix(1542054575, 0)}
+	info := bindataFileInfo{name: "7_add_ip_column.down.sql", size: 34, mode: os.FileMode(420), modTime: time.Unix(1530306711, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -822,7 +822,7 @@ func _7_add_ip_columnUpSql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "7_add_ip_column.up.sql", size: 44, mode: os.FileMode(420), modTime: time.Unix(1542054575, 0)}
+	info := bindataFileInfo{name: "7_add_ip_column.up.sql", size: 44, mode: os.FileMode(420), modTime: time.Unix(1530306711, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -842,7 +842,7 @@ func _8_add_user_addr_columnsDownSql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "8_add_user_addr_columns.down.sql", size: 138, mode: os.FileMode(420), modTime: time.Unix(1542054575, 0)}
+	info := bindataFileInfo{name: "8_add_user_addr_columns.down.sql", size: 138, mode: os.FileMode(420), modTime: time.Unix(1530306711, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -862,7 +862,7 @@ func _8_add_user_addr_columnsUpSql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "8_add_user_addr_columns.up.sql", size: 278, mode: os.FileMode(420), modTime: time.Unix(1542054575, 0)}
+	info := bindataFileInfo{name: "8_add_user_addr_columns.up.sql", size: 278, mode: os.FileMode(420), modTime: time.Unix(1530306711, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -882,7 +882,7 @@ func _9_add_log_columnsDownSql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "9_add_log_columns.down.sql", size: 241, mode: os.FileMode(420), modTime: time.Unix(1542054575, 0)}
+	info := bindataFileInfo{name: "9_add_log_columns.down.sql", size: 241, mode: os.FileMode(420), modTime: time.Unix(1530306711, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -902,7 +902,7 @@ func _9_add_log_columnsUpSql() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "9_add_log_columns.up.sql", size: 486, mode: os.FileMode(420), modTime: time.Unix(1542054575, 0)}
+	info := bindataFileInfo{name: "9_add_log_columns.up.sql", size: 486, mode: os.FileMode(420), modTime: time.Unix(1530306711, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
