@@ -7,7 +7,7 @@ import {
   Output
 } from '@angular/core';
 import { FilteredDatasource } from '../../filterable-datasource/filtered-datasource';
-import { Subject } from 'rxjs';
+import { Subject, of } from 'rxjs';
 import { UserEditFormComponent } from '../user-edit-form/user-edit-form.component';
 import { IPasswordReset } from '../../ecad-angular-auth/interfaces/password-reset.i';
 import { PASSWORD_RESET } from '../../ecad-angular-auth/tokens';
@@ -17,6 +17,7 @@ import { IUsersService } from '../../ecad-angular-auth-admin/interfaces/user-ser
 import { USERS_SERVICE } from '../../ecad-angular-auth-admin/tokens';
 import { first } from 'rxjs/operators';
 import { ConfirmDialogService } from '../../confirm-dialog/confirm-dialog.service';
+import { FilterCondition } from '../../resource-util/resources.service';
 
 @Component({
   selector: 'auth-users-list',
@@ -67,6 +68,16 @@ export class UsersListComponent implements OnInit {
       this.sort.sortChange,
       this.nextPage$,
       this.prevousPage$
+    );
+
+    this.dataSource.addFilterConditionObservable(
+      of([
+        {
+          operation: 'eq',
+          field: 'account_type',
+          value: 'regular'
+        }
+      ] as FilterCondition<User>[])
     );
   }
 

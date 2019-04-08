@@ -16,7 +16,6 @@ export * from './lib/ecad-angular-auth/interfaces/password-reset-result.i';
 export * from './lib/ecad-angular-auth/interfaces/password-reset.i';
 export * from './lib/ecad-angular-auth/interfaces/user-token.i';
 
-
 export * from './lib/ecad-angular-auth/tokens';
 export * from './lib/ecad-angular-auth-admin/interfaces/auth-admin-config.i';
 export * from './lib/ecad-angular-auth-admin/interfaces/create-user.i';
@@ -30,9 +29,9 @@ export * from './lib/ecad-angular-auth/guards/loggedin.guard';
 export * from './lib/ecad-angular-auth/guards/permissions.guard';
 export * from './lib/ecad-angular-auth/guards/role.guard';
 
-
 export * from './lib/ecad-angular-auth-admin-components/user-edit-form/user-edit-form.component';
 export * from './lib/ecad-angular-auth-admin-components/users-list/users-list.component';
+export * from './lib/ecad-angular-auth-admin-components/service-account-list/service-account-list.component';
 export * from './lib/ecad-angular-auth-components/login/login.component';
 export * from './lib/ecad-angular-auth-components/reset-password-email-form/reset-password-email-form.component';
 export * from './lib/ecad-angular-auth-components/reset-password-form/reset-password-form.component';

@@ -13,6 +13,7 @@ export interface User {
   name: string;
   added: string;
   modified: string;
+  account_type: 'service' | 'regular';
   membership: UserMemberhsip[];
   email_verified: boolean;
   address_whitelist: {
