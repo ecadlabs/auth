@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"net"
 	"net/http"
 	"strconv"
 	"strings"
@@ -14,7 +15,7 @@ import (
 	"github.com/ecadlabs/auth/storage"
 	"github.com/ecadlabs/auth/utils"
 	"github.com/gorilla/mux"
-	"github.com/satori/go.uuid"
+	uuid "github.com/satori/go.uuid"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -168,13 +169,18 @@ func (u *Users) Login(w http.ResponseWriter, r *http.Request) {
 
 	var (
 		user       *storage.User
-		remoteAddr string
+		remoteAddr net.IP
 	)
 
 	if request == nil {
 		// Try login by IP
 		var err error
-		remoteAddr = utils.GetRemoteAddr(r)
+		remoteAddr = net.ParseIP(utils.GetRemoteAddr(r))
+		if remoteAddr == nil {
+			utils.JSONError(w, "", errors.CodeUnauthorized)
+			return
+		}
+
 		log.WithField("address", remoteAddr).Println("Empty login request")
 
 		user, err = u.Storage.GetServiceAccountByAddress(ctx, remoteAddr)
@@ -243,7 +249,6 @@ func (u *Users) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	opt := userTokenOptions{
-		addr:          remoteAddr,
 		user:          user,
 		membership:    membership,
 		role:          role,
@@ -251,12 +256,16 @@ func (u *Users) Login(w http.ResponseWriter, r *http.Request) {
 		refresh:       u.RefreshURL(),
 	}
 
+	if remoteAddr != nil {
+		opt.addr = remoteAddr.String()
+	}
+
 	if err := u.writeUserToken(w, &opt); err != nil {
 		utils.JSONErrorResponse(w, err)
 		return
 	}
 
-	if err := u.Storage.UpdateLoginInfo(ctx, user.ID, utils.GetRemoteAddr(r)); err != nil {
+	if err := u.Storage.UpdateLoginInfo(ctx, user.ID, opt.addr); err != nil {
 		utils.JSONErrorResponse(w, err)
 		return
 	}

@@ -11,9 +11,10 @@ import (
 
 	"github.com/ecadlabs/auth/errors"
 	"github.com/ecadlabs/auth/query"
+	"github.com/ecadlabs/auth/utils"
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
-	"github.com/satori/go.uuid"
+	uuid "github.com/satori/go.uuid"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -180,7 +181,7 @@ func (s *Storage) GetUserByEmail(ctx context.Context, typ, email string) (*User,
 }
 
 // GetServiceAccountByAddress retrieve a user by whitelisted IP address if any
-func (s *Storage) GetServiceAccountByAddress(ctx context.Context, address string) (*User, error) {
+func (s *Storage) GetServiceAccountByAddress(ctx context.Context, address net.IP) (*User, error) {
 	q := `
 	SELECT
 	  users.*,
@@ -222,10 +223,10 @@ func (s *Storage) GetServiceAccountByAddress(ctx context.Context, address string
 	  ) AS m ON m.user_id = users.id
 	WHERE
 	  users.account_type = 'service' AND
-	  service_account_ip.addr = $1`
+	  service_account_ip.addr >>= $1`
 
 	var u userModel
-	if err := s.DB.GetContext(ctx, &u, q, address); err != nil {
+	if err := s.DB.GetContext(ctx, &u, q, address.String()); err != nil {
 		if err == sql.ErrNoRows {
 			err = errors.ErrUserNotFound
 		}
@@ -585,7 +586,8 @@ func (s *Storage) UpdateUser(ctx context.Context, typ string, id uuid.UUID, ops 
 		args[0] = id
 
 		for i, r := range addAddr {
-			if net.ParseIP(r) == nil {
+			ipnet, err := utils.ParseIPNet(r)
+			if err != nil {
 				return nil, errors.ErrAddrSyntax
 			}
 
@@ -593,7 +595,7 @@ func (s *Storage) UpdateUser(ctx context.Context, typ string, id uuid.UUID, ops 
 				expr += ", "
 			}
 			expr += fmt.Sprintf("($1, $%d)", i+2)
-			args[i+1] = r
+			args[i+1] = ipnet.String()
 		}
 
 		if _, err = tx.ExecContext(ctx, expr, args...); err != nil {
@@ -611,11 +613,16 @@ func (s *Storage) UpdateUser(ctx context.Context, typ string, id uuid.UUID, ops 
 		args[0] = id
 
 		for i, r := range removeAddr {
+			ipnet, err := utils.ParseIPNet(r)
+			if err != nil {
+				return nil, errors.ErrAddrSyntax
+			}
+
 			if i != 0 {
 				expr += " OR "
 			}
 			expr += fmt.Sprintf("addr = $%d", i+2)
-			args[i+1] = r
+			args[i+1] = ipnet.String()
 		}
 
 		expr += ")"

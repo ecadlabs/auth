@@ -91,3 +91,21 @@ func GetRemoteAddr(r *http.Request) string {
 
 	return r.RemoteAddr
 }
+
+func ParseIPNet(addr string) (ipnet *net.IPNet, err error) {
+	if ip := net.ParseIP(addr); ip != nil {
+		if ipv4 := ip.To4(); ipv4 != nil {
+			ip = ipv4
+		}
+		bitCount := len(ip) * 8
+		mask := net.CIDRMask(bitCount, bitCount)
+		ipnet = &net.IPNet{Mask: mask, IP: ip}
+	} else {
+		_, ipnet, err = net.ParseCIDR(addr)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return
+}
