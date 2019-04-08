@@ -400,6 +400,11 @@ func beforeTest() (srv *httptest.Server, userList []*storage.User, token string,
 		return
 	}
 
+	_, err = db.Exec(`DROP FUNCTION IF EXISTS ip_overlap_check CASCADE`)
+	if err != nil {
+		return
+	}
+
 	// Migrate
 	m, err := migrations.New(*dbURL)
 	if err != nil {
