@@ -15,7 +15,7 @@ import { User } from '../../ecad-angular-auth-admin/interfaces/user.i';
 import { MatSort, MatDialog, MatSnackBar } from '@angular/material';
 import { IUsersService } from '../../ecad-angular-auth-admin/interfaces/user-service.i';
 import { USERS_SERVICE } from '../../ecad-angular-auth-admin/tokens';
-import { first } from 'rxjs/operators';
+import { first, pluck, startWith, map } from 'rxjs/operators';
 import { ConfirmDialogService } from '../../confirm-dialog/confirm-dialog.service';
 import { FilterCondition } from '../../resource-util/resources.service';
 
@@ -32,6 +32,12 @@ export class UsersListComponent implements OnInit {
   public dataSource: FilteredDatasource<User>;
   private nextPage$ = new Subject<void>();
   private prevousPage$ = new Subject<void>();
+
+  public pageIndex$ = this.dataSource.pageInfo$.pipe(
+    startWith(1),
+    pluck('currentPage'),
+    map(x => Number(x) - 1)
+  );
 
   displayedColumns = [
     'email',

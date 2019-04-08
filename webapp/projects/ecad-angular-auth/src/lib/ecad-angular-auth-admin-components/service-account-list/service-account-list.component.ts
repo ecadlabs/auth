@@ -8,14 +8,13 @@ import {
 } from '@angular/core';
 import { MatDialog, MatSort } from '@angular/material';
 import { of, Subject } from 'rxjs';
-import { first } from 'rxjs/operators';
-import { UserEditFormComponent } from '../user-edit-form/user-edit-form.component';
+import { first, map, pluck, startWith } from 'rxjs/operators';
 import { ConfirmDialogService } from '../../confirm-dialog/confirm-dialog.service';
-import { FilteredDatasource } from '../../filterable-datasource/filtered-datasource';
-import { FilterCondition } from '../../resource-util/resources.service';
-import { USERS_SERVICE } from '../../ecad-angular-auth-admin/tokens';
 import { IUsersService } from '../../ecad-angular-auth-admin/interfaces/user-service.i';
 import { User } from '../../ecad-angular-auth-admin/interfaces/user.i';
+import { USERS_SERVICE } from '../../ecad-angular-auth-admin/tokens';
+import { FilteredDatasource } from '../../filterable-datasource/filtered-datasource';
+import { FilterCondition } from '../../resource-util/resources.service';
 
 @Component({
   selector: 'auth-service-account-list',
@@ -31,7 +30,9 @@ export class ServiceAccountListComponent implements OnInit {
   private nextPage$ = new Subject<void>();
   private prevousPage$ = new Subject<void>();
 
-  displayedColumns = ['added', 'modified', 'actions'];
+  displayedColumns = ['id', 'added', 'modified', 'actions'];
+
+  public pageIndex$;
 
   constructor(
     @Inject(USERS_SERVICE)
@@ -56,6 +57,12 @@ export class ServiceAccountListComponent implements OnInit {
       this.sort.sortChange,
       this.nextPage$,
       this.prevousPage$
+    );
+
+    this.pageIndex$ = this.dataSource.pageInfo$.pipe(
+      startWith(1),
+      pluck('currentPage'),
+      map(x => Number(x) - 1)
     );
 
     this.dataSource.addFilterConditionObservable(
