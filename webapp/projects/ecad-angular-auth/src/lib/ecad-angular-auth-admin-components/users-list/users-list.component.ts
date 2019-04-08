@@ -1,23 +1,23 @@
 import {
   Component,
-  OnInit,
-  ViewChild,
-  Inject,
   EventEmitter,
-  Output
+  Inject,
+  OnInit,
+  Output,
+  ViewChild
 } from '@angular/core';
-import { FilteredDatasource } from '../../filterable-datasource/filtered-datasource';
-import { Subject, of } from 'rxjs';
-import { UserEditFormComponent } from '../user-edit-form/user-edit-form.component';
+import { MatDialog, MatSnackBar, MatSort } from '@angular/material';
+import { of, Subject } from 'rxjs';
+import { first } from 'rxjs/operators';
+import { ConfirmDialogService } from '../../confirm-dialog/confirm-dialog.service';
+import { IUsersService } from '../../ecad-angular-auth-admin/interfaces/user-service.i';
+import { User } from '../../ecad-angular-auth-admin/interfaces/user.i';
+import { USERS_SERVICE } from '../../ecad-angular-auth-admin/tokens';
 import { IPasswordReset } from '../../ecad-angular-auth/interfaces/password-reset.i';
 import { PASSWORD_RESET } from '../../ecad-angular-auth/tokens';
-import { User } from '../../ecad-angular-auth-admin/interfaces/user.i';
-import { MatSort, MatDialog, MatSnackBar } from '@angular/material';
-import { IUsersService } from '../../ecad-angular-auth-admin/interfaces/user-service.i';
-import { USERS_SERVICE } from '../../ecad-angular-auth-admin/tokens';
-import { first, pluck, startWith, map } from 'rxjs/operators';
-import { ConfirmDialogService } from '../../confirm-dialog/confirm-dialog.service';
+import { FilteredDatasource } from '../../filterable-datasource/filtered-datasource';
 import { FilterCondition } from '../../resource-util/resources.service';
+import { UserEditFormComponent } from '../user-edit-form/user-edit-form.component';
 
 @Component({
   selector: 'auth-users-list',
@@ -32,12 +32,6 @@ export class UsersListComponent implements OnInit {
   public dataSource: FilteredDatasource<User>;
   private nextPage$ = new Subject<void>();
   private prevousPage$ = new Subject<void>();
-
-  public pageIndex$ = this.dataSource.pageInfo$.pipe(
-    startWith(1),
-    pluck('currentPage'),
-    map(x => Number(x) - 1)
-  );
 
   displayedColumns = [
     'email',
