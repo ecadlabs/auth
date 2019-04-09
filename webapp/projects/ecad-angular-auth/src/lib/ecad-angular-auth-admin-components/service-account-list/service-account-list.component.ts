@@ -6,25 +6,22 @@ import {
   Output,
   ViewChild
 } from '@angular/core';
-import { MatDialog, MatSnackBar, MatSort } from '@angular/material';
+import { MatDialog, MatSort } from '@angular/material';
 import { of, Subject } from 'rxjs';
 import { first } from 'rxjs/operators';
 import { ConfirmDialogService } from '../../confirm-dialog/confirm-dialog.service';
 import { IUsersService } from '../../ecad-angular-auth-admin/interfaces/user-service.i';
 import { User } from '../../ecad-angular-auth-admin/interfaces/user.i';
 import { USERS_SERVICE } from '../../ecad-angular-auth-admin/tokens';
-import { IPasswordReset } from '../../ecad-angular-auth/interfaces/password-reset.i';
-import { PASSWORD_RESET } from '../../ecad-angular-auth/tokens';
 import { FilteredDatasource } from '../../filterable-datasource/filtered-datasource';
 import { FilterCondition } from '../../resource-util/resources.service';
-import { UserEditFormComponent } from '../user-edit-form/user-edit-form.component';
 
 @Component({
-  selector: 'auth-users-list',
-  templateUrl: './users-list.component.html',
-  styleUrls: ['./users-list.component.scss']
+  selector: 'auth-service-account-list',
+  templateUrl: './service-account-list.component.html',
+  styleUrls: ['./service-account-list.component.scss']
 })
-export class UsersListComponent implements OnInit {
+export class ServiceAccountListComponent implements OnInit {
   @Output()
   userClicked: EventEmitter<User> = new EventEmitter();
 
@@ -33,22 +30,12 @@ export class UsersListComponent implements OnInit {
   private nextPage$ = new Subject<void>();
   private prevousPage$ = new Subject<void>();
 
-  displayedColumns = [
-    'email',
-    'name',
-    'added',
-    'modified',
-    'email_verified',
-    'actions'
-  ];
+  displayedColumns = ['id', 'added', 'modified', 'actions'];
 
   constructor(
     @Inject(USERS_SERVICE)
     private userService: IUsersService,
     private dialog: MatDialog,
-    @Inject(PASSWORD_RESET)
-    private passwordReset: IPasswordReset,
-    private snackBar: MatSnackBar,
     private confirmDialog: ConfirmDialogService
   ) {}
 
@@ -75,7 +62,7 @@ export class UsersListComponent implements OnInit {
         {
           operation: 'eq',
           field: 'account_type',
-          value: 'regular'
+          value: 'service'
         }
       ] as FilterCondition<User>[])
     );
@@ -83,42 +70,6 @@ export class UsersListComponent implements OnInit {
 
   selectUser(user: User) {
     this.userClicked.next(user);
-  }
-
-  async resetPassword($event: Event, user: User) {
-    $event.stopPropagation();
-    this.confirmDialog
-      .confirm(
-        'You are about to reset this user password. Do you wish to continue?'
-      )
-      .subscribe(async confirmed => {
-        if (confirmed) {
-          await this.passwordReset.sendResetEmail(user.email).toPromise();
-          this.snackBar.open('Reset password email sent', undefined, {
-            duration: 2000,
-            horizontalPosition: 'end'
-          });
-        }
-      });
-  }
-
-  updateUser($event: Event, user: User) {
-    $event.stopPropagation();
-    this.dialog
-      .open(UserEditFormComponent, { data: user, width: '500px' })
-      .afterClosed()
-      .subscribe(() => {
-        this.dataSource.refresh();
-      });
-  }
-
-  addUser() {
-    this.dialog
-      .open(UserEditFormComponent, { width: '500px' })
-      .afterClosed()
-      .subscribe(() => {
-        this.dataSource.refresh();
-      });
   }
 
   delete($event: Event, user: User) {
