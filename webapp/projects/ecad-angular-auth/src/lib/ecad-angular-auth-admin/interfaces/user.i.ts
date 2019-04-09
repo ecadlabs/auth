@@ -1,6 +1,7 @@
 export interface UserMemberhsip {
   tenant_id: string;
   tenant_type: 'individual' | 'organization';
+  tenant_name: string;
   type: 'owner' | 'member';
   roles: {
     [key: string]: boolean;
