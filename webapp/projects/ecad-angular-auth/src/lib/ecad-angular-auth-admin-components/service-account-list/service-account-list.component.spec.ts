@@ -12,6 +12,7 @@ import {
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { USERS_SERVICE } from '../../ecad-angular-auth-admin/tokens';
 import { PASSWORD_RESET } from '../../ecad-angular-auth/tokens';
+import { AuthAdminComponentsUtilsModule } from '../auth-admin-components-utils/auth-admin-components-utils.module';
 
 describe('ServiceAccountListComponent', () => {
   let component: ServiceAccountListComponent;
@@ -26,7 +27,8 @@ describe('ServiceAccountListComponent', () => {
         NoopAnimationsModule,
         MatSnackBarModule,
         MatIconModule,
-        MatDialogModule
+        MatDialogModule,
+        AuthAdminComponentsUtilsModule
       ],
       providers: [
         { provide: USERS_SERVICE, useValue: {} },
