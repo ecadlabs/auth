@@ -9,6 +9,7 @@ import {
   MatButtonModule,
   MatTooltipModule
 } from '@angular/material';
+import { AuthAdminComponentsUtilsModule } from '../auth-admin-components-utils/auth-admin-components-utils.module';
 
 @NgModule({
   declarations: [ServiceAccountListComponent],
@@ -19,7 +20,8 @@ import {
     MatPaginatorModule,
     MatSortModule,
     MatButtonModule,
-    MatTooltipModule
+    MatTooltipModule,
+    AuthAdminComponentsUtilsModule
   ],
   exports: [ServiceAccountListComponent]
 })

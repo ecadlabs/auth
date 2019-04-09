@@ -30,7 +30,7 @@ export class ServiceAccountListComponent implements OnInit {
   private nextPage$ = new Subject<void>();
   private prevousPage$ = new Subject<void>();
 
-  displayedColumns = ['id', 'added', 'modified', 'actions'];
+  displayedColumns = ['id', 'tenants', 'added', 'modified', 'actions'];
 
   constructor(
     @Inject(USERS_SERVICE)
