@@ -1,0 +1,14 @@
+# build stage
+FROM golang:alpine AS build-env
+WORKDIR  /go/src/github.com/ecadlabs/auth
+COPY . .
+WORKDIR  /go/src/github.com/ecadlabs/auth/cli
+RUN CGO_ENABLED=0 go build -o auth-cli
+
+# final stage
+FROM alpine
+WORKDIR /app
+RUN apk --no-cache add ca-certificates
+COPY --from=build-env /go/src/github.com/ecadlabs/auth/cli/auth-cli /app/auth-cli
+
+ENTRYPOINT ["/app/auth-cli"]
