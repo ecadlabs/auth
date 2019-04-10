@@ -1,5 +1,5 @@
 import { Injectable, Optional, Inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 
 import { map, catchError, tap, filter, switchMap } from 'rxjs/operators';
 import {
@@ -8,7 +8,8 @@ import {
   Observer,
   BehaviorSubject,
   interval,
-  MonoTypeOperatorFunction
+  MonoTypeOperatorFunction,
+  throwError
 } from 'rxjs';
 import { AUTH_CONFIG } from '../tokens';
 import { ILoginService } from '../interfaces/login-service.i';
@@ -64,7 +65,16 @@ export class StandardLoginService implements ILoginService {
           return interval(this.AUTO_REFRESH_INTERVAL).pipe(
             switchMap(() => {
               return this.refreshToken().pipe(
-                catchError(() => observableOf(false))
+                catchError(err => {
+                  // If we get a 401 from the refresh endpoint it means that the user or tenant no longer exsits
+                  // We logout in order to force the user to reauthenticate
+                  if (err instanceof HttpErrorResponse && err.status === 401) {
+                    this.logout().subscribe();
+                    return throwError(err);
+                  } else {
+                    return observableOf(false);
+                  }
+                })
               );
             })
           );
@@ -214,6 +224,7 @@ export class StandardLoginService implements ILoginService {
   public logout(): Observable<Boolean> {
     return Observable.create((observer: Observer<Boolean>) => {
       this.config.tokenSetter('');
+      localStorage.removeItem('refreshTokenUrl');
       this.user.next(this.token);
       observer.next(true);
     });
