@@ -1,0 +1,42 @@
+<ng-container *ngIf="ips?.length > 0; else empty_tmpl">
+  <table
+    class="ips-table"
+    mat-table
+    #table
+    [dataSource]="dataSource$ | async"
+    matSort
+    multiTemplateDataRows
+  >
+    <ng-container matColumnDef="ip">
+      <th mat-header-cell class="col-lg" *matHeaderCellDef mat-sort-header i18n>
+        Ip
+      </th>
+      <td mat-cell class="col-lg" *matCellDef="let element">
+        {{ element }}
+      </td>
+    </ng-container>
+
+    <ng-container matColumnDef="action">
+      <th mat-header-cell class="col-lg" *matHeaderCellDef mat-sort-header i18n>
+        Action
+      </th>
+      <td mat-cell class="col-lg" *matCellDef="let element">
+        <button
+          matTooltip="Remove IP"
+          mat-icon-button
+          (click)="remove.next(element)"
+          color="accent"
+        >
+          <mat-icon>archive</mat-icon>
+        </button>
+      </td>
+    </ng-container>
+
+    <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+    <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+  </table>
+</ng-container>
+
+<ng-template #empty_tmpl>
+  <p i18n>There is no ip on this user yet.</p>
+</ng-template>

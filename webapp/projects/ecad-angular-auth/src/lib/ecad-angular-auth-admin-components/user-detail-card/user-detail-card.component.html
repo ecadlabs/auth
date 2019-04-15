@@ -1,0 +1,45 @@
+<mat-card>
+  <mat-card-title i18n>User details</mat-card-title>
+  <div *ngIf="user">
+    <mat-card-content>
+      <div class="property-container">
+        <span class="property-label">Email</span>
+        <span class="property-value">{{ user.email }}</span>
+      </div>
+      <div class="property-container">
+        <span class="property-label">Added</span>
+        <span class="property-value">{{ user.added }}</span>
+      </div>
+      <div class="property-container">
+        <span class="property-label">Modified</span>
+        <span class="property-value">{{ user.modified }}</span>
+      </div>
+      <div class="property-container">
+        <span class="property-label">Email Verified</span>
+        <span class="property-value">{{
+          user.verified ? 'Verfified' : 'Not verified'
+        }}</span>
+      </div>
+    </mat-card-content>
+    <mat-divider class="divider"></mat-divider>
+    <mat-divider *ngIf="user.login_addr" class="divider"></mat-divider>
+    <mat-card-content>
+      <div class="property-container">
+        <span class="property-label">Last Login</span>
+        <span class="property-value">{{ user.login_ts }}</span>
+      </div>
+      <div class="property-container">
+        <span class="property-label">From</span>
+        <span class="property-value">{{ user.login_addr }}</span>
+      </div>
+      <div class="property-container">
+        <span class="property-label">Last Refresh</span>
+        <span class="property-value">{{ user.refresh_ts }}</span>
+      </div>
+      <div class="property-container">
+        <span class="property-label">From</span>
+        <span class="property-value">{{ user.refresh_addr }}</span>
+      </div>
+    </mat-card-content>
+  </div>
+</mat-card>

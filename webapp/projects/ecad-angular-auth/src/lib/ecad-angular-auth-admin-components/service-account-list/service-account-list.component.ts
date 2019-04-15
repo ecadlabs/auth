@@ -15,6 +15,7 @@ import { User } from '../../ecad-angular-auth-admin/interfaces/user.i';
 import { USERS_SERVICE } from '../../ecad-angular-auth-admin/tokens';
 import { FilteredDatasource } from '../../filterable-datasource/filtered-datasource';
 import { FilterCondition } from '../../resource-util/resources.service';
+import { ServiceAccountEditFormComponent } from '../service-account-edit-form/service-account-edit-form.component';
 
 @Component({
   selector: 'auth-service-account-list',
@@ -30,7 +31,7 @@ export class ServiceAccountListComponent implements OnInit {
   private nextPage$ = new Subject<void>();
   private prevousPage$ = new Subject<void>();
 
-  displayedColumns = ['id', 'tenants', 'added', 'modified', 'actions'];
+  displayedColumns = ['name', 'tenants', 'added', 'modified', 'actions'];
 
   constructor(
     @Inject(USERS_SERVICE)
@@ -70,6 +71,16 @@ export class ServiceAccountListComponent implements OnInit {
 
   selectUser(user: User) {
     this.userClicked.next(user);
+  }
+
+  updateUser($event: Event, user: User) {
+    $event.stopPropagation();
+    this.dialog
+      .open(ServiceAccountEditFormComponent, { data: user, width: '500px' })
+      .afterClosed()
+      .subscribe(() => {
+        this.dataSource.refresh();
+      });
   }
 
   delete($event: Event, user: User) {

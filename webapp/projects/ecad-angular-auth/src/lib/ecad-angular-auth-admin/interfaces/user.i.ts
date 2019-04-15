@@ -13,6 +13,11 @@ export interface User {
   email: string;
   name: string;
   added: string;
+  verified: boolean;
+  refresh_ts: string;
+  login_addr: string;
+  login_ts: string;
+  refresh_addr: string;
   modified: string;
   account_type: 'service' | 'regular';
   membership: UserMemberhsip[];

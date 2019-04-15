@@ -114,13 +114,14 @@ export class UsersService implements IUsersService {
     );
   }
 
-  find(id: string): Observable<User> {
-    return this.resourcesService.find(this.apiEndpoint, id);
+  find(id: string, useCache = true): Observable<User> {
+    return this.resourcesService.find(this.apiEndpoint, id, useCache);
   }
 
   findByMembership(id: string): Observable<User> {
     return this.resourcesService.fetchAndCache(
-      `${this.apiEndpointMembers}/${id}/user`
+      `${this.apiEndpointMembers}/${id}/user`,
+      true
     );
   }
 

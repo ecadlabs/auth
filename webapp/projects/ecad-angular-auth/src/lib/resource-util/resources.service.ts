@@ -54,18 +54,8 @@ export interface PatchPayload<T> {
 })
 export class ResourcesService<T, U> {
   private cache = new Map<string, Observable<any>>();
-  private cacheTimer = new Subject<string>();
 
-  constructor(private httpClient: HttpClient) {
-    this.cacheTimer
-      .pipe(
-        groupBy(url => url),
-        mergeMap(group => group.pipe(debounceTime(20000)))
-      )
-      .subscribe(url => {
-        this.cache.delete(url);
-      });
-  }
+  constructor(private httpClient: HttpClient) {}
 
   private previousMap = new Map();
 
@@ -149,21 +139,21 @@ export class ResourcesService<T, U> {
   private execCache<C>(
     url: string,
     obsFactory: () => Observable<C>,
-    cacheDuration = 2000
+    bypass: boolean = false,
+    cacheDuration = 20000
   ) {
-    if (!this.cache.has(url)) {
-      this.cache.set(url, obsFactory().pipe(shareReplay(1)));
+    if (bypass || !this.cache.has(url)) {
+      this.cache.set(url, obsFactory().pipe(shareReplay(1, cacheDuration)));
     }
-    this.cacheTimer.next(url);
     return this.cache.get(url) as Observable<C>;
   }
 
-  find(resourceUrl: string, id: string): Observable<T> {
+  find(resourceUrl: string, id: string, useCache = true): Observable<T> {
     const url = `${resourceUrl}/${id}`;
-    return this.fetchAndCache(url);
+    return this.fetchAndCache(url, useCache);
   }
 
-  fetchAndCache(url: string): Observable<T> {
-    return this.execCache(url, () => this.httpClient.get<T>(url));
+  fetchAndCache(url: string, useCache: boolean): Observable<T> {
+    return this.execCache(url, () => this.httpClient.get<T>(url), !useCache);
   }
 }

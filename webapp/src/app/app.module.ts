@@ -2,7 +2,7 @@ import { BrowserModule } from '@angular/platform-browser';
 import { NgModule } from '@angular/core';
 
 import { RouterModule } from '@angular/router';
-import { MatToolbarModule } from '@angular/material';
+import { MatToolbarModule, MatSnackBarModule } from '@angular/material';
 import { AppComponent } from './app.component';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import {
@@ -42,6 +42,7 @@ export function tokenSetter(value: string) {
     RequestEmailChangeComponent
   ],
   imports: [
+    MatSnackBarModule,
     EcadAngularAuthModule.forRoot({
       loginUrl: '/api/v1/login',
       whiteListUrl: '/api/v1/checkip',

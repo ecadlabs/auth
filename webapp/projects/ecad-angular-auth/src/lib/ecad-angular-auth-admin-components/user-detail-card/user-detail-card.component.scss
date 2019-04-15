@@ -1,0 +1,18 @@
+:host {
+  .property-container {
+    display: flex;
+
+    .property-label,
+    .property-value {
+      flex: 1;
+    }
+
+    .property-value {
+      min-width: 50%;
+    }
+  }
+
+  .divider + mat-card-content {
+    padding: 20px 0;
+  }
+}

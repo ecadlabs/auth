@@ -1,2 +1,5 @@
-{{userId}}
-<auth-user-detail (userClicked)='userClicked($event)' [userId$]='userId$'></auth-user-detail>
+{{ userId }}
+<auth-user-detail
+  (userClicked)="userClicked($event)"
+  [userId]="userId$ | async"
+></auth-user-detail>
