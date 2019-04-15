@@ -2,6 +2,7 @@ import { async, ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { ProtectedComponent } from './protected.component';
 import { ecadAngularAuth } from 'src/testing/fixture';
+import { MatSnackBarModule } from '@angular/material';
 
 describe('ProtectedComponent', () => {
   let component: ProtectedComponent;
@@ -9,12 +10,9 @@ describe('ProtectedComponent', () => {
 
   beforeEach(async(() => {
     TestBed.configureTestingModule({
-      imports: [
-        ...ecadAngularAuth
-      ],
+      imports: [...ecadAngularAuth, MatSnackBarModule],
       declarations: [ProtectedComponent]
-    })
-      .compileComponents();
+    }).compileComponents();
   }));
 
   beforeEach(() => {
