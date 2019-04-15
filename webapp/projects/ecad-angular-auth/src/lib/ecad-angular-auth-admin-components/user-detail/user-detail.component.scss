@@ -1,37 +1,30 @@
 :host {
+  width: 100%;
+
+  .error-box {
+    padding: 10px;
+    color: red;
+  }
+
+  .hidden {
+    visibility: hidden;
+  }
+
+  .user-detail {
     width: 100%;
+    display: flex;
 
-    .property-container {
-        display: flex;
-
-        .property-label, .property-value {
-            flex:1;
-        }
-
-        .property-value {
-            min-width: 50%;
-        }
+    .gutter {
+      width: 20px;
     }
 
-    .user-detail {
-        width: 100%;
-        display: flex;
-
-        .divider+mat-card-content {
-            padding: 20px 0;
-        }
-
-        .gutter {
-            width: 20px;
-        }
-
-        .user-col {
-            flex: 3;
-            min-width: 200px;
-        }
-
-        .log-col {
-            flex: 8;
-        }
+    .user-col {
+      flex: 3;
+      min-width: 200px;
     }
+
+    .log-col {
+      flex: 8;
+    }
+  }
 }

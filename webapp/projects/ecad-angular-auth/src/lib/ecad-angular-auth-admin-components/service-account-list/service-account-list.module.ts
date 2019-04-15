@@ -1,15 +1,16 @@
-import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ServiceAccountListComponent } from './service-account-list.component';
+import { NgModule } from '@angular/core';
 import {
+  MatButtonModule,
   MatIconModule,
-  MatTableModule,
   MatPaginatorModule,
   MatSortModule,
-  MatButtonModule,
+  MatTableModule,
   MatTooltipModule
 } from '@angular/material';
 import { AuthAdminComponentsUtilsModule } from '../auth-admin-components-utils/auth-admin-components-utils.module';
+import { ServiceAccountEditFormModule } from '../service-account-edit-form/service-account-edit-form.module';
+import { ServiceAccountListComponent } from './service-account-list.component';
 
 @NgModule({
   declarations: [ServiceAccountListComponent],
@@ -21,7 +22,8 @@ import { AuthAdminComponentsUtilsModule } from '../auth-admin-components-utils/a
     MatSortModule,
     MatButtonModule,
     MatTooltipModule,
-    AuthAdminComponentsUtilsModule
+    AuthAdminComponentsUtilsModule,
+    ServiceAccountEditFormModule
   ],
   exports: [ServiceAccountListComponent]
 })

@@ -1,63 +1,48 @@
 <div class="user-detail">
   <div class="user-col">
-    <mat-card>
-      <mat-card-title i18n>User details</mat-card-title>
-      <div *ngIf="(user$ | async); let user">
-        <mat-card-content>
-          <div class="property-container">
-            <span class="property-label">Email</span>
-            <span class="property-value">{{ user.email }}</span>
-          </div>
-          <div class="property-container">
-            <span class="property-label">Added</span>
-            <span class="property-value">{{ user.added }}</span>
-          </div>
-          <div class="property-container">
-            <span class="property-label">Modified</span>
-            <span class="property-value">{{ user.modified }}</span>
-          </div>
-          <div class="property-container">
-            <span class="property-label">Email Verified</span>
-            <span class="property-value">{{
-              user.verified ? 'Verfified' : 'Not verified'
-            }}</span>
-          </div>
-        </mat-card-content>
-        <mat-divider class="divider"></mat-divider>
-        <mat-divider *ngIf="user.login_addr" class="divider"></mat-divider>
-        <mat-card-content>
-          <div class="property-container">
-            <span class="property-label">Last Login</span>
-            <span class="property-value">{{ user.login_ts }}</span>
-          </div>
-          <div class="property-container">
-            <span class="property-label">From</span>
-            <span class="property-value">{{ user.login_addr }}</span>
-          </div>
-          <div class="property-container">
-            <span class="property-label">Last Refresh</span>
-            <span class="property-value">{{ user.refresh_ts }}</span>
-          </div>
-          <div class="property-container">
-            <span class="property-label">From</span>
-            <span class="property-value">{{ user.refresh_addr }}</span>
-          </div>
-        </mat-card-content>
-      </div>
-    </mat-card>
+    <auth-user-detail-card [user]="user$ | async"></auth-user-detail-card>
   </div>
   <div class="gutter"></div>
   <div class="log-col">
+    <mat-card>
+      <mat-card-title i18n>Memberships</mat-card-title>
+      <auth-members-list [userId]="userId$ | async"></auth-members-list>
+    </mat-card>
+    <br />
+    <mat-progress-bar
+      [class.hidden]="!(ipLoading$ | async)"
+      mode="query"
+    ></mat-progress-bar>
+    <mat-card *ngIf="(isServiceAccount$ | async)">
+      <mat-card-title i18n>Ip whitelist</mat-card-title>
+      <mat-card-content>
+        <p
+          *ngIf="(ipErrors$ | async) === IPError.UNKOWN_ERROR"
+          class="error-box"
+          i18n
+        >
+          Unkown error please try again later.
+        </p>
+        <p
+          *ngIf="(ipErrors$ | async) === IPError.CONFLICT_ERROR"
+          class="error-box"
+          i18n
+        >
+          This range is overlap with an existing one.
+        </p>
+        <auth-ip-creation-form (newIp)="newIp($event)"></auth-ip-creation-form>
+        <auth-ip-list
+          (remove)="removeIp($event)"
+          [ips]="ips$ | async"
+        ></auth-ip-list>
+      </mat-card-content>
+    </mat-card>
+    <br />
     <mat-card>
       <auth-user-logs
         (userClicked)="selectUser($event)"
         [userId$]="userId$"
       ></auth-user-logs>
-    </mat-card>
-    <br />
-    <mat-card>
-      <mat-card-title>Memberships</mat-card-title>
-      <auth-members-list [userId]="userId$ | async"></auth-members-list>
     </mat-card>
   </div>
 </div>

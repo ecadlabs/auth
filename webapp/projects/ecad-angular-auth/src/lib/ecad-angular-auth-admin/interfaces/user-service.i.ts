@@ -30,7 +30,7 @@ export interface IUsersService {
   ): Observable<PagedResult<User>>;
 
   findByMembership(id: string): Observable<User>;
-  find(id: string): Observable<User>;
+  find(id: string, useCache?: boolean): Observable<User>;
   fetchNextPage(result: PagedResult<User>): Observable<PagedResult<User>>;
   fetchPreviousPage(result: PagedResult<User>): Observable<PagedResult<User>>;
 }

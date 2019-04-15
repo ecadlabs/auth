@@ -12,6 +12,8 @@ import {
 } from '@angular/material';
 import { UsersListComponent } from './users-list.component';
 import { DomSanitizer } from '@angular/platform-browser';
+import { UserEditFormModule } from '../user-edit-form/user-edit-form.module';
+import { ConfirmDialogModule } from '../../confirm-dialog/confirm-dialog.module';
 
 @NgModule({
   declarations: [UsersListComponent],
@@ -23,7 +25,9 @@ import { DomSanitizer } from '@angular/platform-browser';
     MatPaginatorModule,
     MatSortModule,
     MatButtonModule,
-    MatTooltipModule
+    MatTooltipModule,
+    UserEditFormModule,
+    ConfirmDialogModule
   ]
 })
 export class UsersListModule {

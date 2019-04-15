@@ -1,0 +1,15 @@
+<div class="ip-form" [formGroup]="ipForm">
+  <mat-form-field>
+    <input matInput formControlName="ip" placeholder="Add IP" />
+  </mat-form-field>
+  <div>
+    <button
+      (click)="submit()"
+      [disabled]="ipForm.invalid"
+      mat-raised-button
+      color="accent"
+    >
+      Add
+    </button>
+  </div>
+</div>
