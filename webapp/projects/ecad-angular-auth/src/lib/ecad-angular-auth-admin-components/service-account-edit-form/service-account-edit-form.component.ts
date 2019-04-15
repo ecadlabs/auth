@@ -1,12 +1,10 @@
 import { Component, Inject, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup } from '@angular/forms';
 import { MatDialogRef, MAT_DIALOG_DATA } from '@angular/material';
-import {
-  CreateUser,
-  IUsersService,
-  User
-} from 'dist/ecad-angular-auth/public_api';
 import { USERS_SERVICE } from '../../ecad-angular-auth-admin/tokens';
+import { User } from '../../ecad-angular-auth-admin/interfaces/user.i';
+import { IUsersService } from '../../ecad-angular-auth-admin/interfaces/user-service.i';
+import { CreateUser } from '../../ecad-angular-auth-admin/interfaces/create-user.i';
 
 @Component({
   selector: 'auth-service-account-edit-form',
