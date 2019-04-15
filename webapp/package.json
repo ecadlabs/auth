@@ -2,7 +2,7 @@
   "name": "@ecadlabs/auth-webapp",
   "description": "A reference implementation web application for the ecad auth daemon. Includes a CRUD module to manage users and roles.",
   "license": "UNLICENSED",
-  "version": "0.14.2-beta8",
+  "version": "0.14.2-beta9",
   "scripts": {
     "ng": "ng",
     "start": "ng build --prod ecad-angular-auth && ng serve --host 0.0.0.0",
