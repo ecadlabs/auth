@@ -136,7 +136,20 @@ export class StandardLoginService implements ILoginService {
         'roles',
         this.config.tokenPropertyPrefix
       );
-      return { email, name, roles, tenant, member, ...decodedToken };
+      const permissions = this.getPrefixed(
+        decodedToken,
+        'permissions',
+        this.config.tokenPropertyPrefix
+      );
+      return {
+        email,
+        name,
+        roles,
+        permissions,
+        tenant,
+        member,
+        ...decodedToken
+      };
     } else {
       return null;
     }
@@ -200,7 +213,7 @@ export class StandardLoginService implements ILoginService {
             permission => prevSet.add(permission)
           );
           return prevSet;
-        }, new Set<string>());
+        }, new Set<string>(user.permissions));
       }),
       map(permissionsSet =>
         permissions.every(permission => permissionsSet.has(permission))
