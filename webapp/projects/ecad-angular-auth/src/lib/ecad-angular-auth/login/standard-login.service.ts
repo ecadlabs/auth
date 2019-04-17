@@ -243,11 +243,20 @@ export class StandardLoginService implements ILoginService {
     });
   }
 
+  private getRefreshUrl() {
+    return this.config.refreshUrl || localStorage.getItem('refreshTokenUrl');
+  }
+
   /*
    * Refresh the JWT by querying the refresh url provided in previous login response
    */
   public refreshToken(): Observable<boolean> {
-    return this.httpClient.get(localStorage.getItem('refreshTokenUrl')).pipe(
+    const headers = {
+      headers: {
+        Authorization: `Bearer ${this.config.tokenGetter()}`
+      }
+    };
+    return this.httpClient.get(this.getRefreshUrl(), { ...headers }).pipe(
       this.postLoginOperations,
       map(() => true)
     );

@@ -6,6 +6,7 @@ export interface AuthConfig {
   passwordResetUrl: string;
   sendResetEmailUrl: string;
   loginPageUrl: string;
+  refreshUrl?: string;
   autoRefreshInterval?: number;
   tokenPropertyPrefix?: string;
   rolesPermissionsMapping: {
