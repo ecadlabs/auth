@@ -21,13 +21,17 @@ export * from './lib/ecad-angular-auth-admin/interfaces/auth-admin-config.i';
 export * from './lib/ecad-angular-auth-admin/interfaces/create-user.i';
 export * from './lib/ecad-angular-auth-admin/interfaces/update-user.i';
 export * from './lib/ecad-angular-auth-admin/interfaces/user-service.i';
+export * from './lib/ecad-angular-auth-admin/interfaces/tenant-service.i';
 export * from './lib/ecad-angular-auth-admin/interfaces/user.i';
+export * from './lib/ecad-angular-auth-admin/interfaces/tenant.i';
 export * from './lib/ecad-angular-auth-admin/tokens';
 
 export * from './lib/ecad-angular-auth/guards/ip-whitelisted.guard';
 export * from './lib/ecad-angular-auth/guards/loggedin.guard';
 export * from './lib/ecad-angular-auth/guards/permissions.guard';
 export * from './lib/ecad-angular-auth/guards/role.guard';
+
+export * from './lib/filterable-datasource/filtered-datasource';
 
 export * from './lib/ecad-angular-auth-admin-components/user-edit-form/user-edit-form.component';
 export * from './lib/ecad-angular-auth-admin-components/users-list/users-list.component';
