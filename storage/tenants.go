@@ -136,11 +136,12 @@ func (s *Storage) GetTenant(ctx context.Context, tenantID, userID uuid.UUID, onl
 }
 
 var tenantsQueryColumns = query.Columns{
-	"id":       {Name: "id", Flags: query.ColSort},
-	"name":     {Name: "name", Flags: query.ColSort},
-	"added":    {Name: "added", Flags: query.ColSort},
-	"modified": {Name: "modified", Flags: query.ColSort},
-	"archived": {Name: "archived", Flags: query.ColSort},
+	"id":          {Name: "id", Flags: query.ColSort},
+	"name":        {Name: "name", Flags: query.ColSort},
+	"added":       {Name: "added", Flags: query.ColSort},
+	"modified":    {Name: "modified", Flags: query.ColSort},
+	"archived":    {Name: "archived", Flags: query.ColSort},
+	"tenant_type": {Name: "tenant_type", Flags: query.ColSort},
 }
 
 // GetTenantsSoleMember get a list of tenant where the user is the only member
