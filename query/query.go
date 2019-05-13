@@ -9,18 +9,19 @@ import (
 )
 
 const (
-	OpEq     = "eq"
-	OpNe     = "ne"
-	OpLT     = "lt"
-	OpGT     = "gt"
-	OpLE     = "le"
-	OpGE     = "ge"
-	OpRegex  = "re"
-	OpLike   = "l"
-	OpPrefix = "p"
-	OpSuffix = "s"
-	OpSubstr = "sub"
-	OpHas    = "has"
+	OpEq             = "eq"
+	OpNe             = "ne"
+	OpLT             = "lt"
+	OpGT             = "gt"
+	OpLE             = "le"
+	OpGE             = "ge"
+	OpRegex          = "re"
+	OpRegexSensitive = "res"
+	OpLike           = "l"
+	OpPrefix         = "p"
+	OpSuffix         = "s"
+	OpSubstr         = "sub"
+	OpHas            = "has"
 )
 
 const (
@@ -141,6 +142,8 @@ func (e *Expr) expr(val string, fn ColumnFunc) (string, error) {
 	case OpGE:
 		expr = col + " >= " + val
 	case OpRegex:
+		expr = col + " ~* " + val
+	case OpRegexSensitive:
 		expr = col + " ~ " + val
 	case OpLike:
 		expr = col + " LIKE " + val
