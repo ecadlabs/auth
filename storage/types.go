@@ -7,7 +7,7 @@ import (
 	"sort"
 	"time"
 
-	"github.com/ecadlabs/auth/query"
+	"github.com/ecadlabs/auth/jq"
 	"github.com/ecadlabs/auth/rbac"
 	uuid "github.com/satori/go.uuid"
 )
@@ -225,7 +225,7 @@ type TenantStorage interface {
 	CreateTenantWithOwner(ctx context.Context, name string, ownerID uuid.UUID) (*TenantModel, error)
 	GetTenant(ctx context.Context, tenantID, userID uuid.UUID, onlySelf bool) (*TenantModel, error)
 	GetTenantsSoleMember(ctx context.Context, userID uuid.UUID) (tenants []*TenantModel, err error)
-	GetTenants(ctx context.Context, userID uuid.UUID, onlySelf bool, q *query.Query) (tenants []*TenantModel, count int, next *query.Query, err error)
+	GetTenants(ctx context.Context, userID uuid.UUID, onlySelf bool, q *jq.Query) (tenants []*TenantModel, count int, next *jq.Query, err error)
 	PatchTenant(ctx context.Context, id uuid.UUID, ops *Ops) (*TenantModel, error)
 	DeleteTenant(ctx context.Context, id uuid.UUID) error
 }
@@ -234,7 +234,7 @@ type MembershipStorage interface {
 	AddMembership(ctx context.Context, id uuid.UUID, user *User, status string, membershipType string, role Roles) error
 	GetMembership(ctx context.Context, id uuid.UUID, userID uuid.UUID) (*Membership, error)
 	UpdateMembership(ctx context.Context, id uuid.UUID, userID uuid.UUID, ops *Ops) (*Membership, error)
-	GetMemberships(ctx context.Context, q *query.Query) (memberships []*Membership, count int, next *query.Query, err error)
+	GetMemberships(ctx context.Context, q *jq.Query) (memberships []*Membership, count int, next *jq.Query, err error)
 	DeleteMembership(ctx context.Context, id uuid.UUID, userID uuid.UUID) error
 }
 
@@ -250,7 +250,7 @@ type UserStorage interface {
 	GetUserIDByMembershipID(ctx context.Context, typ string, id uuid.UUID) (uuid.UUID, error)
 	GetUserByEmail(ctx context.Context, typ, email string) (*User, error)
 	GetServiceAccountByAddress(ctx context.Context, address net.IP) (*User, error)
-	GetUsers(ctx context.Context, typ string, q *query.Query) (users []*User, count int, next *query.Query, err error)
+	GetUsers(ctx context.Context, typ string, q *jq.Query) (users []*User, count int, next *jq.Query, err error)
 	NewUser(ctx context.Context, user *CreateUser) (res *User, err error)
 	UpdateUser(ctx context.Context, typ string, id uuid.UUID, ops *Ops) (user *User, err error)
 	DeleteUser(ctx context.Context, typ string, id uuid.UUID) (err error)
@@ -261,5 +261,5 @@ type UserStorage interface {
 }
 
 type LogStorage interface {
-	GetLogs(ctx context.Context, q *query.Query) (entries []*LogEntry, count int, next *query.Query, err error)
+	GetLogs(ctx context.Context, q *jq.Query) (entries []*LogEntry, count int, next *jq.Query, err error)
 }

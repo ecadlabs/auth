@@ -5,7 +5,7 @@ import (
 	"net/url"
 
 	"github.com/ecadlabs/auth/errors"
-	"github.com/ecadlabs/auth/query"
+	"github.com/ecadlabs/auth/jq"
 	"github.com/ecadlabs/auth/storage"
 	"github.com/ecadlabs/auth/utils"
 	log "github.com/sirupsen/logrus"
@@ -38,7 +38,7 @@ func (u *Users) GetLogs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	q, err := query.FromValues(r.Form)
+	q, err := jq.FromValues(r.Form)
 	if err != nil {
 		log.Error(err)
 		utils.JSONError(w, err.Error(), errors.CodeQuerySyntax)

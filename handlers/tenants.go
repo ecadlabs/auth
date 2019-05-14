@@ -9,9 +9,9 @@ import (
 
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/ecadlabs/auth/errors"
+	"github.com/ecadlabs/auth/jq"
 	"github.com/ecadlabs/auth/jsonpatch"
 	"github.com/ecadlabs/auth/notification"
-	"github.com/ecadlabs/auth/query"
 	"github.com/ecadlabs/auth/rbac"
 	"github.com/ecadlabs/auth/storage"
 	"github.com/ecadlabs/auth/utils"
@@ -138,7 +138,7 @@ func (t *Tenants) FindTenants(w http.ResponseWriter, r *http.Request) {
 		utils.JSONError(w, err.Error(), errors.CodeUnknown)
 	}
 
-	q, err := query.FromValues(r.Form)
+	q, err := jq.FromValues(r.Form)
 	if err != nil {
 		log.Error(err)
 		utils.JSONError(w, err.Error(), errors.CodeQuerySyntax)
@@ -146,16 +146,20 @@ func (t *Tenants) FindTenants(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Default archived value to false
-	var found bool
-	for _, e := range q.Match {
-		if e.Col == "archived" {
-			found = true
-			break
+	if q.Expr == nil || !q.Expr.HasColumn("archived") {
+		node := &jq.EQExpr{
+			Key:   "archived",
+			Value: "FALSE",
 		}
-	}
 
-	if !found {
-		q.Match = append(q.Match, query.Expr{Col: "archived", Op: query.OpEq, Value: "false"})
+		if q.Expr == nil {
+			q.Expr = &jq.Expr{Node: node}
+		} else {
+			q.Expr = &jq.Expr{Node: &jq.ANDExpr{
+				q.Expr,
+				&jq.Expr{Node: node},
+			}}
+		}
 	}
 
 	if q.Limit <= 0 {

@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/ecadlabs/auth/errors"
+	"github.com/ecadlabs/auth/jq"
 	"github.com/ecadlabs/auth/jsonpatch"
-	"github.com/ecadlabs/auth/query"
 	"github.com/ecadlabs/auth/rbac"
 	"github.com/ecadlabs/auth/storage"
 	"github.com/ecadlabs/auth/utils"
@@ -251,14 +251,26 @@ func (m *Memberships) FindTenantMemberships(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	// Scope down the request to this particular tenant
-	r.Form.Set("tenant_id[eq]", tenantID.String())
-
-	q, err := query.FromValues(r.Form)
+	q, err := jq.FromValues(r.Form)
 	if err != nil {
 		log.Error(err)
 		utils.JSONError(w, err.Error(), errors.CodeQuerySyntax)
 		return
+	}
+
+	// Scope down the request to this particular tenant
+	node := &jq.EQExpr{
+		Key:   "tenant_id",
+		Value: tenantID.String(),
+	}
+
+	if q.Expr == nil {
+		q.Expr = &jq.Expr{Node: node}
+	} else {
+		q.Expr = &jq.Expr{Node: &jq.ANDExpr{
+			q.Expr,
+			&jq.Expr{Node: node},
+		}}
 	}
 
 	if q.Limit <= 0 {
@@ -337,14 +349,26 @@ func (m *Memberships) FindUserMemberships(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	// Scope down the request to this particular user
-	r.Form.Set("user_id[eq]", userID.String())
-
-	q, err := query.FromValues(r.Form)
+	q, err := jq.FromValues(r.Form)
 	if err != nil {
 		log.Error(err)
 		utils.JSONError(w, err.Error(), errors.CodeQuerySyntax)
 		return
+	}
+
+	// Scope down the request to this particular user
+	node := &jq.EQExpr{
+		Key:   "user_id",
+		Value: userID.String(),
+	}
+
+	if q.Expr == nil {
+		q.Expr = &jq.Expr{Node: node}
+	} else {
+		q.Expr = &jq.Expr{Node: &jq.ANDExpr{
+			q.Expr,
+			&jq.Expr{Node: node},
+		}}
 	}
 
 	if q.Limit <= 0 {

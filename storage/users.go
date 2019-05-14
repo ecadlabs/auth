@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/ecadlabs/auth/errors"
-	"github.com/ecadlabs/auth/query"
+	"github.com/ecadlabs/auth/jq"
 	"github.com/ecadlabs/auth/utils"
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
@@ -29,13 +29,13 @@ type userModel struct {
 	Added            time.Time      `db:"added"`
 	Modified         time.Time      `db:"modified"`
 	EmailVerified    bool           `db:"email_verified"`
-	SortedBy         string         `db:"sorted_by"` // Output only
 	Membership       []byte         `db:"membership"`
 	LoginAddr        string         `db:"login_addr"`
 	LoginTimestamp   time.Time      `db:"login_ts"`
 	RefreshAddr      string         `db:"refresh_addr"`
 	RefreshTimestamp time.Time      `db:"refresh_ts"`
 	AddressWhiteList pq.StringArray `db:"ip_whitelist"`
+	SortedBy         string         `db:"_sorted_by"` // Output only
 }
 
 func (u *userModel) toUser() *User {
@@ -241,29 +241,38 @@ func (s *Storage) GetServiceAccountByAddress(ctx context.Context, address net.IP
 	return u.toUser(), nil
 }
 
-var userQueryColumns = query.Columns{
-	"id":             {Name: "users.id", Flags: query.ColSort},
-	"email":          {Name: "users.email", Flags: query.ColSort},
-	"name":           {Name: "users.name", Flags: query.ColSort},
-	"added":          {Name: "users.added", Flags: query.ColSort},
-	"modified":       {Name: "users.modified", Flags: query.ColSort},
-	"email_verified": {Name: "users.email_verified", Flags: query.ColSort},
-	"login_addr":     {Name: "users.login_addr", Flags: query.ColSort},
-	"login_ts":       {Name: "users.login_ts", Flags: query.ColSort},
-	"refresh_addr":   {Name: "users.refresh_addr", Flags: query.ColSort},
-	"refresh_ts":     {Name: "users.refresh_ts", Flags: query.ColSort},
-	"account_type":   {Name: "users.account_type", Flags: query.ColSort},
+var userQueryColumns = jq.Columns{
+	"id":             {ColumnName: "users.id", Sort: true},
+	"email":          {ColumnName: "users.email", Sort: true},
+	"name":           {ColumnName: "users.name", Sort: true},
+	"added":          {ColumnName: "users.added", Sort: true},
+	"modified":       {ColumnName: "users.modified", Sort: true},
+	"email_verified": {ColumnName: "users.email_verified", Sort: true},
+	"login_addr":     {ColumnName: "users.login_addr", Sort: true},
+	"login_ts":       {ColumnName: "users.login_ts", Sort: true},
+	"refresh_addr":   {ColumnName: "users.refresh_addr", Sort: true},
+	"refresh_ts":     {ColumnName: "users.refresh_ts", Sort: true},
+	"account_type":   {ColumnName: "users.account_type", Sort: true},
 }
 
 // GetUsers retrieve a users according to a query and return a paged results
-func (s *Storage) GetUsers(ctx context.Context, typ string, q *query.Query) (users []*User, count int, next *query.Query, err error) {
+func (s *Storage) GetUsers(ctx context.Context, typ string, query *jq.Query) (users []*User, count int, next *jq.Query, err error) {
+	q := *query
+
 	if q.SortBy == "" {
 		q.SortBy = UsersDefaultSortColumn
 	}
 
-	selOpt := query.SelectOptions{
-		SelectExpr: "users.*, m.membership, ips.ip_whitelist, users." + pq.QuoteIdentifier(q.SortBy) + " AS sorted_by",
+	sortExpr, err := jq.ColumnExpr(q.SortBy, userQueryColumns)
+	if err != nil {
+		err = errors.Wrap(err, errors.CodeQuerySyntax)
+		return
+	}
+
+	selOpt := jq.Options{
+		SelectExpr: fmt.Sprintf("SELECT users.*, m.membership, ips.ip_whitelist, %s AS _sorted_by", sortExpr),
 		FromExpr: `
+		FROM
 			users
 			LEFT JOIN (
 			  SELECT
@@ -308,20 +317,28 @@ func (s *Storage) GetUsers(ctx context.Context, typ string, q *query.Query) (use
 			  GROUP BY
 				user_id
 			) AS ips ON ips.user_id = users.id`,
-		IDColumn:   "users.id",
-		ColumnFunc: userQueryColumns.Func,
+		IDColumn:     "id",
+		Columns:      userQueryColumns,
+		DriverParams: jq.PostgresDriverParams,
 	}
 
-	tmp := *q
 	if typ != "" {
-		tmp.Match = append(tmp.Match, query.Expr{
-			Col:   "account_type",
-			Op:    query.OpEq,
+		node := &jq.EQExpr{
+			Key:   "account_type",
 			Value: typ,
-		})
+		}
+
+		if q.Expr == nil {
+			q.Expr = &jq.Expr{Node: node}
+		} else {
+			q.Expr = &jq.Expr{Node: &jq.ANDExpr{
+				q.Expr,
+				&jq.Expr{Node: node},
+			}}
+		}
 	}
 
-	stmt, args, err := tmp.SelectStmt(&selOpt)
+	stmt, args, err := q.SelectStmt(&selOpt)
 	if err != nil {
 		err = errors.Wrap(err, errors.CodeQuerySyntax)
 		return
@@ -351,8 +368,8 @@ func (s *Storage) GetUsers(ctx context.Context, typ string, q *query.Query) (use
 	}
 
 	// Count
-	if tmp.TotalCount {
-		if stmt, args, err = tmp.CountStmt(&selOpt); err != nil {
+	if q.TotalCount {
+		if stmt, args, err = q.CountStmt(&selOpt); err != nil {
 			return
 		}
 
@@ -365,9 +382,9 @@ func (s *Storage) GetUsers(ctx context.Context, typ string, q *query.Query) (use
 
 	if lastItem != nil {
 		// Update query
-		lastId := lastItem.ID.String()
-		ret := *q
-		ret.LastID = &lastId
+		lastID := lastItem.ID.String()
+		ret := *query
+		ret.LastID = &lastID
 		ret.Last = &lastItem.SortedBy
 		ret.TotalCount = false
 
@@ -394,7 +411,6 @@ func NewUserInt(ctx context.Context, tx *sqlx.Tx, user *CreateUser, defaultRole 
 	}
 
 	// Create user
-
 	var idVal string
 	if model.ID != uuid.Nil {
 		idVal = ":id"

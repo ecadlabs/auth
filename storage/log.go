@@ -4,12 +4,12 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/ecadlabs/auth/errors"
-	"github.com/ecadlabs/auth/query"
-	"github.com/lib/pq"
-	"github.com/satori/go.uuid"
+	"github.com/ecadlabs/auth/jq"
+	uuid "github.com/satori/go.uuid"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -24,7 +24,7 @@ type logEntryModel struct {
 	Data       []byte         `db:"data"`
 	Address    string         `db:"addr"`
 	Message    sql.NullString `db:"msg"`
-	SortedBy   string         `db:"sorted_by"` // Output only
+	SortedBy   string         `db:"_sorted_by"` // Output only
 }
 
 func (l *logEntryModel) toLogEntry() *LogEntry {
@@ -49,25 +49,35 @@ func (l *logEntryModel) toLogEntry() *LogEntry {
 	return ret
 }
 
-var logQueryColumns = query.Columns{
-	"ts":        {Name: "ts", Flags: query.ColSort},
-	"event":     {Name: "event", Flags: query.ColSort},
-	"source_id": {Name: "source_id", Flags: query.ColSort},
-	"target_id": {Name: "target_id", Flags: query.ColSort},
-	"addr":      {Name: "addr", Flags: query.ColSort},
+var logQueryColumns = jq.Columns{
+	"id":        {ColumnName: "id", Sort: true},
+	"ts":        {ColumnName: "ts", Sort: true},
+	"event":     {ColumnName: "event", Sort: true},
+	"source_id": {ColumnName: "source_id", Sort: true},
+	"target_id": {ColumnName: "target_id", Sort: true},
+	"addr":      {ColumnName: "addr", Sort: true},
 }
 
 // GetLogs retrive logs from the database as a paged results
-func (s *Storage) GetLogs(ctx context.Context, q *query.Query) (entries []*LogEntry, count int, next *query.Query, err error) {
+func (s *Storage) GetLogs(ctx context.Context, query *jq.Query) (entries []*LogEntry, count int, next *jq.Query, err error) {
+	q := *query
+
 	if q.SortBy == "" {
 		q.SortBy = LogDefaultSortColumn
 	}
 
-	selOpt := query.SelectOptions{
-		SelectExpr: "*, " + pq.QuoteIdentifier(q.SortBy) + " AS sorted_by",
-		FromExpr:   "log",
-		IDColumn:   "id",
-		ColumnFunc: logQueryColumns.Func,
+	sortExpr, err := jq.ColumnExpr(q.SortBy, logQueryColumns)
+	if err != nil {
+		err = errors.Wrap(err, errors.CodeQuerySyntax)
+		return
+	}
+
+	selOpt := jq.Options{
+		SelectExpr:   fmt.Sprintf("SELECT *, %s AS _sorted_by", sortExpr),
+		FromExpr:     "FROM log",
+		IDColumn:     "id",
+		Columns:      logQueryColumns,
+		DriverParams: jq.PostgresDriverParams,
 	}
 
 	stmt, args, err := q.SelectStmt(&selOpt)
@@ -113,9 +123,9 @@ func (s *Storage) GetLogs(ctx context.Context, q *query.Query) (entries []*LogEn
 
 	if lastItem != nil {
 		// Update query
-		lastid := lastItem.ID.String()
-		ret := *q
-		ret.LastID = &lastid
+		lastID := lastItem.ID.String()
+		ret := *query
+		ret.LastID = &lastID
 		ret.Last = &lastItem.SortedBy
 		ret.TotalCount = false
 
