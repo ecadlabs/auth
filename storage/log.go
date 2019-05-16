@@ -50,12 +50,12 @@ func (l *logEntryModel) toLogEntry() *LogEntry {
 }
 
 var logQueryColumns = jq.Columns{
-	"id":        {ColumnName: "id", Sort: true},
-	"ts":        {ColumnName: "ts", Sort: true},
-	"event":     {ColumnName: "event", Sort: true},
-	"source_id": {ColumnName: "source_id", Sort: true},
-	"target_id": {ColumnName: "target_id", Sort: true},
-	"addr":      {ColumnName: "addr", Sort: true},
+	"id":        {ColumnExpr: "id", Sort: true},
+	"ts":        {ColumnExpr: "ts", Sort: true},
+	"event":     {ColumnExpr: "event", Sort: true},
+	"source_id": {ColumnExpr: "source_id", Sort: true},
+	"target_id": {ColumnExpr: "target_id", Sort: true},
+	"addr":      {ColumnExpr: "addr", Sort: true},
 }
 
 // GetLogs retrive logs from the database as a paged results

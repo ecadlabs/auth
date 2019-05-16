@@ -261,14 +261,14 @@ func (s *Storage) UpdateMembership(ctx context.Context, id uuid.UUID, userID uui
 }
 
 var membershipsQueryColumns = jq.Columns{
-	"id":                {ColumnName: "membership.id", Sort: true},
-	"user_id":           {ColumnName: "membership.user_id", Sort: true},
-	"tenant_id":         {ColumnName: "membership.tenant_id", Sort: true},
-	"added":             {ColumnName: "membership.added", Sort: true},
-	"modified":          {ColumnName: "membership.modified", Sort: true},
-	"membership_type":   {ColumnName: "membership.membership_type", Sort: true},
-	"membership_status": {ColumnName: "membership.membership_status", Sort: true},
-	"roles":             {ColumnName: "r.roles"},
+	"id":                {ColumnExpr: "membership.id", Sort: true},
+	"user_id":           {ColumnExpr: "membership.user_id", Sort: true},
+	"tenant_id":         {ColumnExpr: "membership.tenant_id", Sort: true},
+	"added":             {ColumnExpr: "membership.added", Sort: true},
+	"modified":          {ColumnExpr: "membership.modified", Sort: true},
+	"membership_type":   {ColumnExpr: "membership.membership_type", Sort: true},
+	"membership_status": {ColumnExpr: "membership.membership_status", Sort: true},
+	"roles":             {ColumnExpr: "r.roles"},
 }
 
 // GetMemberships get memberships from the database as a paged result

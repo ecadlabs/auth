@@ -48,16 +48,16 @@ type KeyVal struct {
 }
 
 type Column struct {
-	ColumnName   string
-	CoalesceExpr string
-	Sort         bool
+	ColumnExpr        string
+	Sort              bool
+	ExprFormatterFunc func(expr string) string
 }
 
-func (c *Column) Expr() string {
-	if c.CoalesceExpr != "" {
-		return c.CoalesceExpr
+func (c *Column) formatSubquery(expr string) string {
+	if c.ExprFormatterFunc != nil {
+		return c.ExprFormatterFunc(expr)
 	}
-	return c.ColumnName
+	return expr
 }
 
 type Columns map[string]*Column
@@ -192,26 +192,34 @@ func (d *DriverParams) textType() string {
 	return DefaultTextType
 }
 
-func ColumnExpr(col string, columns Columns) (string, error) {
+func columnOptions(col string, columns Columns) (*Column, error) {
 	if columns == nil {
-		return col, nil
+		return &Column{ColumnExpr: col}, nil
 	}
 
 	c, ok := columns[col]
 	if !ok || c == nil {
-		return "", fmt.Errorf("Unknown column `%s'", col)
+		return nil, fmt.Errorf("Unknown column `%s'", col)
 	}
 
-	return c.Expr(), nil
+	return c, nil
+}
+
+func ColumnExpr(col string, columns Columns) (string, error) {
+	c, err := columnOptions(col, columns)
+	if err != nil {
+		return "", err
+	}
+	return c.ColumnExpr, nil
 }
 
 func (k *KeyVal) binary(op string, index *int, p *DriverParams, columns Columns) (sql string, args []interface{}, err error) {
-	col, err := ColumnExpr(k.Key, columns)
+	col, err := columnOptions(k.Key, columns)
 	if err != nil {
 		return "", nil, err
 	}
 	(*index)++
-	return col + " " + op + " " + p.pos(*index), []interface{}{k.Value}, nil
+	return col.formatSubquery(col.ColumnExpr + " " + op + " " + p.pos(*index)), []interface{}{k.Value}, nil
 }
 
 func (l List) sql(index *int, p *DriverParams, columns Columns) (exprs []string, args []interface{}, err error) {
@@ -329,7 +337,7 @@ func (e *CNTExpr) SQL(index *int, p *DriverParams, columns Columns) (sql string,
 type ReExpr KeyVal
 
 func (e *ReExpr) SQL(index *int, p *DriverParams, columns Columns) (sql string, args []interface{}, err error) {
-	return (*KeyVal)(e).binary("~", index, p, columns)
+	return (*KeyVal)(e).binary("~*", index, p, columns)
 }
 
 type LExpr KeyVal
@@ -341,43 +349,43 @@ func (e *LExpr) SQL(index *int, p *DriverParams, columns Columns) (sql string, a
 type PExpr KeyVal
 
 func (e *PExpr) SQL(index *int, p *DriverParams, columns Columns) (sql string, args []interface{}, err error) {
-	col, err := ColumnExpr(e.Key, columns)
+	col, err := columnOptions(e.Key, columns)
 	if err != nil {
 		return "", nil, err
 	}
 	(*index)++
-	return col + " LIKE CONCAT(CAST(" + p.pos(*index) + " AS " + p.textType() + "), '%')", []interface{}{e.Value}, nil
+	return col.formatSubquery(col.ColumnExpr + " LIKE CONCAT(LOWER(CAST(" + p.pos(*index) + " AS " + p.textType() + ")), '%')"), []interface{}{e.Value}, nil
 }
 
 type SExpr KeyVal
 
 func (e *SExpr) SQL(index *int, p *DriverParams, columns Columns) (sql string, args []interface{}, err error) {
-	col, err := ColumnExpr(e.Key, columns)
+	col, err := columnOptions(e.Key, columns)
 	if err != nil {
 		return "", nil, err
 	}
 	(*index)++
-	return col + " LIKE CONCAT('%', CAST(" + p.pos(*index) + " AS " + p.textType() + "))", []interface{}{e.Value}, nil
+	return col.formatSubquery(col.ColumnExpr + " LIKE CONCAT('%', LOWER(CAST(" + p.pos(*index) + " AS " + p.textType() + ")))"), []interface{}{e.Value}, nil
 }
 
 type SubExpr KeyVal
 
 func (e *SubExpr) SQL(index *int, p *DriverParams, columns Columns) (sql string, args []interface{}, err error) {
-	col, err := ColumnExpr(e.Key, columns)
+	col, err := columnOptions(e.Key, columns)
 	if err != nil {
 		return "", nil, err
 	}
 	(*index)++
-	return col + " LIKE CONCAT('%', CAST(" + p.pos(*index) + " AS " + p.textType() + "), '%')", []interface{}{e.Value}, nil
+	return col.formatSubquery(col.ColumnExpr + " LIKE CONCAT('%', LOWER(CAST(" + p.pos(*index) + " AS " + p.textType() + ")), '%')"), []interface{}{e.Value}, nil
 }
 
 type HasExpr KeyVal
 
 func (e *HasExpr) SQL(index *int, p *DriverParams, columns Columns) (sql string, args []interface{}, err error) {
-	col, err := ColumnExpr(e.Key, columns)
+	col, err := columnOptions(e.Key, columns)
 	if err != nil {
 		return "", nil, err
 	}
 	(*index)++
-	return "(" + col + " IS NOT NULL AND " + p.pos(*index) + " = ANY(" + col + "))", []interface{}{e.Value}, nil
+	return col.formatSubquery("(" + col.ColumnExpr + " IS NOT NULL AND " + p.pos(*index) + " = ANY(" + col.ColumnExpr + "))"), []interface{}{e.Value}, nil
 }

@@ -88,55 +88,54 @@ type Storage struct {
 }
 
 const getUserQuery = `
-	SELECT
-	  users.*,
-	  m.membership,
-	  ips.ip_whitelist
-	FROM
-	  users
-	  LEFT JOIN (
-		SELECT
-		  membership.user_id,
-		  json_agg(
-			json_build_object(
-			  'tenant_id',
-			  membership.tenant_id,
-			  'type',
-				membership.membership_type,
-				'tenant_name',
-			  tenants.name,
-			  'tenant_type',
-			  tenants.tenant_type,
-			  'roles',
-			  r.roles
-			)
-		  ) AS membership
-		FROM
-		  membership
-		  INNER JOIN tenants ON tenants.id = membership.tenant_id
-		  LEFT JOIN (
-			SELECT
-			  membership_id,
-			  json_agg(role) AS roles
-			FROM
-			  roles
-			GROUP BY
-			  membership_id
-		  ) AS r ON membership.id = r.membership_id
-		WHERE
-		  membership.membership_status = 'active'
-		GROUP BY
-		  membership.user_id
-	  ) AS m ON m.user_id = users.id
-	  LEFT JOIN (
-		SELECT
-		  user_id,
-		  array_agg(addr) AS ip_whitelist
-		FROM
-		  service_account_ip
-		GROUP BY
-		  user_id
-	  ) AS ips ON ips.user_id = users.id`
+SELECT
+    users.*,
+    m.membership,
+    ips.ip_whitelist 
+FROM
+    users 
+    LEFT JOIN
+        (
+            SELECT
+                membership.user_id,
+                json_agg( json_build_object( 'tenant_id', membership.tenant_id, 'type', membership.membership_type, 'tenant_name', tenants.name, 'tenant_type', tenants.tenant_type, 'roles', r.roles ) ) AS membership 
+            FROM
+                membership 
+                INNER JOIN
+                    tenants 
+                    ON tenants.id = membership.tenant_id 
+                LEFT JOIN
+                    (
+                        SELECT
+                            membership_id,
+                            json_agg(role) AS roles 
+                        FROM
+                            roles 
+                        GROUP BY
+                            membership_id 
+                    )
+                    AS r 
+                    ON membership.id = r.membership_id 
+            WHERE
+                membership.membership_status = 'active' 
+            GROUP BY
+                membership.user_id 
+        )
+        AS m 
+        ON m.user_id = users.id 
+    LEFT JOIN
+        (
+            SELECT
+                user_id,
+                array_agg(addr) AS ip_whitelist 
+            FROM
+                service_account_ip 
+            GROUP BY
+                user_id 
+        )
+        AS ips 
+        ON ips.user_id = users.id
+`
 
 // GetUserByID retrieve a user by his ID
 func (s *Storage) GetUserByID(ctx context.Context, typ string, id uuid.UUID) (*User, error) {
@@ -185,49 +184,47 @@ func (s *Storage) GetUserByEmail(ctx context.Context, typ, email string) (*User,
 // GetServiceAccountByAddress retrieve a user by whitelisted IP address if any
 func (s *Storage) GetServiceAccountByAddress(ctx context.Context, address net.IP) (*User, error) {
 	q := `
-	SELECT
-	  users.*,
-	  m.membership
-	FROM
-	  users
-	  INNER JOIN service_account_ip ON service_account_ip.user_id = users.id
-	  LEFT JOIN (
-	    SELECT
-	      membership.user_id,
-	      json_agg(
-	        json_build_object(
-			  'tenant_id',
-			  membership.tenant_id,
-			  'type',
-				membership.membership_type,
-				'tenant_name',
-			  tenants.name,
-			  'tenant_type',
-			  tenants.tenant_type,
-			  'roles',
-			  r.roles
-	        )
-	      ) AS membership
-	    FROM
-	      membership
-		  INNER JOIN tenants ON tenants.id = membership.tenant_id
-	      LEFT JOIN (
-	        SELECT
-	          membership_id,
-	          json_agg(role) AS roles
-	        FROM
-	          roles
-	        GROUP BY
-	          membership_id
-	      ) AS r ON membership.id = r.membership_id
-	    WHERE
-	      membership.membership_status = 'active'
-	    GROUP BY
-	      membership.user_id
-	  ) AS m ON m.user_id = users.id
-	WHERE
-	  users.account_type = 'service' AND
-	  service_account_ip.addr >>= $1`
+SELECT
+    users.*,
+    m.membership 
+FROM
+    users 
+    INNER JOIN
+        service_account_ip 
+        ON service_account_ip.user_id = users.id 
+    LEFT JOIN
+        (
+            SELECT
+                membership.user_id,
+                json_agg( json_build_object( 'tenant_id', membership.tenant_id, 'type', membership.membership_type, 'tenant_name', tenants.name, 'tenant_type', tenants.tenant_type, 'roles', r.roles ) ) AS membership 
+            FROM
+                membership 
+                INNER JOIN
+                    tenants 
+                    ON tenants.id = membership.tenant_id 
+                LEFT JOIN
+                    (
+                        SELECT
+                            membership_id,
+                            json_agg(role) AS roles 
+                        FROM
+                            roles 
+                        GROUP BY
+                            membership_id 
+                    )
+                    AS r 
+                    ON membership.id = r.membership_id 
+            WHERE
+                membership.membership_status = 'active' 
+            GROUP BY
+                membership.user_id 
+        )
+        AS m 
+        ON m.user_id = users.id 
+WHERE
+    users.account_type = 'service' 
+    AND service_account_ip.addr >>= $1
+`
 
 	var u userModel
 	if err := s.DB.GetContext(ctx, &u, q, address.String()); err != nil {
@@ -242,17 +239,24 @@ func (s *Storage) GetServiceAccountByAddress(ctx context.Context, address net.IP
 }
 
 var userQueryColumns = jq.Columns{
-	"id":             {ColumnName: "users.id", Sort: true},
-	"email":          {ColumnName: "users.email", Sort: true},
-	"name":           {ColumnName: "users.name", Sort: true},
-	"added":          {ColumnName: "users.added", Sort: true},
-	"modified":       {ColumnName: "users.modified", Sort: true},
-	"email_verified": {ColumnName: "users.email_verified", Sort: true},
-	"login_addr":     {ColumnName: "users.login_addr", Sort: true},
-	"login_ts":       {ColumnName: "users.login_ts", Sort: true},
-	"refresh_addr":   {ColumnName: "users.refresh_addr", Sort: true},
-	"refresh_ts":     {ColumnName: "users.refresh_ts", Sort: true},
-	"account_type":   {ColumnName: "users.account_type", Sort: true},
+	"id":             {ColumnExpr: "users.id", Sort: true},
+	"email":          {ColumnExpr: "users.email", Sort: true},
+	"name":           {ColumnExpr: "users.name", Sort: true},
+	"added":          {ColumnExpr: "users.added", Sort: true},
+	"modified":       {ColumnExpr: "users.modified", Sort: true},
+	"email_verified": {ColumnExpr: "users.email_verified", Sort: true},
+	"login_addr":     {ColumnExpr: "users.login_addr", Sort: true},
+	"login_ts":       {ColumnExpr: "users.login_ts", Sort: true},
+	"refresh_addr":   {ColumnExpr: "users.refresh_addr", Sort: true},
+	"refresh_ts":     {ColumnExpr: "users.refresh_ts", Sort: true},
+	"account_type":   {ColumnExpr: "users.account_type", Sort: true},
+
+	"tenant": {
+		ColumnExpr: "tenants.name",
+		ExprFormatterFunc: func(expr string) string {
+			return fmt.Sprintf("EXISTS(SELECT 1 FROM membership INNER JOIN tenants ON tenants.id = membership.tenant_id WHERE membership.user_id = users.id AND (%s))", expr)
+		},
+	},
 }
 
 // GetUsers retrieve a users according to a query and return a paged results
@@ -272,51 +276,50 @@ func (s *Storage) GetUsers(ctx context.Context, typ string, query *jq.Query) (us
 	selOpt := jq.Options{
 		SelectExpr: fmt.Sprintf("SELECT users.*, m.membership, ips.ip_whitelist, %s AS _sorted_by", sortExpr),
 		FromExpr: `
-		FROM
-			users
-			LEFT JOIN (
-			  SELECT
-				membership.user_id,
-				json_agg(
-				  json_build_object(
-				    'tenant_id',
-				    membership.tenant_id,
-				    'type',
-						membership.membership_type,
-						'tenant_name',
-			  		tenants.name,
-				    'tenant_type',
-					tenants.tenant_type,
-				    'roles',
-				    r.roles
-				  )
-				) AS membership
-			  FROM
-				membership
-				INNER JOIN tenants ON tenants.id = membership.tenant_id
-				LEFT JOIN (
-				  SELECT
-					membership_id,
-					json_agg(role) AS roles
-				  FROM
-					roles
-				  GROUP BY
-					membership_id
-				) AS r ON membership.id = r.membership_id
-			  WHERE
-				membership.membership_status = 'active'
-			  GROUP BY
-				membership.user_id
-			) AS m ON m.user_id = users.id
-			LEFT JOIN (
-			  SELECT
-				user_id,
-				array_agg(addr) AS ip_whitelist
-			  FROM
-				service_account_ip
-			  GROUP BY
-				user_id
-			) AS ips ON ips.user_id = users.id`,
+FROM
+    users 
+    LEFT JOIN
+        (
+            SELECT
+                membership.user_id,
+                json_agg( json_build_object( 'tenant_id', membership.tenant_id, 'type', membership.membership_type, 'tenant_name', tenants.name, 'tenant_type', tenants.tenant_type, 'roles', r.roles ) ) AS membership 
+            FROM
+                membership 
+                INNER JOIN
+                    tenants 
+                    ON tenants.id = membership.tenant_id 
+                LEFT JOIN
+                    (
+                        SELECT
+                            membership_id,
+                            json_agg(role) AS roles 
+                        FROM
+                            roles 
+                        GROUP BY
+                            membership_id 
+                    )
+                    AS r 
+                    ON membership.id = r.membership_id 
+            WHERE
+                membership.membership_status = 'active' 
+            GROUP BY
+                membership.user_id 
+        )
+        AS m 
+        ON m.user_id = users.id 
+        LEFT JOIN
+            (
+                SELECT
+                    user_id,
+                    array_agg(addr) AS ip_whitelist 
+                FROM
+                    service_account_ip 
+                GROUP BY
+                    user_id 
+            )
+            AS ips 
+            ON ips.user_id = users.id
+`,
 		IDColumn:     "id",
 		Columns:      userQueryColumns,
 		DriverParams: jq.PostgresDriverParams,

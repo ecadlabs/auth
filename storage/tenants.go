@@ -135,12 +135,12 @@ func (s *Storage) GetTenant(ctx context.Context, tenantID, userID uuid.UUID, onl
 }
 
 var tenantsQueryColumns = jq.Columns{
-	"id":          {ColumnName: "id", Sort: true},
-	"name":        {ColumnName: "name", Sort: true},
-	"added":       {ColumnName: "added", Sort: true},
-	"modified":    {ColumnName: "modified", Sort: true},
-	"archived":    {ColumnName: "archived", Sort: true},
-	"tenant_type": {ColumnName: "tenant_type", Sort: true},
+	"id":          {ColumnExpr: "id", Sort: true},
+	"name":        {ColumnExpr: "name", Sort: true},
+	"added":       {ColumnExpr: "added", Sort: true},
+	"modified":    {ColumnExpr: "modified", Sort: true},
+	"archived":    {ColumnExpr: "archived", Sort: true},
+	"tenant_type": {ColumnExpr: "tenant_type", Sort: true},
 }
 
 // GetTenantsSoleMember get a list of tenant where the user is the only member

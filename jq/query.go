@@ -172,13 +172,13 @@ func (q *Query) SelectStmt(o *Options) (string, []interface{}, error) {
 		if !ok || c == nil || !c.Sort {
 			return "", nil, fmt.Errorf("Can't sort by column `%s'", sortBy)
 		}
-		sortSQLColumn = c.ColumnName
+		sortSQLColumn = c.ColumnExpr
 
 		idC, idOk := o.Columns[o.IDColumn]
 		if !idOk || idC == nil {
 			return "", nil, fmt.Errorf("Unknown column `%s'", o.IDColumn)
 		}
-		idSQLColumn = idC.ColumnName
+		idSQLColumn = idC.ColumnExpr
 	}
 
 	expr := q.Expr
