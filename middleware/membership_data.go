@@ -8,28 +8,30 @@ import (
 	"github.com/ecadlabs/auth/errors"
 	"github.com/ecadlabs/auth/storage"
 	"github.com/ecadlabs/auth/utils"
-	"github.com/satori/go.uuid"
+	uuid "github.com/satori/go.uuid"
 	log "github.com/sirupsen/logrus"
 )
 
+type membershipContextKey struct{}
+
+var MembershipContextKey interface{} = membershipContextKey{}
+
 // Gets user data from DB
 type MembershipData struct {
-	Storage              storage.MembershipStorage
-	TokenContextKey      interface{}
-	MembershipContextKey interface{}
-	Namespace            string
+	Storage   storage.MembershipStorage
+	Namespace string
 }
 
 func (m *MembershipData) Handler(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if _, ok := r.Context().Value(m.MembershipContextKey).(*storage.Membership); ok {
+		if _, ok := r.Context().Value(MembershipContextKey).(*storage.Membership); ok {
 			// Already got from the service account key
 			h.ServeHTTP(w, r)
 			return
 		}
 
 		var err error
-		if token, ok := r.Context().Value(m.TokenContextKey).(*jwt.Token); ok {
+		if token, ok := r.Context().Value(TokenContextKey).(*jwt.Token); ok {
 			claims := token.Claims.(jwt.MapClaims)
 
 			if sub, ok := claims["sub"].(string); ok {
@@ -42,7 +44,7 @@ func (m *MembershipData) Handler(h http.Handler) http.Handler {
 							membership, err := m.Storage.GetMembership(r.Context(), tenantID, id)
 
 							if err == nil {
-								req := r.WithContext(context.WithValue(r.Context(), m.MembershipContextKey, membership))
+								req := r.WithContext(context.WithValue(r.Context(), MembershipContextKey, membership))
 								h.ServeHTTP(w, req)
 								return
 							}

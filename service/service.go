@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/auth0/go-jwt-middleware"
+	jwtmiddleware "github.com/auth0/go-jwt-middleware"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/ecadlabs/auth/errors"
 	"github.com/ecadlabs/auth/handlers"
@@ -160,7 +160,7 @@ func (s *Service) APIHandler() http.Handler {
 	jwtOptions := jwtmiddleware.Options{
 		ValidationKeyGetter: func(token *jwt.Token) (interface{}, error) { return []byte(s.config.JWTSecret), nil },
 		SigningMethod:       JWTSigningMethod,
-		UserProperty:        handlers.TokenContextKey,
+		UserProperty:        middleware.TokenContextKey,
 		ErrorHandler: func(w http.ResponseWriter, r *http.Request, err string) {
 			utils.JSONError(w, err, errors.CodeUnauthorized)
 		},
@@ -169,9 +169,8 @@ func (s *Service) APIHandler() http.Handler {
 
 	// Check audience
 	aud := &middleware.Audience{
-		Value:           baseURLFunc,
-		TokenContextKey: handlers.TokenContextKey,
-		Namespace:       s.config.Namespace(),
+		Value:     baseURLFunc,
+		Namespace: s.config.Namespace(),
 	}
 
 	m := mux.NewRouter()
@@ -189,23 +188,17 @@ func (s *Service) APIHandler() http.Handler {
 	m.Methods("GET", "POST").Path("/login").HandlerFunc(usersHandler.Login)
 
 	userdata := &middleware.UserData{
-		TokenContextKey: handlers.TokenContextKey,
-		UserContextKey:  handlers.UserContextKey{},
-		Storage:         s.storage,
+		Storage: s.storage,
 	}
 
 	membershipData := &middleware.MembershipData{
-		MembershipContextKey: handlers.MembershipContextKey{},
-		TokenContextKey:      handlers.TokenContextKey,
-		Storage:              s.storage,
-		Namespace:            s.config.Namespace(),
+		Storage:   s.storage,
+		Namespace: s.config.Namespace(),
 	}
 
 	serviceAPI := &middleware.ServiceAPI{
-		MembershipContextKey: handlers.MembershipContextKey{},
-		TokenContextKey:      handlers.TokenContextKey,
-		Storage:              s.storage,
-		Namespace:            s.config.Namespace(),
+		Storage:   s.storage,
+		Namespace: s.config.Namespace(),
 	}
 
 	m.Methods("GET").Path("/refresh").Handler(jwtMiddleware.Handler(aud.Handler(userdata.Handler(membershipData.Handler(http.HandlerFunc(usersHandler.Refresh))))))

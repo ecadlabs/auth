@@ -11,6 +11,7 @@ import (
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/ecadlabs/auth/errors"
+	"github.com/ecadlabs/auth/middleware"
 	"github.com/ecadlabs/auth/rbac"
 	"github.com/ecadlabs/auth/storage"
 	"github.com/ecadlabs/auth/utils"
@@ -18,11 +19,6 @@ import (
 	uuid "github.com/satori/go.uuid"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
-)
-
-const (
-	//TokenContextKey Context value key for request token
-	TokenContextKey = "token"
 )
 
 type userTokenOptions struct {
@@ -278,9 +274,9 @@ func (u *Users) Login(w http.ResponseWriter, r *http.Request) {
 
 // Refresh is a refresh endpoint handler
 func (u *Users) Refresh(w http.ResponseWriter, r *http.Request) {
-	self := r.Context().Value(UserContextKey{}).(*storage.User)
-	member := r.Context().Value(MembershipContextKey{}).(*storage.Membership)
-	token := r.Context().Value(TokenContextKey).(*jwt.Token)
+	self := r.Context().Value(middleware.UserContextKey).(*storage.User)
+	member := r.Context().Value(middleware.MembershipContextKey).(*storage.Membership)
+	token := r.Context().Value(middleware.TokenContextKey).(*jwt.Token)
 
 	ctx, cancel := u.context(r)
 	defer cancel()

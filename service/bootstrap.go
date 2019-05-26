@@ -6,7 +6,7 @@ import (
 	"errors"
 	"net"
 
-	"github.com/satori/go.uuid"
+	uuid "github.com/satori/go.uuid"
 
 	"github.com/ecadlabs/auth/storage"
 	"github.com/jmoiron/sqlx"

@@ -10,6 +10,7 @@ import (
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/ecadlabs/auth/errors"
 	"github.com/ecadlabs/auth/jsonpatch"
+	"github.com/ecadlabs/auth/middleware"
 	"github.com/ecadlabs/auth/notification"
 	"github.com/ecadlabs/auth/query"
 	"github.com/ecadlabs/auth/rbac"
@@ -55,7 +56,7 @@ func (t *Tenants) context(r *http.Request) (context.Context, context.CancelFunc)
 
 // FindTenant is a endpoint handler to find a tenant by id
 func (t *Tenants) FindTenant(w http.ResponseWriter, r *http.Request) {
-	member := r.Context().Value(MembershipContextKey{}).(*storage.Membership)
+	member := r.Context().Value(middleware.MembershipContextKey).(*storage.Membership)
 	ctx, cancel := t.context(r)
 	defer cancel()
 
@@ -85,7 +86,7 @@ func (t *Tenants) FindTenant(w http.ResponseWriter, r *http.Request) {
 
 // FindTenant is a endpoint handler to delete a tenant
 func (t *Tenants) DeleteTenant(w http.ResponseWriter, r *http.Request) {
-	member := r.Context().Value(MembershipContextKey{}).(*storage.Membership)
+	member := r.Context().Value(middleware.MembershipContextKey).(*storage.Membership)
 	ctx, cancel := t.context(r)
 	defer cancel()
 
@@ -126,7 +127,7 @@ func (t *Tenants) DeleteTenant(w http.ResponseWriter, r *http.Request) {
 // FindTenants is a endpoint handler to get a list of tenants
 func (t *Tenants) FindTenants(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
-	member := r.Context().Value(MembershipContextKey{}).(*storage.Membership)
+	member := r.Context().Value(middleware.MembershipContextKey).(*storage.Membership)
 	ctx, cancel := t.context(r)
 	defer cancel()
 
@@ -201,7 +202,7 @@ func (t *Tenants) FindTenants(w http.ResponseWriter, r *http.Request) {
 
 // CreateTenant is a endpoint handler to create a new tenant
 func (t *Tenants) CreateTenant(w http.ResponseWriter, r *http.Request) {
-	member := r.Context().Value(MembershipContextKey{}).(*storage.Membership)
+	member := r.Context().Value(middleware.MembershipContextKey).(*storage.Membership)
 
 	ctx, cancel := t.context(r)
 	defer cancel()
@@ -289,7 +290,7 @@ func (t *Tenants) canUpdateTenant(role rbac.Role, member *storage.Membership, ui
 
 // UpdateTenant is a endpoint handler to update a tenant resource
 func (t *Tenants) UpdateTenant(w http.ResponseWriter, r *http.Request) {
-	member := r.Context().Value(MembershipContextKey{}).(*storage.Membership)
+	member := r.Context().Value(middleware.MembershipContextKey).(*storage.Membership)
 	ctx, cancel := t.context(r)
 	defer cancel()
 
@@ -421,8 +422,8 @@ func (t *Tenants) AcceptInvite(w http.ResponseWriter, r *http.Request) {
 
 // InviteExistingUser is a endpoint handler to invite a user to a tenant
 func (t *Tenants) InviteExistingUser(w http.ResponseWriter, r *http.Request) {
-	self := r.Context().Value(UserContextKey{}).(*storage.User)
-	member := r.Context().Value(MembershipContextKey{}).(*storage.Membership)
+	self := r.Context().Value(middleware.UserContextKey).(*storage.User)
+	member := r.Context().Value(middleware.MembershipContextKey).(*storage.Membership)
 
 	ctx, cancel := t.context(r)
 	defer cancel()

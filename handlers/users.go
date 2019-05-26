@@ -7,17 +7,18 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/auth0/go-jwt-middleware"
+	jwtmiddleware "github.com/auth0/go-jwt-middleware"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/ecadlabs/auth/errors"
 	"github.com/ecadlabs/auth/jsonpatch"
+	"github.com/ecadlabs/auth/middleware"
 	"github.com/ecadlabs/auth/notification"
 	"github.com/ecadlabs/auth/query"
 	"github.com/ecadlabs/auth/rbac"
 	"github.com/ecadlabs/auth/storage"
 	"github.com/ecadlabs/auth/utils"
 	"github.com/gorilla/mux"
-	"github.com/satori/go.uuid"
+	uuid "github.com/satori/go.uuid"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -25,9 +26,6 @@ import (
 const (
 	DefaultLimit = 20
 )
-
-type UserContextKey struct{}
-type MembershipContextKey struct{}
 
 type Users struct {
 	Storage Storage
@@ -158,8 +156,8 @@ func (u *Users) checkReadPermissions(role rbac.Role, typ string, self bool) (res
 }
 
 func (u *Users) getUserById(ctx context.Context, uid uuid.UUID, w http.ResponseWriter, r *http.Request) {
-	self := r.Context().Value(UserContextKey{}).(*storage.User)
-	member := r.Context().Value(MembershipContextKey{}).(*storage.Membership)
+	self := r.Context().Value(middleware.UserContextKey).(*storage.User)
+	member := r.Context().Value(middleware.MembershipContextKey).(*storage.Membership)
 
 	role, err := u.Enforcer.GetRole(ctx, member.Roles.Get()...)
 	if err != nil {
@@ -199,7 +197,7 @@ func (u *Users) GetUser(w http.ResponseWriter, r *http.Request) {
 
 func (u *Users) GetUsers(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
-	member := r.Context().Value(MembershipContextKey{}).(*storage.Membership)
+	member := r.Context().Value(middleware.MembershipContextKey).(*storage.Membership)
 
 	q, err := query.FromValues(r.Form)
 	if err != nil {
@@ -267,11 +265,11 @@ func (u *Users) GetUsers(w http.ResponseWriter, r *http.Request) {
 func (u *Users) resetToken(user *storage.User) (string, error) {
 	now := time.Now()
 	claims := jwt.MapClaims{
-		"sub": user.ID,
-		"exp": now.Add(u.ResetTokenMaxAge).Unix(),
-		"iat": now.Unix(),
-		"iss": u.BaseURL(),
-		"aud": u.ResetURL(),
+		"sub":                             user.ID,
+		"exp":                             now.Add(u.ResetTokenMaxAge).Unix(),
+		"iat":                             now.Unix(),
+		"iss":                             u.BaseURL(),
+		"aud":                             u.ResetURL(),
 		utils.NSClaim(u.Namespace, "gen"): user.PasswordGen,
 	}
 
@@ -286,8 +284,8 @@ func (u *Users) resetToken(user *storage.User) (string, error) {
 }
 
 func (u *Users) NewUser(w http.ResponseWriter, r *http.Request) {
-	self := r.Context().Value(UserContextKey{}).(*storage.User)
-	member := r.Context().Value(MembershipContextKey{}).(*storage.Membership)
+	self := r.Context().Value(middleware.UserContextKey).(*storage.User)
+	member := r.Context().Value(middleware.MembershipContextKey).(*storage.Membership)
 
 	var user storage.CreateUser
 	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
@@ -410,8 +408,8 @@ func (u *Users) NewUser(w http.ResponseWriter, r *http.Request) {
 
 func (u *Users) PatchUser(w http.ResponseWriter, r *http.Request) {
 	// TODO Email verification
-	self := r.Context().Value(UserContextKey{}).(*storage.User)
-	member := r.Context().Value(MembershipContextKey{}).(*storage.Membership)
+	self := r.Context().Value(middleware.UserContextKey).(*storage.User)
+	member := r.Context().Value(middleware.MembershipContextKey).(*storage.Membership)
 
 	uid, err := uuid.FromString(mux.Vars(r)["id"])
 	if err != nil {
@@ -502,8 +500,8 @@ func (u *Users) PatchUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func (u *Users) DeleteUser(w http.ResponseWriter, r *http.Request) {
-	self := r.Context().Value(UserContextKey{}).(*storage.User)
-	member := r.Context().Value(MembershipContextKey{}).(*storage.Membership)
+	self := r.Context().Value(middleware.UserContextKey).(*storage.User)
+	member := r.Context().Value(middleware.MembershipContextKey).(*storage.Membership)
 
 	uid, err := uuid.FromString(mux.Vars(r)["id"])
 	if err != nil {
@@ -770,8 +768,8 @@ func (u *Users) SendResetRequest(w http.ResponseWriter, r *http.Request) {
 }
 
 func (u *Users) SendUpdateEmailRequest(w http.ResponseWriter, r *http.Request) {
-	self := r.Context().Value(UserContextKey{}).(*storage.User)
-	member := r.Context().Value(MembershipContextKey{}).(*storage.Membership)
+	self := r.Context().Value(middleware.UserContextKey).(*storage.User)
+	member := r.Context().Value(middleware.MembershipContextKey).(*storage.Membership)
 
 	var request struct {
 		Email string    `json:"email"`
@@ -832,11 +830,11 @@ func (u *Users) SendUpdateEmailRequest(w http.ResponseWriter, r *http.Request) {
 	now := time.Now()
 
 	claims := jwt.MapClaims{
-		"sub": user.ID,
-		"exp": now.Add(u.EmailUpdateTokenMaxAge).Unix(),
-		"iat": now.Unix(),
-		"iss": u.BaseURL(),
-		"aud": u.EmailUpdateURL(),
+		"sub":                               user.ID,
+		"exp":                               now.Add(u.EmailUpdateTokenMaxAge).Unix(),
+		"iat":                               now.Unix(),
+		"iss":                               u.BaseURL(),
+		"aud":                               u.EmailUpdateURL(),
 		utils.NSClaim(u.Namespace, "email"): request.Email,
 		utils.NSClaim(u.Namespace, "gen"):   user.EmailGen,
 	}

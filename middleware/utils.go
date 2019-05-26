@@ -4,6 +4,11 @@ import (
 	"net/http"
 )
 
+const (
+	//TokenContextKey Context value key for request token
+	TokenContextKey = "token"
+)
+
 // ResponseWriter wraps http.ResponseWriter to save HTTP status code
 type ResponseStatusWriter interface {
 	http.ResponseWriter
