@@ -11,7 +11,6 @@ import (
 )
 
 type TokenFactory struct {
-	SessionMaxAge    time.Duration
 	JWTSecretGetter  func() ([]byte, error)
 	JWTSigningMethod jwt.SigningMethod
 	BaseURL          func() string

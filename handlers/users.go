@@ -31,7 +31,6 @@ type Users struct {
 	Storage Storage
 	Timeout time.Duration
 
-	SessionMaxAge    time.Duration
 	JWTSecretGetter  func() ([]byte, error)
 	JWTSigningMethod jwt.SigningMethod
 
@@ -43,9 +42,7 @@ type Users struct {
 	EmailUpdatePath string
 	Namespace       string
 
-	Notifier               notification.Notifier
-	ResetTokenMaxAge       time.Duration
-	EmailUpdateTokenMaxAge time.Duration
+	Notifier notification.Notifier
 
 	Enforcer rbac.Enforcer
 
@@ -262,11 +259,11 @@ func (u *Users) GetUsers(w http.ResponseWriter, r *http.Request) {
 	utils.JSONResponse(w, http.StatusOK, &res)
 }
 
-func (u *Users) resetToken(user *storage.User) (string, error) {
+func (u *Users) resetToken(user *storage.User, conf *middleware.DomainConfigData) (string, error) {
 	now := time.Now()
 	claims := jwt.MapClaims{
 		"sub":                             user.ID,
-		"exp":                             now.Add(u.ResetTokenMaxAge).Unix(),
+		"exp":                             now.Add(conf.ResetTokenMaxAge).Unix(),
 		"iat":                             now.Unix(),
 		"iss":                             u.BaseURL(),
 		"aud":                             u.ResetURL(),
@@ -286,6 +283,7 @@ func (u *Users) resetToken(user *storage.User) (string, error) {
 func (u *Users) NewUser(w http.ResponseWriter, r *http.Request) {
 	self := r.Context().Value(middleware.UserContextKey).(*storage.User)
 	member := r.Context().Value(middleware.MembershipContextKey).(*storage.Membership)
+	site := r.Context().Value(middleware.DomainConfigContextKey).(*middleware.DomainConfigData)
 
 	var user storage.CreateUser
 	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
@@ -373,7 +371,7 @@ func (u *Users) NewUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Create reset token
-	token, err := u.resetToken(ret)
+	token, err := u.resetToken(ret, site)
 	if err != nil {
 		log.Error(err)
 		utils.JSONErrorResponse(w, err)
@@ -386,7 +384,7 @@ func (u *Users) NewUser(w http.ResponseWriter, r *http.Request) {
 			CurrentUser: self,
 			TargetUser:  ret,
 			Token:       token,
-			TokenMaxAge: u.ResetTokenMaxAge,
+			TokenMaxAge: site.ResetTokenMaxAge,
 		}); err != nil {
 			log.Error(err)
 		}
@@ -706,6 +704,8 @@ func (u *Users) ResetPassword(w http.ResponseWriter, r *http.Request) {
 }
 
 func (u *Users) SendResetRequest(w http.ResponseWriter, r *http.Request) {
+	site := r.Context().Value(middleware.DomainConfigContextKey).(*middleware.DomainConfigData)
+
 	var request struct {
 		Email string `json:"email"`
 	}
@@ -744,7 +744,7 @@ func (u *Users) SendResetRequest(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Create reset token
-	token, err := u.resetToken(user)
+	token, err := u.resetToken(user, site)
 	if err != nil {
 		log.Error(err)
 		return
@@ -755,7 +755,7 @@ func (u *Users) SendResetRequest(w http.ResponseWriter, r *http.Request) {
 		CurrentUser: user,
 		TargetUser:  user,
 		Token:       token,
-		TokenMaxAge: u.ResetTokenMaxAge,
+		TokenMaxAge: site.ResetTokenMaxAge,
 	}); err != nil {
 		log.Error(err)
 		return
@@ -770,6 +770,7 @@ func (u *Users) SendResetRequest(w http.ResponseWriter, r *http.Request) {
 func (u *Users) SendUpdateEmailRequest(w http.ResponseWriter, r *http.Request) {
 	self := r.Context().Value(middleware.UserContextKey).(*storage.User)
 	member := r.Context().Value(middleware.MembershipContextKey).(*storage.Membership)
+	site := r.Context().Value(middleware.DomainConfigContextKey).(*middleware.DomainConfigData)
 
 	var request struct {
 		Email string    `json:"email"`
@@ -831,7 +832,7 @@ func (u *Users) SendUpdateEmailRequest(w http.ResponseWriter, r *http.Request) {
 
 	claims := jwt.MapClaims{
 		"sub":                               user.ID,
-		"exp":                               now.Add(u.EmailUpdateTokenMaxAge).Unix(),
+		"exp":                               now.Add(site.EmailUpdateTokenMaxAge).Unix(),
 		"iat":                               now.Unix(),
 		"iss":                               u.BaseURL(),
 		"aud":                               u.EmailUpdateURL(),
@@ -862,7 +863,7 @@ func (u *Users) SendUpdateEmailRequest(w http.ResponseWriter, r *http.Request) {
 		CurrentUser: user,
 		TargetUser:  user,
 		Token:       tokStr,
-		TokenMaxAge: u.EmailUpdateTokenMaxAge,
+		TokenMaxAge: site.EmailUpdateTokenMaxAge,
 	}); err != nil {
 		log.Error(err)
 		return

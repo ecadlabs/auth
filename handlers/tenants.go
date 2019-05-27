@@ -38,13 +38,12 @@ type Tenants struct {
 	Timeout  time.Duration
 	Enforcer rbac.Enforcer
 
-	BaseURL            func() string
-	TokenFactory       *TokenFactory
-	TenantsPath        string
-	InvitePath         string
-	Notifier           notification.Notifier
-	AuxLogger          *log.Logger
-	TenantInviteMaxAge time.Duration
+	BaseURL      func() string
+	TokenFactory *TokenFactory
+	TenantsPath  string
+	InvitePath   string
+	Notifier     notification.Notifier
+	AuxLogger    *log.Logger
 }
 
 func (t *Tenants) context(r *http.Request) (context.Context, context.CancelFunc) {
@@ -337,14 +336,14 @@ func (t *Tenants) UpdateTenant(w http.ResponseWriter, r *http.Request) {
 	utils.JSONResponse(w, 200, &tenant)
 }
 
-func (t *Tenants) inviteToken(user *storage.User, tenantID uuid.UUID) (string, error) {
+func (t *Tenants) inviteToken(user *storage.User, tenantID uuid.UUID, conf *middleware.DomainConfigData) (string, error) {
 	return t.TokenFactory.Create(
 		jwt.MapClaims{
 			"tenant_invite": tenantID,
 		},
 		user,
 		t.InvitePath,
-		t.TenantInviteMaxAge,
+		conf.TenantInviteMaxAge,
 	)
 }
 
@@ -424,6 +423,7 @@ func (t *Tenants) AcceptInvite(w http.ResponseWriter, r *http.Request) {
 func (t *Tenants) InviteExistingUser(w http.ResponseWriter, r *http.Request) {
 	self := r.Context().Value(middleware.UserContextKey).(*storage.User)
 	member := r.Context().Value(middleware.MembershipContextKey).(*storage.Membership)
+	site := r.Context().Value(middleware.DomainConfigContextKey).(*middleware.DomainConfigData)
 
 	ctx, cancel := t.context(r)
 	defer cancel()
@@ -547,7 +547,7 @@ func (t *Tenants) InviteExistingUser(w http.ResponseWriter, r *http.Request) {
 	// If the state is invite we need to send an email to the user
 	if invitedState == storage.InvitedState {
 		// Create invite token
-		token, err := t.inviteToken(target, uid)
+		token, err := t.inviteToken(target, uid, site)
 		if err != nil {
 			log.Error(err)
 			utils.JSONErrorResponse(w, err)
@@ -559,7 +559,7 @@ func (t *Tenants) InviteExistingUser(w http.ResponseWriter, r *http.Request) {
 			CurrentUser: self,
 			TargetUser:  target,
 			Token:       token,
-			TokenMaxAge: t.TokenFactory.SessionMaxAge,
+			TokenMaxAge: site.TenantInviteMaxAge,
 		}); err != nil {
 			log.Error(err)
 		}

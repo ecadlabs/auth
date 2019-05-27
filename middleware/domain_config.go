@@ -2,9 +2,11 @@ package middleware
 
 import (
 	"context"
+	"net"
 	"net/http"
 	"time"
 
+	"github.com/ecadlabs/auth/errors"
 	"github.com/ecadlabs/auth/utils"
 	log "github.com/sirupsen/logrus"
 )
@@ -38,6 +40,13 @@ func (d *DomainConfig) Handler(h http.Handler) http.Handler {
 			} else {
 				domain = r.Host
 			}
+		}
+
+		domain, _, err := net.SplitHostPort(domain)
+		if err != nil {
+			log.Error(err)
+			utils.JSONError(w, err.Error(), errors.CodeBadRequest)
+			return
 		}
 
 		conf, err := d.Storage.GetDomainConfig(domain)

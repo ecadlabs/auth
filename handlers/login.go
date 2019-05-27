@@ -137,6 +137,8 @@ func (u *Users) getMembershipLogin(ctx context.Context, tenantID, userID uuid.UU
 
 // Login is a login endpoint handler
 func (u *Users) Login(w http.ResponseWriter, r *http.Request) {
+	site := r.Context().Value(middleware.DomainConfigContextKey).(*middleware.DomainConfigData)
+
 	writePerm := true
 	if v := r.FormValue("permissions"); v != "" {
 		writePerm, _ = strconv.ParseBool(v)
@@ -248,7 +250,7 @@ func (u *Users) Login(w http.ResponseWriter, r *http.Request) {
 		user:          user,
 		membership:    membership,
 		role:          role,
-		sessionMaxAge: u.SessionMaxAge,
+		sessionMaxAge: site.SessionMaxAge,
 		refresh:       u.RefreshURL(),
 	}
 
@@ -277,6 +279,7 @@ func (u *Users) Refresh(w http.ResponseWriter, r *http.Request) {
 	self := r.Context().Value(middleware.UserContextKey).(*storage.User)
 	member := r.Context().Value(middleware.MembershipContextKey).(*storage.Membership)
 	token := r.Context().Value(middleware.TokenContextKey).(*jwt.Token)
+	site := r.Context().Value(middleware.DomainConfigContextKey).(*middleware.DomainConfigData)
 
 	ctx, cancel := u.context(r)
 	defer cancel()
@@ -304,7 +307,7 @@ func (u *Users) Refresh(w http.ResponseWriter, r *http.Request) {
 		user:          self,
 		membership:    member,
 		role:          role,
-		sessionMaxAge: u.SessionMaxAge,
+		sessionMaxAge: site.SessionMaxAge,
 		refresh:       u.RefreshURL(),
 	}
 

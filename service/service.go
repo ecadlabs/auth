@@ -102,8 +102,7 @@ func (s *Service) APIHandler() http.Handler {
 		},
 		JWTSigningMethod: JWTSigningMethod,
 
-		BaseURL:       baseURLFunc,
-		SessionMaxAge: time.Duration(s.config.SessionMaxAge) * time.Second,
+		BaseURL: baseURLFunc,
 	}
 
 	usersHandler := &handlers.Users{
@@ -125,10 +124,6 @@ func (s *Service) APIHandler() http.Handler {
 
 		Enforcer: s.ac,
 
-		SessionMaxAge:          time.Duration(s.config.SessionMaxAge) * time.Second,
-		ResetTokenMaxAge:       time.Duration(s.config.ResetTokenMaxAge) * time.Second,
-		EmailUpdateTokenMaxAge: time.Duration(s.config.EmailUpdateTokenMaxAge) * time.Second,
-
 		AuxLogger: dbLogger,
 		Notifier:  s.notifier,
 	}
@@ -138,13 +133,12 @@ func (s *Service) APIHandler() http.Handler {
 		Timeout:  time.Duration(s.config.DBTimeout) * time.Second,
 		Enforcer: s.ac,
 
-		BaseURL:            baseURLFunc,
-		TenantsPath:        "/tenants/",
-		InvitePath:         "/tenants/accept_invite",
-		TokenFactory:       tokenFactory,
-		AuxLogger:          dbLogger,
-		Notifier:           s.notifier,
-		TenantInviteMaxAge: time.Duration(s.config.TenantInviteMaxAge) * time.Second,
+		BaseURL:      baseURLFunc,
+		TenantsPath:  "/tenants/",
+		InvitePath:   "/tenants/accept_invite",
+		TokenFactory: tokenFactory,
+		AuxLogger:    dbLogger,
+		Notifier:     s.notifier,
 	}
 
 	membershipsHandler := &handlers.Memberships{
@@ -173,6 +167,10 @@ func (s *Service) APIHandler() http.Handler {
 		Namespace: s.config.Namespace(),
 	}
 
+	domainData := &middleware.DomainConfig{
+		Storage: &s.config,
+	}
+
 	m := mux.NewRouter()
 
 	if s.enableLog {
@@ -180,6 +178,7 @@ func (s *Service) APIHandler() http.Handler {
 	}
 	m.Use(middleware.NewPrometheus().Handler)
 	m.Use((&middleware.Recover{}).Handler)
+	m.Use(domainData.Handler)
 
 	// Login API
 	m.Methods("POST").Path("/password_reset").HandlerFunc(usersHandler.ResetPassword)
