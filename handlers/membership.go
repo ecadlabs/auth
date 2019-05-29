@@ -26,18 +26,17 @@ type Memberships struct {
 	Timeout  time.Duration
 	Enforcer rbac.Enforcer
 
-	BaseURL     func() string
 	TenantsPath string
 	UsersPath   string
 	AuxLogger   *log.Logger
 }
 
-func (m *Memberships) membershipsURL(tenantID uuid.UUID) string {
-	return fmt.Sprintf("%s%s/members/", m.BaseURL()+m.TenantsPath, tenantID)
+func (m *Memberships) membershipsURL(c *middleware.DomainConfigData, tenantID uuid.UUID) string {
+	return fmt.Sprintf("%s%s/members/", c.GetBaseURL()+m.TenantsPath, tenantID)
 }
 
-func (m *Memberships) usersURL() string {
-	return m.BaseURL() + m.UsersPath
+func (m *Memberships) usersURL(c *middleware.DomainConfigData) string {
+	return c.GetBaseURL() + m.UsersPath
 }
 
 func (m *Memberships) context(r *http.Request) (context.Context, context.CancelFunc) {
@@ -221,6 +220,7 @@ func (m *Memberships) DeleteMembership(w http.ResponseWriter, r *http.Request) {
 func (m *Memberships) FindTenantMemberships(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	member := r.Context().Value(middleware.MembershipContextKey).(*storage.Membership)
+	site := r.Context().Value(middleware.DomainConfigContextKey).(*middleware.DomainConfigData)
 
 	ctx, cancel := m.context(r)
 	defer cancel()
@@ -289,7 +289,7 @@ func (m *Memberships) FindTenantMemberships(w http.ResponseWriter, r *http.Reque
 	}
 
 	if nextQuery != nil {
-		nextURL, err := url.Parse(m.membershipsURL(tenantID))
+		nextURL, err := url.Parse(m.membershipsURL(site, tenantID))
 		if err != nil {
 			log.Error(err)
 			utils.JSONErrorResponse(w, err)
@@ -307,6 +307,7 @@ func (m *Memberships) FindTenantMemberships(w http.ResponseWriter, r *http.Reque
 func (m *Memberships) FindUserMemberships(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	member := r.Context().Value(middleware.MembershipContextKey).(*storage.Membership)
+	site := r.Context().Value(middleware.DomainConfigContextKey).(*middleware.DomainConfigData)
 
 	ctx, cancel := m.context(r)
 	defer cancel()
@@ -375,7 +376,7 @@ func (m *Memberships) FindUserMemberships(w http.ResponseWriter, r *http.Request
 	}
 
 	if nextQuery != nil {
-		nextURL, err := url.Parse(fmt.Sprintf("%s/%s/memberships/", m.usersURL(), userID))
+		nextURL, err := url.Parse(fmt.Sprintf("%s/%s/memberships/", m.usersURL(site), userID))
 		if err != nil {
 			log.Error(err)
 			utils.JSONErrorResponse(w, err)

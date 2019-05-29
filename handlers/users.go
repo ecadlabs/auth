@@ -34,7 +34,6 @@ type Users struct {
 	JWTSecretGetter  func() ([]byte, error)
 	JWTSigningMethod jwt.SigningMethod
 
-	BaseURL         func() string
 	UsersPath       string
 	RefreshPath     string
 	ResetPath       string
@@ -49,24 +48,24 @@ type Users struct {
 	AuxLogger *log.Logger
 }
 
-func (u *Users) UsersURL() string {
-	return u.BaseURL() + u.UsersPath
+func (u *Users) UsersURL(c *middleware.DomainConfigData) string {
+	return c.GetBaseURL() + u.UsersPath
 }
 
-func (u *Users) RefreshURL() string {
-	return u.BaseURL() + u.RefreshPath
+func (u *Users) RefreshURL(c *middleware.DomainConfigData) string {
+	return c.GetBaseURL() + u.RefreshPath
 }
 
-func (u *Users) ResetURL() string {
-	return u.BaseURL() + u.ResetPath
+func (u *Users) ResetURL(c *middleware.DomainConfigData) string {
+	return c.GetBaseURL() + u.ResetPath
 }
 
-func (u *Users) LogURL() string {
-	return u.BaseURL() + u.LogPath
+func (u *Users) LogURL(c *middleware.DomainConfigData) string {
+	return c.GetBaseURL() + u.LogPath
 }
 
-func (u *Users) EmailUpdateURL() string {
-	return u.BaseURL() + u.EmailUpdatePath
+func (u *Users) EmailUpdateURL(c *middleware.DomainConfigData) string {
+	return c.GetBaseURL() + u.EmailUpdatePath
 }
 
 func (u *Users) context(r *http.Request) (context.Context, context.CancelFunc) {
@@ -193,6 +192,7 @@ func (u *Users) GetUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func (u *Users) GetUsers(w http.ResponseWriter, r *http.Request) {
+	site := r.Context().Value(middleware.DomainConfigContextKey).(*middleware.DomainConfigData)
 	r.ParseForm()
 	member := r.Context().Value(middleware.MembershipContextKey).(*storage.Membership)
 
@@ -245,7 +245,7 @@ func (u *Users) GetUsers(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if nextQuery != nil {
-		nextUrl, err := url.Parse(u.UsersURL())
+		nextUrl, err := url.Parse(u.UsersURL(site))
 		if err != nil {
 			log.Error(err)
 			utils.JSONErrorResponse(w, err)
@@ -265,8 +265,8 @@ func (u *Users) resetToken(user *storage.User, conf *middleware.DomainConfigData
 		"sub":                             user.ID,
 		"exp":                             now.Add(conf.ResetTokenMaxAge).Unix(),
 		"iat":                             now.Unix(),
-		"iss":                             u.BaseURL(),
-		"aud":                             u.ResetURL(),
+		"iss":                             conf.GetBaseURL(),
+		"aud":                             u.ResetURL(conf),
 		utils.NSClaim(u.Namespace, "gen"): user.PasswordGen,
 	}
 
@@ -385,6 +385,7 @@ func (u *Users) NewUser(w http.ResponseWriter, r *http.Request) {
 			TargetUser:  ret,
 			Token:       token,
 			TokenMaxAge: site.ResetTokenMaxAge,
+			Misc:        &site.TemplateData,
 		}); err != nil {
 			log.Error(err)
 		}
@@ -400,7 +401,7 @@ func (u *Users) NewUser(w http.ResponseWriter, r *http.Request) {
 		}).Printf("User %v created account %v from tenant %v", self.ID, ret.ID, member.TenantID)
 	}
 
-	w.Header().Set("Location", u.UsersURL()+ret.ID.String())
+	w.Header().Set("Location", u.UsersURL(site)+ret.ID.String())
 	utils.JSONResponse(w, http.StatusCreated, ret)
 }
 
@@ -607,6 +608,8 @@ func (u *Users) ResetPassword(w http.ResponseWriter, r *http.Request) {
 		Password string `json:"password"`
 	}
 
+	site := r.Context().Value(middleware.DomainConfigContextKey).(*middleware.DomainConfigData)
+
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
 		log.Error(err)
 		utils.JSONError(w, err.Error(), errors.CodeBadRequest)
@@ -653,7 +656,7 @@ func (u *Users) ResetPassword(w http.ResponseWriter, r *http.Request) {
 
 	// Verify audience
 	claims := token.Claims.(jwt.MapClaims)
-	if !claims.VerifyAudience(u.ResetURL(), true) {
+	if !claims.VerifyAudience(u.ResetURL(site), true) {
 		utils.JSONErrorResponse(w, errors.ErrAudience)
 		return
 	}
@@ -756,6 +759,7 @@ func (u *Users) SendResetRequest(w http.ResponseWriter, r *http.Request) {
 		TargetUser:  user,
 		Token:       token,
 		TokenMaxAge: site.ResetTokenMaxAge,
+		Misc:        &site.TemplateData,
 	}); err != nil {
 		log.Error(err)
 		return
@@ -834,8 +838,8 @@ func (u *Users) SendUpdateEmailRequest(w http.ResponseWriter, r *http.Request) {
 		"sub":                               user.ID,
 		"exp":                               now.Add(site.EmailUpdateTokenMaxAge).Unix(),
 		"iat":                               now.Unix(),
-		"iss":                               u.BaseURL(),
-		"aud":                               u.EmailUpdateURL(),
+		"iss":                               site.GetBaseURL,
+		"aud":                               u.EmailUpdateURL(site),
 		utils.NSClaim(u.Namespace, "email"): request.Email,
 		utils.NSClaim(u.Namespace, "gen"):   user.EmailGen,
 	}
@@ -864,6 +868,7 @@ func (u *Users) SendUpdateEmailRequest(w http.ResponseWriter, r *http.Request) {
 		TargetUser:  user,
 		Token:       tokStr,
 		TokenMaxAge: site.EmailUpdateTokenMaxAge,
+		Misc:        &site.TemplateData,
 	}); err != nil {
 		log.Error(err)
 		return
@@ -878,6 +883,8 @@ func (u *Users) SendUpdateEmailRequest(w http.ResponseWriter, r *http.Request) {
 }
 
 func (u *Users) UpdateEmail(w http.ResponseWriter, r *http.Request) {
+	site := r.Context().Value(middleware.DomainConfigContextKey).(*middleware.DomainConfigData)
+
 	var request struct {
 		Token string `json:"token"`
 	}
@@ -915,7 +922,7 @@ func (u *Users) UpdateEmail(w http.ResponseWriter, r *http.Request) {
 
 	// Verify audience
 	claims := token.Claims.(jwt.MapClaims)
-	if !claims.VerifyAudience(u.EmailUpdateURL(), true) {
+	if !claims.VerifyAudience(u.EmailUpdateURL(site), true) {
 		utils.JSONErrorResponse(w, errors.ErrAudience)
 		return
 	}
@@ -963,6 +970,7 @@ func (u *Users) UpdateEmail(w http.ResponseWriter, r *http.Request) {
 		To:          []string{prevEmail, user.Email},
 		CurrentUser: user,
 		TargetUser:  user,
+		Misc:        &site.TemplateData,
 	}); err != nil {
 		log.Error(err)
 		utils.JSONErrorResponse(w, err)

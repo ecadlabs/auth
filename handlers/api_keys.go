@@ -195,6 +195,7 @@ func (u *Users) DeleteAPIKey(w http.ResponseWriter, r *http.Request) {
 func (u *Users) GetAPIToken(w http.ResponseWriter, r *http.Request) {
 	self := r.Context().Value(middleware.UserContextKey).(*storage.User)
 	member := r.Context().Value(middleware.MembershipContextKey).(*storage.Membership)
+	site := r.Context().Value(middleware.DomainConfigContextKey).(*middleware.DomainConfigData)
 
 	uid, err := uuid.FromString(mux.Vars(r)["userId"])
 	if err != nil {
@@ -260,6 +261,7 @@ func (u *Users) GetAPIToken(w http.ResponseWriter, r *http.Request) {
 		key:        key,
 		membership: keyMembership,
 		role:       keyRole,
+		baseURL:    site.GetBaseURL(),
 	}
 
 	if err := u.writeUserToken(w, &opt); err != nil {

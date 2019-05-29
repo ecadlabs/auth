@@ -66,7 +66,7 @@ func New(c *Config, ac rbac.RBAC, enableLog bool) (*Service, error) {
 		notifier, err = notification.NewEmailNotifier(&mail.Address{
 			Name:    c.Email.FromName,
 			Address: c.Email.FromAddress,
-		}, &c.Email.TemplateData, c.Email.Driver, c.Email.Config)
+		}, c.Email.Driver, c.Email.Config)
 		if err != nil {
 			return nil, err
 		}
@@ -85,8 +85,6 @@ func New(c *Config, ac rbac.RBAC, enableLog bool) (*Service, error) {
 }
 
 func (s *Service) APIHandler() http.Handler {
-	baseURLFunc := s.config.GetBaseURLFunc()
-
 	dbLogger := log.New()
 	if !s.enableLog {
 		dbLogger.Out = ioutil.Discard
@@ -101,8 +99,6 @@ func (s *Service) APIHandler() http.Handler {
 			return []byte(s.config.JWTSecret), nil
 		},
 		JWTSigningMethod: JWTSigningMethod,
-
-		BaseURL: baseURLFunc,
 	}
 
 	usersHandler := &handlers.Users{
@@ -114,7 +110,6 @@ func (s *Service) APIHandler() http.Handler {
 		},
 		JWTSigningMethod: JWTSigningMethod,
 
-		BaseURL:         baseURLFunc,
 		UsersPath:       "/users/",
 		RefreshPath:     "/refresh",
 		ResetPath:       "/password_reset",
@@ -133,7 +128,6 @@ func (s *Service) APIHandler() http.Handler {
 		Timeout:  time.Duration(s.config.DBTimeout) * time.Second,
 		Enforcer: s.ac,
 
-		BaseURL:      baseURLFunc,
 		TenantsPath:  "/tenants/",
 		InvitePath:   "/tenants/accept_invite",
 		TokenFactory: tokenFactory,
@@ -145,7 +139,6 @@ func (s *Service) APIHandler() http.Handler {
 		Storage:     s.storage,
 		Timeout:     time.Duration(s.config.DBTimeout) * time.Second,
 		Enforcer:    s.ac,
-		BaseURL:     baseURLFunc,
 		TenantsPath: "/tenants/",
 		UsersPath:   "/users/",
 		AuxLogger:   dbLogger,
@@ -163,7 +156,10 @@ func (s *Service) APIHandler() http.Handler {
 
 	// Check audience
 	aud := &middleware.Audience{
-		Value:     baseURLFunc,
+		Value: func(r *http.Request) string {
+			site := r.Context().Value(middleware.DomainConfigContextKey).(*middleware.DomainConfigData)
+			return site.GetBaseURL()
+		},
 		Namespace: s.config.Namespace(),
 	}
 

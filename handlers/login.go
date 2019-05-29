@@ -29,6 +29,7 @@ type userTokenOptions struct {
 	role          rbac.Role
 	sessionMaxAge time.Duration
 	refresh       string
+	baseURL       string
 }
 
 func (u *Users) writeUserToken(w http.ResponseWriter, opt *userTokenOptions) error {
@@ -37,8 +38,8 @@ func (u *Users) writeUserToken(w http.ResponseWriter, opt *userTokenOptions) err
 	claims := jwt.MapClaims{
 		"sub": opt.user.ID,
 		"iat": now.Unix(),
-		"iss": u.BaseURL(),
-		"aud": u.BaseURL(),
+		"iss": opt.baseURL,
+		"aud": opt.baseURL,
 	}
 
 	if opt.sessionMaxAge != 0 {
@@ -251,7 +252,8 @@ func (u *Users) Login(w http.ResponseWriter, r *http.Request) {
 		membership:    membership,
 		role:          role,
 		sessionMaxAge: site.SessionMaxAge,
-		refresh:       u.RefreshURL(),
+		refresh:       u.RefreshURL(site),
+		baseURL:       site.GetBaseURL(),
 	}
 
 	if remoteAddr != nil {
@@ -308,7 +310,8 @@ func (u *Users) Refresh(w http.ResponseWriter, r *http.Request) {
 		membership:    member,
 		role:          role,
 		sessionMaxAge: site.SessionMaxAge,
-		refresh:       u.RefreshURL(),
+		refresh:       u.RefreshURL(site),
+		baseURL:       site.GetBaseURL(),
 	}
 
 	opt.addr, _ = claims[utils.NSClaim(u.Namespace, "address")].(string)

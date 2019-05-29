@@ -21,8 +21,8 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func (t *Tenants) tenantsURL() string {
-	return t.BaseURL() + t.TenantsPath
+func (t *Tenants) tenantsURL(c *middleware.DomainConfigData) string {
+	return c.GetBaseURL() + t.TenantsPath
 }
 
 // CreateTenantModel struct used to create new tenant
@@ -38,7 +38,6 @@ type Tenants struct {
 	Timeout  time.Duration
 	Enforcer rbac.Enforcer
 
-	BaseURL      func() string
 	TokenFactory *TokenFactory
 	TenantsPath  string
 	InvitePath   string
@@ -125,6 +124,7 @@ func (t *Tenants) DeleteTenant(w http.ResponseWriter, r *http.Request) {
 
 // FindTenants is a endpoint handler to get a list of tenants
 func (t *Tenants) FindTenants(w http.ResponseWriter, r *http.Request) {
+	site := r.Context().Value(middleware.DomainConfigContextKey).(*middleware.DomainConfigData)
 	r.ParseForm()
 	member := r.Context().Value(middleware.MembershipContextKey).(*storage.Membership)
 	ctx, cancel := t.context(r)
@@ -185,7 +185,7 @@ func (t *Tenants) FindTenants(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if nextQuery != nil {
-		nextURL, err := url.Parse(t.tenantsURL())
+		nextURL, err := url.Parse(t.tenantsURL(site))
 		if err != nil {
 			log.Error(err)
 			utils.JSONErrorResponse(w, err)
@@ -344,6 +344,7 @@ func (t *Tenants) inviteToken(user *storage.User, tenantID uuid.UUID, conf *midd
 		user,
 		t.InvitePath,
 		conf.TenantInviteMaxAge,
+		conf,
 	)
 }
 
@@ -560,6 +561,7 @@ func (t *Tenants) InviteExistingUser(w http.ResponseWriter, r *http.Request) {
 			TargetUser:  target,
 			Token:       token,
 			TokenMaxAge: site.TenantInviteMaxAge,
+			Misc:        &site.TemplateData,
 		}); err != nil {
 			log.Error(err)
 		}

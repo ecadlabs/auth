@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/dgrijalva/jwt-go"
+	"github.com/ecadlabs/auth/middleware"
 	"github.com/ecadlabs/auth/migrations"
 	"github.com/ecadlabs/auth/notification"
 	"github.com/ecadlabs/auth/rbac"
@@ -20,7 +21,7 @@ import (
 	"github.com/golang-migrate/migrate"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
-	"github.com/satori/go.uuid"
+	uuid "github.com/satori/go.uuid"
 )
 
 const (
@@ -419,15 +420,19 @@ func beforeTest() (srv *httptest.Server, userList []*storage.User, token string,
 
 	// Create test server
 	config := service.Config{
-		BaseURLFunc:            func() string { return srv.URL },
-		JWTSecret:              testJWTSecret,
-		SessionMaxAge:          259200,
-		ResetTokenMaxAge:       259200,
-		TenantInviteMaxAge:     259200,
-		EmailUpdateTokenMaxAge: 259200,
-		PostgresURL:            *dbURL,
-		DBTimeout:              10 * 60 * 60,
-		Notifier:               testNotifier(tokenCh),
+		DomainsConfig: service.DomainsConfig{
+			Default: middleware.DomainConfigData{
+				BaseURLFunc:            func() string { return srv.URL },
+				SessionMaxAge:          259200,
+				ResetTokenMaxAge:       259200,
+				TenantInviteMaxAge:     259200,
+				EmailUpdateTokenMaxAge: 259200,
+			},
+		},
+		JWTSecret:   testJWTSecret,
+		PostgresURL: *dbURL,
+		DBTimeout:   10 * 60 * 60,
+		Notifier:    testNotifier(tokenCh),
 	}
 
 	svc, err := service.New(&config, &testRBAC, *enableLog)

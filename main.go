@@ -67,7 +67,7 @@ func main() {
 	flag.BoolVar(&migrateOnly, "migrate", false, "Migrate and exit immediately.")
 	flag.StringVar(&bootstrap, "bootstrap", "", "Bootstrap DB.")
 
-	flag.StringVar(&config.BaseURL, "base", "http://localhost:8000", "Base URL.")
+	flag.StringVar(&config.DomainsConfig.Default.BaseURL, "base", "http://localhost:8000", "Base URL.")
 	flag.StringVar(&config.Address, "http", ":8000", "HTTP service address.")
 	flag.StringVar(&config.HealthAddress, "health", ":8001", "Health service address.")
 	flag.StringVar(&config.JWTSecret, "secret", "", "JWT signing secret.")

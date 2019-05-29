@@ -7,16 +7,27 @@ import (
 	"time"
 
 	"github.com/ecadlabs/auth/errors"
+	"github.com/ecadlabs/auth/notification"
 	"github.com/ecadlabs/auth/utils"
 	log "github.com/sirupsen/logrus"
 )
 
 type DomainConfigData struct {
-	SessionMaxAge          time.Duration `yaml:"session_max_age"`
-	ResetTokenMaxAge       time.Duration `yaml:"reset_token_max_age"`
-	TenantInviteMaxAge     time.Duration `yaml:"tenant_invite_max_age"`
-	EmailUpdateTokenMaxAge time.Duration `yaml:"email_update_token_max_age"`
-	// TODO different URLs
+	SessionMaxAge          time.Duration                  `yaml:"session_max_age"`
+	ResetTokenMaxAge       time.Duration                  `yaml:"reset_token_max_age"`
+	TenantInviteMaxAge     time.Duration                  `yaml:"tenant_invite_max_age"`
+	EmailUpdateTokenMaxAge time.Duration                  `yaml:"email_update_token_max_age"`
+	BaseURL                string                         `yaml:"base_url"`
+	TemplateData           notification.EmailTemplateData `yaml:"template"`
+	BaseURLFunc            func() string                  `yaml:"-"` // Testing only
+}
+
+func (c *DomainConfigData) GetBaseURL() string {
+	if c.BaseURLFunc != nil {
+		return c.BaseURLFunc()
+	}
+
+	return c.BaseURL
 }
 
 type DomainConfigStorage interface {

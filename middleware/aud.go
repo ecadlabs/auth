@@ -10,7 +10,7 @@ import (
 )
 
 type Audience struct {
-	Value     func() string
+	Value     func(r *http.Request) string
 	Namespace string
 }
 
@@ -33,7 +33,7 @@ func (a *Audience) Handler(h http.Handler) http.Handler {
 				}
 			}
 
-			if !claims.VerifyAudience(a.Value(), true) {
+			if !claims.VerifyAudience(a.Value(r), true) {
 				utils.JSONErrorResponse(w, errors.ErrAudience)
 				return
 			}

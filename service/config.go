@@ -12,11 +12,10 @@ import (
 const DefaultNamespace = "com.ecadlabs.auth"
 
 type EmailConfig struct {
-	FromAddress  string                         `yaml:"from_address"`
-	FromName     string                         `yaml:"from_name"`
-	Driver       string                         `yaml:"driver"`
-	Config       utils.Options                  `yaml:"config"`
-	TemplateData notification.EmailTemplateData `yaml:"template"`
+	FromAddress string        `yaml:"from_address"`
+	FromName    string        `yaml:"from_name"`
+	Driver      string        `yaml:"driver"`
+	Config      utils.Options `yaml:"config"`
 }
 
 type DomainsConfig struct {
@@ -25,7 +24,6 @@ type DomainsConfig struct {
 }
 
 type Config struct {
-	BaseURL            string                `yaml:"base_url"`
 	TLS                bool                  `yaml:"tls"`
 	TLSCert            string                `yaml:"tls_cert"`
 	TLSKey             string                `yaml:"tls_key"`
@@ -40,7 +38,6 @@ type Config struct {
 	HealthAddress      string                `yaml:"health_address"`
 	DBTimeout          int                   `yaml:"db_timeout"`
 	Email              EmailConfig           `yaml:"email"`
-	BaseURLFunc        func() string         `yaml:"-"` // Testing only
 	Notifier           notification.Notifier `yaml:"-"` // Testing only
 }
 
@@ -68,14 +65,6 @@ type BootstrapConfig struct {
 	Tenants    []BootstrapTenant `yaml:"tenants"`
 	Users      []BootstrapUser   `yaml:"users"`
 	Membership []BootstrapMember `yaml:"memberships"`
-}
-
-func (c *Config) GetBaseURLFunc() func() string {
-	if c.BaseURLFunc != nil {
-		return c.BaseURLFunc
-	}
-
-	return func() string { return c.BaseURL }
 }
 
 func (c *BootstrapConfig) Load(name string) error {
