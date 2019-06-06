@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/auth0/go-jwt-middleware"
+	jwtmiddleware "github.com/auth0/go-jwt-middleware"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/ecadlabs/auth/errors"
 	"github.com/ecadlabs/auth/handlers"
@@ -176,10 +176,10 @@ func (s *Service) APIHandler() http.Handler {
 
 	m := mux.NewRouter()
 
+	m.Use(middleware.NewPrometheusWithHandlerID().Handler)
 	if s.enableLog {
 		m.Use((&middleware.Logging{}).Handler)
 	}
-	m.Use(middleware.NewPrometheus().Handler)
 	m.Use((&middleware.Recover{}).Handler)
 
 	// Login API
@@ -290,10 +290,6 @@ func (s *Service) APIHandler() http.Handler {
 	rmux.Methods("GET").Path("/permissions/").HandlerFunc(rbacHandler.GetPermissions)
 	rmux.Methods("GET").Path("/permissions/{id}").HandlerFunc(rbacHandler.GetPermission)
 
-	// Miscellaneous
-	m.Methods("GET").Path("/version").Handler(handlers.VersionHandler(version))
-	m.Methods("GET").Path("/metrics").Handler(promhttp.Handler())
-
 	m.NotFoundHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		utils.JSONErrorResponse(w, errors.ErrResourceNotFound)
 		if !s.enableLog {
@@ -321,10 +317,14 @@ func (s *Service) HealthHandler() http.Handler {
 
 	// Health router
 	m := mux.NewRouter()
-	m.Use((&middleware.Logging{}).Handler)
+	if s.enableLog {
+		m.Use((&middleware.Logging{}).Handler)
+	}
 	m.Use((&middleware.Recover{}).Handler)
 
 	m.Methods("GET").Path("/healthz").Handler(healthMon)
+	m.Methods("GET").Path("/version").Handler(handlers.VersionHandler(version))
+	m.Methods("GET").Path("/metrics").Handler(promhttp.Handler())
 
 	return m
 }

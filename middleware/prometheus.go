@@ -5,33 +5,42 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/gorilla/mux"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 type Prometheus struct {
-	counter *prometheus.CounterVec
-	hist    *prometheus.HistogramVec
+	counter      *prometheus.CounterVec
+	hist         *prometheus.HistogramVec
+	useHandlerID bool
 }
 
-func NewPrometheus(n ...string) *Prometheus {
-	var (
-		namePrefix string
-		helpPrefix string
-	)
+func NewPrometheus() *Prometheus {
+	return NewPrometheusFull("", false)
+}
 
-	if len(n) != 0 {
-		helpPrefix = n[0] + ": "
-		namePrefix = n[0]
+func NewPrometheusWithHandlerID() *Prometheus {
+	return NewPrometheusFull("", true)
+}
 
-		if namePrefix[len(namePrefix)-1] != '_' {
-			namePrefix += "_"
+func NewPrometheusFull(prefix string, handlerID bool) *Prometheus {
+	var helpPrefix string
+
+	if prefix != "" {
+		helpPrefix = prefix + ": "
+
+		if prefix[len(prefix)-1] != '_' {
+			prefix += "_"
 		}
 	}
 
-	labels := []string{"code", "method", "path"}
+	labels := []string{"code", "method" /*, "path"*/}
+	if handlerID {
+		labels = append(labels, "handler")
+	}
 
 	counter := prometheus.NewCounterVec(prometheus.CounterOpts{
-		Name: namePrefix + "http_requests_total",
+		Name: prefix + "http_requests_total",
 		Help: helpPrefix + "Total number of HTTP requests",
 	}, labels)
 
@@ -45,9 +54,9 @@ func NewPrometheus(n ...string) *Prometheus {
 	}
 
 	hist := prometheus.NewHistogramVec(prometheus.HistogramOpts{
-		Name: namePrefix + "http_request_duration_milliseconds",
-		Help: helpPrefix + "HTTP request duration",
-		// TODO buckets
+		Name:    prefix + "http_request_duration_milliseconds",
+		Help:    helpPrefix + "HTTP request duration",
+		Buckets: prometheus.ExponentialBuckets(250, 2, 6),
 	}, labels)
 
 	if err := prometheus.Register(hist); err != nil {
@@ -60,26 +69,46 @@ func NewPrometheus(n ...string) *Prometheus {
 	}
 
 	return &Prometheus{
-		counter: counter,
-		hist:    hist,
+		counter:      counter,
+		hist:         hist,
+		useHandlerID: handlerID,
 	}
+}
+
+func (p *Prometheus) handler(w http.ResponseWriter, r *http.Request, handler string, next http.Handler) {
+	rw := NewResponseStatusWriter(w)
+
+	timestamp := time.Now()
+	next.ServeHTTP(rw, r)
+	duration := time.Since(timestamp)
+
+	labels := prometheus.Labels{
+		"code":   strconv.FormatInt(int64(rw.Status()), 10),
+		"method": r.Method,
+	}
+
+	if p.useHandlerID {
+		labels["handler"] = handler
+	}
+
+	p.counter.With(labels).Inc()
+	p.hist.With(labels).Observe(float64(duration / time.Millisecond))
+}
+
+func (p *Prometheus) HandlerWithID(handler string, next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		p.handler(w, r, handler, next)
+	})
 }
 
 func (p *Prometheus) Handler(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		rw := NewResponseStatusWriter(w)
-
-		timestamp := time.Now()
-		next.ServeHTTP(rw, r)
-		duration := time.Since(timestamp)
-
-		labels := prometheus.Labels{
-			"code":   strconv.FormatInt(int64(rw.Status()), 10),
-			"method": r.Method,
-			"path":   r.URL.Path,
+		var handler string
+		if route := mux.CurrentRoute(r); route != nil {
+			if tpl, err := route.GetPathTemplate(); err == nil {
+				handler = tpl
+			}
 		}
-
-		p.counter.With(labels).Inc()
-		p.hist.With(labels).Observe(float64(duration / time.Millisecond))
+		p.handler(w, r, handler, next)
 	})
 }
