@@ -10,6 +10,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"testing"
+	"time"
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/ecadlabs/auth/middleware"
@@ -423,10 +424,10 @@ func beforeTest() (srv *httptest.Server, userList []*storage.User, token string,
 		DomainsConfig: service.DomainsConfig{
 			Default: middleware.DomainConfigData{
 				BaseURLFunc:            func() string { return srv.URL },
-				SessionMaxAge:          259200,
-				ResetTokenMaxAge:       259200,
-				TenantInviteMaxAge:     259200,
-				EmailUpdateTokenMaxAge: 259200,
+				SessionMaxAge:          72 * time.Hour,
+				ResetTokenMaxAge:       72 * time.Hour,
+				TenantInviteMaxAge:     72 * time.Hour,
+				EmailUpdateTokenMaxAge: 72 * time.Hour,
 			},
 		},
 		JWTSecret:   testJWTSecret,
