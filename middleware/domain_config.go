@@ -53,13 +53,20 @@ func (d *DomainConfig) Handler(h http.Handler) http.Handler {
 			}
 		}
 
-		domain, _, err := net.SplitHostPort(domain)
+		parsedDomain, _, err := net.SplitHostPort(domain)
+
 		if err != nil {
-			log.Error(err)
-			utils.JSONError(w, err.Error(), errors.CodeBadRequest)
-			return
+			switch err.(type) {
+			case *net.AddrError:
+				parsedDomain = domain
+			default:
+				log.Error(err)
+				utils.JSONError(w, err.Error(), errors.CodeBadRequest)
+				return
+			}
 		}
 
+		domain = parsedDomain
 		conf, err := d.Storage.GetDomainConfig(domain)
 		if err != nil {
 			log.Error(err)
