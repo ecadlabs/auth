@@ -34,7 +34,6 @@ type EmailNotifier struct {
 	ch     chan *Message
 	driver MailDriver
 	from   *mail.Address
-	data   *EmailTemplateData
 }
 
 type DriverFunc func(utils.Options) (MailDriver, error)
@@ -45,7 +44,7 @@ func RegisterDriver(name string, f DriverFunc) {
 	driverRegistry[name] = f
 }
 
-func NewEmailNotifier(from *mail.Address, templateData *EmailTemplateData, driver string, data utils.Options) (*EmailNotifier, error) {
+func NewEmailNotifier(from *mail.Address, driver string, data utils.Options) (*EmailNotifier, error) {
 	driverFunc, ok := driverRegistry[driver]
 	if !ok {
 		return nil, fmt.Errorf("Unknown driver `%s'", driver)
@@ -60,7 +59,6 @@ func NewEmailNotifier(from *mail.Address, templateData *EmailTemplateData, drive
 		ch:     make(chan *Message, 100),
 		driver: drv,
 		from:   from,
-		data:   templateData,
 	}
 
 	// Send in background
@@ -77,13 +75,11 @@ func NewEmailNotifier(from *mail.Address, templateData *EmailTemplateData, drive
 
 func (e *EmailNotifier) send(ctx context.Context, d *NotificationData, tplPrefix string) error {
 	templateData := struct {
-		*EmailTemplateData
 		*NotificationData
 		Timestamp time.Time `json:"timestamp"`
 	}{
-		NotificationData:  d,
-		EmailTemplateData: e.data,
-		Timestamp:         time.Now(),
+		NotificationData: d,
+		Timestamp:        time.Now(),
 	}
 
 	var subject bytes.Buffer

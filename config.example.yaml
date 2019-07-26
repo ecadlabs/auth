@@ -5,8 +5,15 @@ email:
   config:
     address: smtp.gmail.com:587
     user: auth@ecadlabs.com
-  template:
-    app_name: ECAD Portal
-    reset_url_prefix: http://localhost:8000/reset_password/
-    update_email_prefix: http://localhost:8000/update_email/
-    support_email: support@domain.com
+domains:
+  default:
+    #session_max_age:
+	  #reset_token_max_age:
+	  #tenant_invite_max_age:
+	  #email_update_token_max_age:
+    #base_url:
+    template:
+      app_name: ECAD Portal
+      reset_url_prefix: http://localhost:8000/reset_password/
+      update_email_prefix: http://localhost:8000/update_email/
+      support_email: support@domain.com

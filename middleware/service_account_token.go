@@ -8,7 +8,7 @@ import (
 	"github.com/ecadlabs/auth/errors"
 	"github.com/ecadlabs/auth/storage"
 	"github.com/ecadlabs/auth/utils"
-	"github.com/satori/go.uuid"
+	uuid "github.com/satori/go.uuid"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -18,15 +18,13 @@ type KeyMembershipStorage interface {
 }
 
 type ServiceAPI struct {
-	Storage              KeyMembershipStorage
-	TokenContextKey      interface{}
-	MembershipContextKey interface{}
-	Namespace            string
+	Storage   KeyMembershipStorage
+	Namespace string
 }
 
 func (s *ServiceAPI) Handler(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		token, ok := r.Context().Value(s.TokenContextKey).(*jwt.Token)
+		token, ok := r.Context().Value(TokenContextKey).(*jwt.Token)
 		if !ok {
 			utils.JSONError(w, "", errors.CodeUnauthorized)
 			return
@@ -68,7 +66,7 @@ func (s *ServiceAPI) Handler(h http.Handler) http.Handler {
 			return
 		}
 
-		req := r.WithContext(context.WithValue(r.Context(), s.MembershipContextKey, membership))
+		req := r.WithContext(context.WithValue(r.Context(), MembershipContextKey, membership))
 		h.ServeHTTP(w, req)
 	})
 }

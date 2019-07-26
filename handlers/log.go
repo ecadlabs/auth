@@ -5,6 +5,7 @@ import (
 	"net/url"
 
 	"github.com/ecadlabs/auth/errors"
+	"github.com/ecadlabs/auth/middleware"
 	"github.com/ecadlabs/auth/query"
 	"github.com/ecadlabs/auth/storage"
 	"github.com/ecadlabs/auth/utils"
@@ -13,8 +14,9 @@ import (
 
 //GetLogs Endpoint handler to get list of logs
 func (u *Users) GetLogs(w http.ResponseWriter, r *http.Request) {
+	site := r.Context().Value(middleware.DomainConfigContextKey).(*middleware.DomainConfigData)
 	r.ParseForm()
-	member := r.Context().Value(MembershipContextKey{}).(*storage.Membership)
+	member := r.Context().Value(middleware.MembershipContextKey).(*storage.Membership)
 
 	ctx, cancel := u.context(r)
 	defer cancel()
@@ -71,7 +73,7 @@ func (u *Users) GetLogs(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if nextQuery != nil {
-		nextURL, err := url.Parse(u.LogURL())
+		nextURL, err := url.Parse(u.LogURL(site))
 		if err != nil {
 			log.Error(err)
 			utils.JSONErrorResponse(w, err)

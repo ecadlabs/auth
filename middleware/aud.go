@@ -10,14 +10,13 @@ import (
 )
 
 type Audience struct {
-	TokenContextKey interface{}
-	Value           func() string
-	Namespace       string
+	Value     func(r *http.Request) string
+	Namespace string
 }
 
 func (a *Audience) Handler(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if token, ok := r.Context().Value(a.TokenContextKey).(*jwt.Token); ok {
+		if token, ok := r.Context().Value(TokenContextKey).(*jwt.Token); ok {
 			claims := token.Claims.(jwt.MapClaims)
 
 			if addr, ok := claims[utils.NSClaim(a.Namespace, "address")].(string); ok {
@@ -34,7 +33,7 @@ func (a *Audience) Handler(h http.Handler) http.Handler {
 				}
 			}
 
-			if !claims.VerifyAudience(a.Value(), true) {
+			if !claims.VerifyAudience(a.Value(r), true) {
 				utils.JSONErrorResponse(w, errors.ErrAudience)
 				return
 			}

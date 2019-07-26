@@ -66,7 +66,7 @@ func New(c *Config, ac rbac.RBAC, enableLog bool) (*Service, error) {
 		notifier, err = notification.NewEmailNotifier(&mail.Address{
 			Name:    c.Email.FromName,
 			Address: c.Email.FromAddress,
-		}, &c.Email.TemplateData, c.Email.Driver, c.Email.Config)
+		}, c.Email.Driver, c.Email.Config)
 		if err != nil {
 			return nil, err
 		}
@@ -85,8 +85,6 @@ func New(c *Config, ac rbac.RBAC, enableLog bool) (*Service, error) {
 }
 
 func (s *Service) APIHandler() http.Handler {
-	baseURLFunc := s.config.GetBaseURLFunc()
-
 	dbLogger := log.New()
 	if !s.enableLog {
 		dbLogger.Out = ioutil.Discard
@@ -101,9 +99,6 @@ func (s *Service) APIHandler() http.Handler {
 			return []byte(s.config.JWTSecret), nil
 		},
 		JWTSigningMethod: JWTSigningMethod,
-
-		BaseURL:       baseURLFunc,
-		SessionMaxAge: time.Duration(s.config.SessionMaxAge) * time.Second,
 	}
 
 	usersHandler := &handlers.Users{
@@ -115,7 +110,6 @@ func (s *Service) APIHandler() http.Handler {
 		},
 		JWTSigningMethod: JWTSigningMethod,
 
-		BaseURL:         baseURLFunc,
 		UsersPath:       "/users/",
 		RefreshPath:     "/refresh",
 		ResetPath:       "/password_reset",
@@ -124,10 +118,6 @@ func (s *Service) APIHandler() http.Handler {
 		Namespace:       s.config.Namespace(),
 
 		Enforcer: s.ac,
-
-		SessionMaxAge:          time.Duration(s.config.SessionMaxAge) * time.Second,
-		ResetTokenMaxAge:       time.Duration(s.config.ResetTokenMaxAge) * time.Second,
-		EmailUpdateTokenMaxAge: time.Duration(s.config.EmailUpdateTokenMaxAge) * time.Second,
 
 		AuxLogger: dbLogger,
 		Notifier:  s.notifier,
@@ -138,20 +128,17 @@ func (s *Service) APIHandler() http.Handler {
 		Timeout:  time.Duration(s.config.DBTimeout) * time.Second,
 		Enforcer: s.ac,
 
-		BaseURL:            baseURLFunc,
-		TenantsPath:        "/tenants/",
-		InvitePath:         "/tenants/accept_invite",
-		TokenFactory:       tokenFactory,
-		AuxLogger:          dbLogger,
-		Notifier:           s.notifier,
-		TenantInviteMaxAge: time.Duration(s.config.TenantInviteMaxAge) * time.Second,
+		TenantsPath:  "/tenants/",
+		InvitePath:   "/tenants/accept_invite",
+		TokenFactory: tokenFactory,
+		AuxLogger:    dbLogger,
+		Notifier:     s.notifier,
 	}
 
 	membershipsHandler := &handlers.Memberships{
 		Storage:     s.storage,
 		Timeout:     time.Duration(s.config.DBTimeout) * time.Second,
 		Enforcer:    s.ac,
-		BaseURL:     baseURLFunc,
 		TenantsPath: "/tenants/",
 		UsersPath:   "/users/",
 		AuxLogger:   dbLogger,
@@ -160,7 +147,7 @@ func (s *Service) APIHandler() http.Handler {
 	jwtOptions := jwtmiddleware.Options{
 		ValidationKeyGetter: func(token *jwt.Token) (interface{}, error) { return []byte(s.config.JWTSecret), nil },
 		SigningMethod:       JWTSigningMethod,
-		UserProperty:        handlers.TokenContextKey,
+		UserProperty:        middleware.TokenContextKey,
 		ErrorHandler: func(w http.ResponseWriter, r *http.Request, err string) {
 			utils.JSONError(w, err, errors.CodeUnauthorized)
 		},
@@ -169,9 +156,15 @@ func (s *Service) APIHandler() http.Handler {
 
 	// Check audience
 	aud := &middleware.Audience{
-		Value:           baseURLFunc,
-		TokenContextKey: handlers.TokenContextKey,
-		Namespace:       s.config.Namespace(),
+		Value: func(r *http.Request) string {
+			site := r.Context().Value(middleware.DomainConfigContextKey).(*middleware.DomainConfigData)
+			return site.GetBaseURL()
+		},
+		Namespace: s.config.Namespace(),
+	}
+
+	domainData := &middleware.DomainConfig{
+		Storage: &s.config,
 	}
 
 	m := mux.NewRouter()
@@ -181,6 +174,7 @@ func (s *Service) APIHandler() http.Handler {
 		m.Use((&middleware.Logging{}).Handler)
 	}
 	m.Use((&middleware.Recover{}).Handler)
+	m.Use(domainData.Handler)
 
 	// Login API
 	m.Methods("POST").Path("/password_reset").HandlerFunc(usersHandler.ResetPassword)
@@ -189,23 +183,17 @@ func (s *Service) APIHandler() http.Handler {
 	m.Methods("GET", "POST").Path("/login").HandlerFunc(usersHandler.Login)
 
 	userdata := &middleware.UserData{
-		TokenContextKey: handlers.TokenContextKey,
-		UserContextKey:  handlers.UserContextKey{},
-		Storage:         s.storage,
+		Storage: s.storage,
 	}
 
 	membershipData := &middleware.MembershipData{
-		MembershipContextKey: handlers.MembershipContextKey{},
-		TokenContextKey:      handlers.TokenContextKey,
-		Storage:              s.storage,
-		Namespace:            s.config.Namespace(),
+		Storage:   s.storage,
+		Namespace: s.config.Namespace(),
 	}
 
 	serviceAPI := &middleware.ServiceAPI{
-		MembershipContextKey: handlers.MembershipContextKey{},
-		TokenContextKey:      handlers.TokenContextKey,
-		Storage:              s.storage,
-		Namespace:            s.config.Namespace(),
+		Storage:   s.storage,
+		Namespace: s.config.Namespace(),
 	}
 
 	m.Methods("GET").Path("/refresh").Handler(jwtMiddleware.Handler(aud.Handler(userdata.Handler(membershipData.Handler(http.HandlerFunc(usersHandler.Refresh))))))

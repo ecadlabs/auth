@@ -6,11 +6,12 @@ import (
 	"strconv"
 
 	"github.com/ecadlabs/auth/errors"
+	"github.com/ecadlabs/auth/middleware"
 	"github.com/ecadlabs/auth/rbac"
 	"github.com/ecadlabs/auth/storage"
 	"github.com/ecadlabs/auth/utils"
 	"github.com/gorilla/mux"
-	"github.com/satori/go.uuid"
+	uuid "github.com/satori/go.uuid"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -19,8 +20,8 @@ type newKey struct {
 }
 
 func (u *Users) NewAPIKey(w http.ResponseWriter, r *http.Request) {
-	self := r.Context().Value(UserContextKey{}).(*storage.User)
-	member := r.Context().Value(MembershipContextKey{}).(*storage.Membership)
+	self := r.Context().Value(middleware.UserContextKey).(*storage.User)
+	member := r.Context().Value(middleware.MembershipContextKey).(*storage.Membership)
 
 	uid, err := uuid.FromString(mux.Vars(r)["userId"])
 	if err != nil {
@@ -64,8 +65,8 @@ func (u *Users) NewAPIKey(w http.ResponseWriter, r *http.Request) {
 }
 
 func (u *Users) GetAPIKey(w http.ResponseWriter, r *http.Request) {
-	self := r.Context().Value(UserContextKey{}).(*storage.User)
-	member := r.Context().Value(MembershipContextKey{}).(*storage.Membership)
+	self := r.Context().Value(middleware.UserContextKey).(*storage.User)
+	member := r.Context().Value(middleware.MembershipContextKey).(*storage.Membership)
 
 	uid, err := uuid.FromString(mux.Vars(r)["userId"])
 	if err != nil {
@@ -107,8 +108,8 @@ func (u *Users) GetAPIKey(w http.ResponseWriter, r *http.Request) {
 }
 
 func (u *Users) GetAPIKeys(w http.ResponseWriter, r *http.Request) {
-	self := r.Context().Value(UserContextKey{}).(*storage.User)
-	member := r.Context().Value(MembershipContextKey{}).(*storage.Membership)
+	self := r.Context().Value(middleware.UserContextKey).(*storage.User)
+	member := r.Context().Value(middleware.MembershipContextKey).(*storage.Membership)
 
 	uid, err := uuid.FromString(mux.Vars(r)["userId"])
 	if err != nil {
@@ -148,8 +149,8 @@ func (u *Users) GetAPIKeys(w http.ResponseWriter, r *http.Request) {
 }
 
 func (u *Users) DeleteAPIKey(w http.ResponseWriter, r *http.Request) {
-	self := r.Context().Value(UserContextKey{}).(*storage.User)
-	member := r.Context().Value(MembershipContextKey{}).(*storage.Membership)
+	self := r.Context().Value(middleware.UserContextKey).(*storage.User)
+	member := r.Context().Value(middleware.MembershipContextKey).(*storage.Membership)
 
 	uid, err := uuid.FromString(mux.Vars(r)["userId"])
 	if err != nil {
@@ -192,8 +193,9 @@ func (u *Users) DeleteAPIKey(w http.ResponseWriter, r *http.Request) {
 }
 
 func (u *Users) GetAPIToken(w http.ResponseWriter, r *http.Request) {
-	self := r.Context().Value(UserContextKey{}).(*storage.User)
-	member := r.Context().Value(MembershipContextKey{}).(*storage.Membership)
+	self := r.Context().Value(middleware.UserContextKey).(*storage.User)
+	member := r.Context().Value(middleware.MembershipContextKey).(*storage.Membership)
+	site := r.Context().Value(middleware.DomainConfigContextKey).(*middleware.DomainConfigData)
 
 	uid, err := uuid.FromString(mux.Vars(r)["userId"])
 	if err != nil {
@@ -259,6 +261,7 @@ func (u *Users) GetAPIToken(w http.ResponseWriter, r *http.Request) {
 		key:        key,
 		membership: keyMembership,
 		role:       keyRole,
+		baseURL:    site.GetBaseURL(),
 	}
 
 	if err := u.writeUserToken(w, &opt); err != nil {

@@ -5,26 +5,25 @@ import (
 
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/ecadlabs/auth/errors"
+	"github.com/ecadlabs/auth/middleware"
 	"github.com/ecadlabs/auth/storage"
 	"github.com/ecadlabs/auth/utils"
 	log "github.com/sirupsen/logrus"
 )
 
 type TokenFactory struct {
-	SessionMaxAge    time.Duration
 	JWTSecretGetter  func() ([]byte, error)
 	JWTSigningMethod jwt.SigningMethod
-	BaseURL          func() string
 	Namespace        string
 }
 
-func (t *TokenFactory) Create(claims jwt.MapClaims, user *storage.User, aud string, exp time.Duration) (string, error) {
+func (t *TokenFactory) Create(claims jwt.MapClaims, user *storage.User, aud string, exp time.Duration, c *middleware.DomainConfigData) (string, error) {
 	now := time.Now()
 	baseClaims := jwt.MapClaims{
 		"sub": user.ID,
 		"exp": now.Add(exp).Unix(),
 		"iat": now.Unix(),
-		"iss": t.BaseURL(),
+		"iss": c.GetBaseURL(),
 		"aud": aud,
 	}
 
