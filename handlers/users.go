@@ -10,10 +10,10 @@ import (
 	jwtmiddleware "github.com/auth0/go-jwt-middleware"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/ecadlabs/auth/errors"
+	"github.com/ecadlabs/auth/jq"
 	"github.com/ecadlabs/auth/jsonpatch"
 	"github.com/ecadlabs/auth/middleware"
 	"github.com/ecadlabs/auth/notification"
-	"github.com/ecadlabs/auth/query"
 	"github.com/ecadlabs/auth/rbac"
 	"github.com/ecadlabs/auth/storage"
 	"github.com/ecadlabs/auth/utils"
@@ -196,7 +196,7 @@ func (u *Users) GetUsers(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	member := r.Context().Value(middleware.MembershipContextKey).(*storage.Membership)
 
-	q, err := query.FromValues(r.Form)
+	q, err := jq.FromValues(r.Form)
 	if err != nil {
 		log.Error(err)
 		utils.JSONError(w, err.Error(), errors.CodeQuerySyntax)

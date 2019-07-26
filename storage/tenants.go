@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/ecadlabs/auth/errors"
-	"github.com/ecadlabs/auth/query"
+	"github.com/ecadlabs/auth/jq"
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
 	uuid "github.com/satori/go.uuid"
@@ -22,7 +22,7 @@ type TenantModel struct {
 	Protected  bool      `json:"-" db:"protected"`
 	Archived   bool      `json:"-" db:"archived"`
 	TenantType string    `json:"type" db:"tenant_type"`
-	SortedBy   string    `json:"-" db:"sorted_by"`
+	SortedBy   string    `json:"-" db:"_sorted_by"`
 }
 
 // Clone clone a TenantModel struct
@@ -39,7 +39,6 @@ func (t *TenantModel) Clone() *TenantModel {
 }
 
 func (s *Storage) CreateTenantInt(ctx context.Context, tx *sqlx.Tx, tenant *TenantModel) (*TenantModel, error) {
-
 	// If ID is not set yet we create it
 	if tenant.ID == uuid.Nil {
 		tenant.ID = uuid.NewV4()
@@ -135,13 +134,13 @@ func (s *Storage) GetTenant(ctx context.Context, tenantID, userID uuid.UUID, onl
 	return &model, nil
 }
 
-var tenantsQueryColumns = query.Columns{
-	"id":          {Name: "id", Flags: query.ColSort},
-	"name":        {Name: "name", Flags: query.ColSort},
-	"added":       {Name: "added", Flags: query.ColSort},
-	"modified":    {Name: "modified", Flags: query.ColSort},
-	"archived":    {Name: "archived", Flags: query.ColSort},
-	"tenant_type": {Name: "tenant_type", Flags: query.ColSort},
+var tenantsQueryColumns = jq.Columns{
+	"id":          {ColumnExpr: "id", Sort: true},
+	"name":        {ColumnExpr: "name", Sort: true},
+	"added":       {ColumnExpr: "added", Sort: true},
+	"modified":    {ColumnExpr: "modified", Sort: true},
+	"archived":    {ColumnExpr: "archived", Sort: true},
+	"tenant_type": {ColumnExpr: "tenant_type", Sort: true},
 }
 
 // GetTenantsSoleMember get a list of tenant where the user is the only member
@@ -189,21 +188,34 @@ func (s *Storage) GetTenantsSoleMember(ctx context.Context, userID uuid.UUID) (t
 }
 
 // GetTenants get a list of tenant which are paged
-func (s *Storage) GetTenants(ctx context.Context, userID uuid.UUID, onlySelf bool, q *query.Query) (tenants []*TenantModel, count int, next *query.Query, err error) {
-	var queryExtension = "tenants as scoped_tenants"
+func (s *Storage) GetTenants(ctx context.Context, userID uuid.UUID, onlySelf bool, query *jq.Query) (tenants []*TenantModel, count int, next *jq.Query, err error) {
+	q := *query
+
+	if q.SortBy == "" {
+		q.SortBy = TenantsDefaultSortColumn
+	}
+
+	sortExpr, err := jq.ColumnExpr(q.SortBy, tenantsQueryColumns)
+	if err != nil {
+		err = errors.Wrap(err, errors.CodeQuerySyntax)
+		return
+	}
+
+	var queryExtension = "FROM tenants as scoped_tenants"
 	if onlySelf {
-		queryExtension = "(SELECT * FROM tenants WHERE id IN (SELECT tenant_id FROM membership WHERE user_id = '" + userID.String() + "')) as scoped_tenants"
+		queryExtension = "FROM (SELECT * FROM tenants WHERE id IN (SELECT tenant_id FROM membership WHERE user_id = '" + userID.String() + "')) as scoped_tenants"
 	}
 
 	if q.SortBy == "" {
 		q.SortBy = TenantsDefaultSortColumn
 	}
 
-	selOpt := query.SelectOptions{
-		SelectExpr: "scoped_tenants.*, scoped_tenants." + pq.QuoteIdentifier(q.SortBy) + " AS sorted_by",
-		FromExpr:   queryExtension,
-		IDColumn:   "id",
-		ColumnFunc: tenantsQueryColumns.Func,
+	selOpt := jq.Options{
+		SelectExpr:   fmt.Sprintf("SELECT scoped_tenants.*, %s AS _sorted_by", sortExpr),
+		FromExpr:     queryExtension,
+		IDColumn:     "id",
+		Columns:      tenantsQueryColumns,
+		DriverParams: jq.PostgresDriverParams,
 	}
 
 	stmt, args, err := q.SelectStmt(&selOpt)
@@ -250,9 +262,9 @@ func (s *Storage) GetTenants(ctx context.Context, userID uuid.UUID, onlySelf boo
 
 	if lastItem != nil {
 		// Update query
-		lastId := lastItem.ID.String()
-		ret := *q
-		ret.LastID = &lastId
+		lastID := lastItem.ID.String()
+		ret := *query
+		ret.LastID = &lastID
 		ret.Last = &lastItem.SortedBy
 		ret.TotalCount = false
 

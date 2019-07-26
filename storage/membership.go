@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/ecadlabs/auth/errors"
-	"github.com/ecadlabs/auth/query"
+	"github.com/ecadlabs/auth/jq"
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
 	uuid "github.com/satori/go.uuid"
@@ -23,8 +23,8 @@ type membershipModel struct {
 	Added            time.Time      `db:"added"`
 	Modified         time.Time      `db:"modified"`
 	Roles            pq.StringArray `db:"roles"`
-	SortedBy         string         `db:"sorted_by"`
 	Email            string         `db:"email"`
+	SortedBy         string         `db:"_sorted_by"`
 }
 
 func (m *membershipModel) toMembership() *Membership {
@@ -260,25 +260,35 @@ func (s *Storage) UpdateMembership(ctx context.Context, id uuid.UUID, userID uui
 	return u.toMembership(), nil
 }
 
-var membershipsQueryColumns = query.Columns{
-	"user_id":           {Name: "membership.user_id", Flags: query.ColSort},
-	"tenant_id":         {Name: "membership.tenant_id", Flags: query.ColSort},
-	"added":             {Name: "membership.added", Flags: query.ColSort},
-	"modified":          {Name: "membership.modified", Flags: query.ColSort},
-	"membership_type":   {Name: "membership.membership_type", Flags: query.ColSort},
-	"membership_status": {Name: "membership.membership_status", Flags: query.ColSort},
-	"roles":             {Name: "r.roles"},
+var membershipsQueryColumns = jq.Columns{
+	"id":                {ColumnExpr: "membership.id", Sort: true},
+	"user_id":           {ColumnExpr: "membership.user_id", Sort: true},
+	"tenant_id":         {ColumnExpr: "membership.tenant_id", Sort: true},
+	"added":             {ColumnExpr: "membership.added", Sort: true},
+	"modified":          {ColumnExpr: "membership.modified", Sort: true},
+	"membership_type":   {ColumnExpr: "membership.membership_type", Sort: true},
+	"membership_status": {ColumnExpr: "membership.membership_status", Sort: true},
+	"roles":             {ColumnExpr: "r.roles"},
 }
 
 // GetMemberships get memberships from the database as a paged result
-func (s *Storage) GetMemberships(ctx context.Context, q *query.Query) (memberships []*Membership, count int, next *query.Query, err error) {
+func (s *Storage) GetMemberships(ctx context.Context, query *jq.Query) (memberships []*Membership, count int, next *jq.Query, err error) {
+	q := *query
+
 	if q.SortBy == "" {
 		q.SortBy = MembershipsDefaultSortColumn
 	}
 
-	selOpt := query.SelectOptions{
-		SelectExpr: "membership.*, r.roles, users.email, membership." + pq.QuoteIdentifier(q.SortBy) + " AS sorted_by",
+	sortExpr, err := jq.ColumnExpr(q.SortBy, membershipsQueryColumns)
+	if err != nil {
+		err = errors.Wrap(err, errors.CodeQuerySyntax)
+		return
+	}
+
+	selOpt := jq.Options{
+		SelectExpr: fmt.Sprintf("SELECT membership.*, r.roles, users.email, %s AS _sorted_by", sortExpr),
 		FromExpr: `
+		FROM
 			membership
 			INNER JOIN tenants ON tenants.id = membership.tenant_id
 			AND tenants.archived = FALSE
@@ -292,8 +302,9 @@ func (s *Storage) GetMemberships(ctx context.Context, q *query.Query) (membershi
 		  	GROUP BY
 		    	membership_id
 				) AS r ON r.membership_id = membership.id`,
-		IDColumn:   "membership.id",
-		ColumnFunc: membershipsQueryColumns.Func,
+		IDColumn:     "id",
+		Columns:      membershipsQueryColumns,
+		DriverParams: jq.PostgresDriverParams,
 	}
 
 	stmt, args, err := q.SelectStmt(&selOpt)
@@ -340,9 +351,9 @@ func (s *Storage) GetMemberships(ctx context.Context, q *query.Query) (membershi
 
 	if lastItem != nil {
 		// Update query
-		lastId := lastItem.ID.String()
-		ret := *q
-		ret.LastID = &lastId
+		lastID := lastItem.ID.String()
+		ret := *query
+		ret.LastID = &lastID
 		ret.Last = &lastItem.SortedBy
 		ret.TotalCount = false
 
