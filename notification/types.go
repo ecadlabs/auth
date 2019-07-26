@@ -16,6 +16,7 @@ type NotificationData struct {
 	To          []string
 	Token       string
 	TokenMaxAge time.Duration
+	Misc        interface{}
 }
 
 const (

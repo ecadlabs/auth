@@ -11,6 +11,7 @@ import (
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/ecadlabs/auth/errors"
+	"github.com/ecadlabs/auth/middleware"
 	"github.com/ecadlabs/auth/rbac"
 	"github.com/ecadlabs/auth/storage"
 	"github.com/ecadlabs/auth/utils"
@@ -18,11 +19,6 @@ import (
 	uuid "github.com/satori/go.uuid"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
-)
-
-const (
-	//TokenContextKey Context value key for request token
-	TokenContextKey = "token"
 )
 
 type userTokenOptions struct {
@@ -33,6 +29,7 @@ type userTokenOptions struct {
 	role          rbac.Role
 	sessionMaxAge time.Duration
 	refresh       string
+	baseURL       string
 }
 
 func (u *Users) writeUserToken(w http.ResponseWriter, opt *userTokenOptions) error {
@@ -41,8 +38,8 @@ func (u *Users) writeUserToken(w http.ResponseWriter, opt *userTokenOptions) err
 	claims := jwt.MapClaims{
 		"sub": opt.user.ID,
 		"iat": now.Unix(),
-		"iss": u.BaseURL(),
-		"aud": u.BaseURL(),
+		"iss": opt.baseURL,
+		"aud": opt.baseURL,
 	}
 
 	if opt.sessionMaxAge != 0 {
@@ -141,6 +138,8 @@ func (u *Users) getMembershipLogin(ctx context.Context, tenantID, userID uuid.UU
 
 // Login is a login endpoint handler
 func (u *Users) Login(w http.ResponseWriter, r *http.Request) {
+	site := r.Context().Value(middleware.DomainConfigContextKey).(*middleware.DomainConfigData)
+
 	writePerm := true
 	if v := r.FormValue("permissions"); v != "" {
 		writePerm, _ = strconv.ParseBool(v)
@@ -252,8 +251,9 @@ func (u *Users) Login(w http.ResponseWriter, r *http.Request) {
 		user:          user,
 		membership:    membership,
 		role:          role,
-		sessionMaxAge: u.SessionMaxAge,
-		refresh:       u.RefreshURL(),
+		sessionMaxAge: site.SessionMaxAge,
+		refresh:       u.RefreshURL(site),
+		baseURL:       site.GetBaseURL(),
 	}
 
 	if remoteAddr != nil {
@@ -278,9 +278,10 @@ func (u *Users) Login(w http.ResponseWriter, r *http.Request) {
 
 // Refresh is a refresh endpoint handler
 func (u *Users) Refresh(w http.ResponseWriter, r *http.Request) {
-	self := r.Context().Value(UserContextKey{}).(*storage.User)
-	member := r.Context().Value(MembershipContextKey{}).(*storage.Membership)
-	token := r.Context().Value(TokenContextKey).(*jwt.Token)
+	self := r.Context().Value(middleware.UserContextKey).(*storage.User)
+	member := r.Context().Value(middleware.MembershipContextKey).(*storage.Membership)
+	token := r.Context().Value(middleware.TokenContextKey).(*jwt.Token)
+	site := r.Context().Value(middleware.DomainConfigContextKey).(*middleware.DomainConfigData)
 
 	ctx, cancel := u.context(r)
 	defer cancel()
@@ -308,8 +309,9 @@ func (u *Users) Refresh(w http.ResponseWriter, r *http.Request) {
 		user:          self,
 		membership:    member,
 		role:          role,
-		sessionMaxAge: u.SessionMaxAge,
-		refresh:       u.RefreshURL(),
+		sessionMaxAge: site.SessionMaxAge,
+		refresh:       u.RefreshURL(site),
+		baseURL:       site.GetBaseURL(),
 	}
 
 	opt.addr, _ = claims[utils.NSClaim(u.Namespace, "address")].(string)

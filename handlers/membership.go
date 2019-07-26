@@ -11,6 +11,7 @@ import (
 	"github.com/ecadlabs/auth/errors"
 	"github.com/ecadlabs/auth/jq"
 	"github.com/ecadlabs/auth/jsonpatch"
+	"github.com/ecadlabs/auth/middleware"
 	"github.com/ecadlabs/auth/rbac"
 	"github.com/ecadlabs/auth/storage"
 	"github.com/ecadlabs/auth/utils"
@@ -25,18 +26,17 @@ type Memberships struct {
 	Timeout  time.Duration
 	Enforcer rbac.Enforcer
 
-	BaseURL     func() string
 	TenantsPath string
 	UsersPath   string
 	AuxLogger   *log.Logger
 }
 
-func (m *Memberships) membershipsURL(tenantID uuid.UUID) string {
-	return fmt.Sprintf("%s%s/members/", m.BaseURL()+m.TenantsPath, tenantID)
+func (m *Memberships) membershipsURL(c *middleware.DomainConfigData, tenantID uuid.UUID) string {
+	return fmt.Sprintf("%s%s/members/", c.GetBaseURL()+m.TenantsPath, tenantID)
 }
 
-func (m *Memberships) usersURL() string {
-	return m.BaseURL() + m.UsersPath
+func (m *Memberships) usersURL(c *middleware.DomainConfigData) string {
+	return c.GetBaseURL() + m.UsersPath
 }
 
 func (m *Memberships) context(r *http.Request) (context.Context, context.CancelFunc) {
@@ -48,7 +48,7 @@ func (m *Memberships) context(r *http.Request) (context.Context, context.CancelF
 
 // PatchMembership is an endpoint handler to update membership item
 func (m *Memberships) PatchMembership(w http.ResponseWriter, r *http.Request) {
-	member := r.Context().Value(MembershipContextKey{}).(*storage.Membership)
+	member := r.Context().Value(middleware.MembershipContextKey).(*storage.Membership)
 
 	ctx, cancel := m.context(r)
 	defer cancel()
@@ -159,7 +159,7 @@ func (m *Memberships) PatchMembership(w http.ResponseWriter, r *http.Request) {
 
 // DeleteMembership is an endpoint handler to delete membership item
 func (m *Memberships) DeleteMembership(w http.ResponseWriter, r *http.Request) {
-	member := r.Context().Value(MembershipContextKey{}).(*storage.Membership)
+	member := r.Context().Value(middleware.MembershipContextKey).(*storage.Membership)
 
 	ctx, cancel := m.context(r)
 	defer cancel()
@@ -219,7 +219,8 @@ func (m *Memberships) DeleteMembership(w http.ResponseWriter, r *http.Request) {
 // FindTenantMemberships is an endpoint handler to get list of membership item for a particular tenant
 func (m *Memberships) FindTenantMemberships(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
-	member := r.Context().Value(MembershipContextKey{}).(*storage.Membership)
+	member := r.Context().Value(middleware.MembershipContextKey).(*storage.Membership)
+	site := r.Context().Value(middleware.DomainConfigContextKey).(*middleware.DomainConfigData)
 
 	ctx, cancel := m.context(r)
 	defer cancel()
@@ -300,7 +301,7 @@ func (m *Memberships) FindTenantMemberships(w http.ResponseWriter, r *http.Reque
 	}
 
 	if nextQuery != nil {
-		nextURL, err := url.Parse(m.membershipsURL(tenantID))
+		nextURL, err := url.Parse(m.membershipsURL(site, tenantID))
 		if err != nil {
 			log.Error(err)
 			utils.JSONErrorResponse(w, err)
@@ -317,7 +318,8 @@ func (m *Memberships) FindTenantMemberships(w http.ResponseWriter, r *http.Reque
 // FindUserMemberships is an endpoint handler to get list of membership item for a particular user
 func (m *Memberships) FindUserMemberships(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
-	member := r.Context().Value(MembershipContextKey{}).(*storage.Membership)
+	member := r.Context().Value(middleware.MembershipContextKey).(*storage.Membership)
+	site := r.Context().Value(middleware.DomainConfigContextKey).(*middleware.DomainConfigData)
 
 	ctx, cancel := m.context(r)
 	defer cancel()
@@ -398,7 +400,7 @@ func (m *Memberships) FindUserMemberships(w http.ResponseWriter, r *http.Request
 	}
 
 	if nextQuery != nil {
-		nextURL, err := url.Parse(fmt.Sprintf("%s/%s/memberships/", m.usersURL(), userID))
+		nextURL, err := url.Parse(fmt.Sprintf("%s/%s/memberships/", m.usersURL(site), userID))
 		if err != nil {
 			log.Error(err)
 			utils.JSONErrorResponse(w, err)
