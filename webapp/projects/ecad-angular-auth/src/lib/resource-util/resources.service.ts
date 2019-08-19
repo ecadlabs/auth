@@ -1,19 +1,17 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Observable, of as observableOf, Subject } from 'rxjs';
-import {
-  catchError,
-  debounceTime,
-  groupBy,
-  map,
-  mergeMap,
-  shareReplay
-} from 'rxjs/operators';
+import { Observable, of as observableOf } from 'rxjs';
+import { catchError, map, shareReplay } from 'rxjs/operators';
 
 export interface FilterCondition<T> {
   operation: FilterOperation;
   field: keyof T;
   value: string;
+}
+
+export interface FilterExpression<T> {
+  condition: 'and' | 'or';
+  filterConditions: FilterCondition<T>[];
 }
 
 export type FilterOperation =
@@ -81,15 +79,11 @@ export class ResourcesService<T, U> {
     sortBy: keyof T,
     order: 'asc' | 'desc'
   ): Observable<PagedResult<T>> {
-    const filter = filters
-      .filter(x => x)
-      .map(x => {
-        return x ? `${x.field}[${x.operation}]=${x.value}` : undefined;
-      })
-      .join('&');
+    const query = { and: this.convertExpression(filters) };
+    const queryStr = filters.length > 0 ? `&q=${JSON.stringify(query)}` : '';
     return this.httpClient
       .get<PagedResult<T>>(
-        `${resourceUrl}/?count=true&sortBy=${sortBy}&order=${order}&${filter}`
+        `${resourceUrl}/?count=true&sortBy=${sortBy}&order=${order}${queryStr}`
       )
       .pipe(map((page: PagedResult<T>) => ({ ...page, currentPage: 1 })));
   }
@@ -106,6 +100,26 @@ export class ResourcesService<T, U> {
       total_count: result ? result.total_count : 0,
       next: ''
     };
+  }
+
+  private convertExpression(
+    expressions: (FilterExpression<T> | FilterCondition<T>)[]
+  ) {
+    const query = [] as any[];
+    for (const exp of expressions) {
+      if ('filterConditions' in exp) {
+        query.push({
+          [exp.condition]: this.convertExpression(exp.filterConditions)
+        });
+      } else {
+        query.push({
+          [exp.operation]: {
+            [exp.field]: exp.value
+          }
+        });
+      }
+    }
+    return query;
   }
 
   fetchPreviousPage(result: PagedResult<T>): Observable<PagedResult<T>> {

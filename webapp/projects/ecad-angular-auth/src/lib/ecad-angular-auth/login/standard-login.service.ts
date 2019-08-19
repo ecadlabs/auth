@@ -208,7 +208,7 @@ export class StandardLoginService implements ILoginService {
           return new Set();
         }
 
-        return user.roles.reduce((prevSet: Set<string>, role) => {
+        return (user.roles || []).reduce((prevSet: Set<string>, role) => {
           (this.config.rolesPermissionsMapping[role] || []).forEach(
             permission => prevSet.add(permission)
           );
