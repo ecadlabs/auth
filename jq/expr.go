@@ -354,7 +354,7 @@ func (e *PExpr) SQL(index *int, p *DriverParams, columns Columns) (sql string, a
 		return "", nil, err
 	}
 	(*index)++
-	return col.formatSubquery(col.ColumnExpr + " LIKE CONCAT(LOWER(CAST(" + p.pos(*index) + " AS " + p.textType() + ")), '%')"), []interface{}{e.Value}, nil
+	return col.formatSubquery("LOWER(" + col.ColumnExpr + ") LIKE CONCAT(LOWER(CAST(" + p.pos(*index) + " AS " + p.textType() + ")), '%')"), []interface{}{e.Value}, nil
 }
 
 type SExpr KeyVal
@@ -365,7 +365,7 @@ func (e *SExpr) SQL(index *int, p *DriverParams, columns Columns) (sql string, a
 		return "", nil, err
 	}
 	(*index)++
-	return col.formatSubquery(col.ColumnExpr + " LIKE CONCAT('%', LOWER(CAST(" + p.pos(*index) + " AS " + p.textType() + ")))"), []interface{}{e.Value}, nil
+	return col.formatSubquery("LOWER(" + col.ColumnExpr + ") LIKE CONCAT('%', LOWER(CAST(" + p.pos(*index) + " AS " + p.textType() + ")))"), []interface{}{e.Value}, nil
 }
 
 type SubExpr KeyVal
@@ -376,7 +376,7 @@ func (e *SubExpr) SQL(index *int, p *DriverParams, columns Columns) (sql string,
 		return "", nil, err
 	}
 	(*index)++
-	return col.formatSubquery(col.ColumnExpr + " LIKE CONCAT('%', LOWER(CAST(" + p.pos(*index) + " AS " + p.textType() + ")), '%')"), []interface{}{e.Value}, nil
+	return col.formatSubquery("LOWER(" + col.ColumnExpr + ") LIKE CONCAT('%', LOWER(CAST(" + p.pos(*index) + " AS " + p.textType() + ")), '%')"), []interface{}{e.Value}, nil
 }
 
 type HasExpr KeyVal
