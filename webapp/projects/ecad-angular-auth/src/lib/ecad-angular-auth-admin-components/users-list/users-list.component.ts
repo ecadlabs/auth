@@ -4,10 +4,11 @@ import {
   Inject,
   OnInit,
   Output,
-  ViewChild
+  ViewChild,
+  Input
 } from '@angular/core';
 import { MatDialog, MatSnackBar, MatSort } from '@angular/material';
-import { of, Subject } from 'rxjs';
+import { of, Subject, BehaviorSubject } from 'rxjs';
 import { first } from 'rxjs/operators';
 import { ConfirmDialogService } from '../../confirm-dialog/confirm-dialog.service';
 import { IUsersService } from '../../ecad-angular-auth-admin/interfaces/user-service.i';
@@ -32,6 +33,19 @@ export class UsersListComponent implements OnInit {
   public dataSource: FilteredDatasource<User>;
   private nextPage$ = new Subject<void>();
   private prevousPage$ = new Subject<void>();
+
+  private _filterConditions$ = new BehaviorSubject([] as FilterCondition<
+    User
+  >[]);
+
+  @Input()
+  get filterConditions() {
+    return this._filterConditions$.value;
+  }
+
+  set filterConditions(value) {
+    this._filterConditions$.next(value);
+  }
 
   displayedColumns = [
     'email',
@@ -79,6 +93,8 @@ export class UsersListComponent implements OnInit {
         }
       ] as FilterCondition<User>[])
     );
+
+    this.dataSource.addFilterConditionObservable(this._filterConditions$);
   }
 
   selectUser(user: User) {

@@ -43,7 +43,7 @@ export class StandardLoginService implements ILoginService {
       tap(result => localStorage.setItem('refreshTokenUrl', result.refresh)),
       tap(() => this.user.next(this.getTokenAndCheckExp()))
     );
-  }
+  };
 
   constructor(
     @Optional()
@@ -208,7 +208,7 @@ export class StandardLoginService implements ILoginService {
           return new Set();
         }
 
-        return user.roles.reduce((prevSet: Set<string>, role) => {
+        return (user.roles || []).reduce((prevSet: Set<string>, role) => {
           (this.config.rolesPermissionsMapping[role] || []).forEach(
             permission => prevSet.add(permission)
           );

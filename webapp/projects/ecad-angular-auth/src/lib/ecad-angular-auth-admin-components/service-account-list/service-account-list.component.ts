@@ -4,10 +4,11 @@ import {
   Inject,
   OnInit,
   Output,
+  Input,
   ViewChild
 } from '@angular/core';
 import { MatDialog, MatSort } from '@angular/material';
-import { of, Subject } from 'rxjs';
+import { of, Subject, BehaviorSubject } from 'rxjs';
 import { first } from 'rxjs/operators';
 import { ConfirmDialogService } from '../../confirm-dialog/confirm-dialog.service';
 import { IUsersService } from '../../ecad-angular-auth-admin/interfaces/user-service.i';
@@ -30,6 +31,19 @@ export class ServiceAccountListComponent implements OnInit {
   public dataSource: FilteredDatasource<User>;
   private nextPage$ = new Subject<void>();
   private prevousPage$ = new Subject<void>();
+
+  private _filterConditions$ = new BehaviorSubject([] as FilterCondition<
+    User
+  >[]);
+
+  @Input()
+  get filterConditions() {
+    return this._filterConditions$.value;
+  }
+
+  set filterConditions(value) {
+    this._filterConditions$.next(value);
+  }
 
   displayedColumns = ['name', 'tenants', 'added', 'modified', 'actions'];
 
@@ -67,6 +81,8 @@ export class ServiceAccountListComponent implements OnInit {
         }
       ] as FilterCondition<User>[])
     );
+
+    this.dataSource.addFilterConditionObservable(this._filterConditions$);
   }
 
   selectUser(user: User) {
